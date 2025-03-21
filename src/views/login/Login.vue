@@ -78,18 +78,14 @@ const login = async () => {
 
   // 模拟登录服务，实际项目中应调用后端API验证用户名和密码
   // 这里简单实现，实际项目中应该从服务器获取用户信息和token
-  const userInfo = {
-    username: formModel.value.username,
-    avatar: '', // 默认为空，用户可在个人中心上传头像
+  const res = await authLoginService(formModel.value)
+  if (res.code === 200) {
+    ElMessage.success('登录成功')
+    localStorage.setItem('token', res.data.token)
+    router.push('/')
+  } else {
+    ElMessage.error('登录失败')
   }
-
-  // 将用户信息存储到localStorage
-  localStorage.setItem('userInfo', JSON.stringify(userInfo))
-
-  ElMessage.success('登录成功')
-
-  // 登录成功后跳转到首页
-  router.push('/')
 }
 </script>
 
