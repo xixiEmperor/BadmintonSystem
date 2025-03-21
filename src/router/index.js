@@ -42,6 +42,25 @@ const router = createRouter({
         },
       ],
     },
+    // 后台管理系统路由
+    {
+      path: '/admin',
+      component: () => import('@/views/admin/layout/AdminLayout.vue'),
+      // meta: { requiresAdmin: true }, // 需要管理员权限
+      redirect: '/admin/dashboard',
+      children: [
+        {
+          path: 'dashboard',
+          component: () => import('@/views/admin/Dashboard.vue'),
+          meta: { title: '首页' },
+        },
+        {
+          path: 'booking-review',
+          component: () => import('@/views/admin/BookingReview.vue'),
+          meta: { title: '预定审核' },
+        },
+      ],
+    },
     {
       path: '/login',
       component: () => import('@/views/login/Login.vue'),
@@ -58,6 +77,22 @@ router.beforeEach((to, from, next) => {
     if (userInfo) {
       // 已登录，允许访问
       next()
+    } else {
+      // 未登录，跳转到登录页
+      next('/login')
+    }
+  } else if (to.meta.requiresAdmin) {
+    // 判断是否为管理员
+    const userInfo = localStorage.getItem('userInfo')
+    if (userInfo) {
+      const user = JSON.parse(userInfo)
+      // 这里应该根据实际情况判断是否为管理员，暂时简化处理
+      if (user.isAdmin) {
+        next()
+      } else {
+        // 非管理员，跳转到首页
+        next('/')
+      }
     } else {
       // 未登录，跳转到登录页
       next('/login')
