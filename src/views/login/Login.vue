@@ -8,6 +8,7 @@ import { User, Lock, Message } from '@element-plus/icons-vue'
 import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { authRegisterService, authLoginService } from '@/api/auth'
 
 const router = useRouter()
 const isRegister = ref(false) // 默认显示登录页面
@@ -61,9 +62,13 @@ const register = async () => {
   await form.value.validate()
   // 模拟注册服务，实际项目中应调用后端API
   // 在实际项目中，这里应该调用API将用户信息发送到服务器
-
-  // 模拟注册成功
-  ElMessage.success('注册成功')
+  const res = await authRegisterService(formModel.value)
+  if (res.code === 200) {
+    ElMessage.success('注册成功')
+    isRegister.value = false
+  } else {
+    ElMessage.error('注册失败')
+  }
   isRegister.value = false
 }
 
