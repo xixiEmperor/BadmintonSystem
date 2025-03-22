@@ -84,7 +84,11 @@ const login = async () => {
     ElMessage.success('登录成功')
     localStorage.setItem('token', res.data.token)
     userStore.setToken(res.data.token)
-    // 如果用户角色为管理员，则跳转至管理员页面
+
+    // 先获取用户信息
+    await userStore.getUserinfo()
+
+    // 获取到用户信息后再判断角色和跳转
     if (userStore.userinfo.role === 'ROLE_ADMIN') {
       router.push('/admin')
     } else {

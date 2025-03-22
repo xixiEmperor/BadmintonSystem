@@ -18,17 +18,25 @@ export const useUserStore = defineStore(
       const res = await getUserInfoService(token.value)
       userinfo.value = res.data
     }
-    const setUserinfo = () => {
+    const clearUserinfo = () => {
       userinfo.value = {}
+    }
+
+    // 登出方法，一次性清除所有状态
+    const logout = () => {
+      token.value = ''
+      userinfo.value = {}
+      localStorage.removeItem('token')
     }
 
     return {
       userinfo,
       token,
       getUserinfo,
-      setUserinfo,
+      clearUserinfo,
       setToken,
       removeToken,
+      logout,
     }
   },
   {

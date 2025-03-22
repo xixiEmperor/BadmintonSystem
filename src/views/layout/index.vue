@@ -3,9 +3,11 @@ import { ref, onMounted } from 'vue'
 import { Plus } from '@element-plus/icons-vue'
 import AIChatDialog from '@/components/AiChatDialog.vue'
 import { useRouter } from 'vue-router'
+import { useUserStore } from '@/stores'
 
 // 路由
 const router = useRouter()
+const userStore = useUserStore()
 
 // AI助手对话框控制
 const showAIChat = ref(false)
@@ -51,8 +53,8 @@ const goToLogin = () => {
 
 // 退出登录
 const logout = () => {
-  // TODO: 调用API进行退出登录
-  localStorage.removeItem('userInfo')
+  // 使用store的logout方法统一处理登出逻辑
+  userStore.logout()
   isLogin.value = false
   userInfo.value = {
     username: '',
