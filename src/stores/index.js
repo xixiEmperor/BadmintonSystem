@@ -1,3 +1,8 @@
-import { defineStore } from 'pinia'
+import { createPinia } from 'pinia'
+import persist from 'pinia-plugin-persistedstate'
 
-export const useCounterStore = defineStore('counter', () => {})
+const pinia = createPinia()
+pinia.use(persist)
+
+export default pinia
+export * from '@/stores/modules/user'

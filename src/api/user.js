@@ -4,8 +4,12 @@ import request from '@/utils/request'
  * 获取用户个人信息
  * @returns {Promise<Object>} 用户个人信息
  */
-export function getUserProfile() {
-  return request.get('/user/profile')
+export const getUserInfoService = (token) => {
+  return request.get('/api/user/info', {
+    params: {
+      token,
+    },
+  })
 }
 
 /**

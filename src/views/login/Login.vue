@@ -8,7 +8,11 @@ import { User, Lock, Message } from '@element-plus/icons-vue'
 import { ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { authRegisterService, authLoginService } from '@/api/auth'
+import { useRouter } from 'vue-router'
+import { useUserStore } from '@/stores'
 
+const userStore = useUserStore()
+const router = useRouter()
 const isRegister = ref(false) // 默认显示登录页面
 const formModel = ref({
   username: '',
@@ -76,11 +80,16 @@ const login = async () => {
   // 模拟登录服务，实际项目中应调用后端API验证用户名和密码
   // 这里简单实现，实际项目中应该从服务器获取用户信息和token
   const res = await authLoginService(formModel.value)
-  if (res.code === 0) {
+  if (res.data.token) {
     ElMessage.success('登录成功')
     localStorage.setItem('token', res.data.token)
-    // 跳转回首页，使用当前标签页
-    window.location.href = '/'
+    userStore.setToken(res.data.token)
+    // 如果用户角色为管理员，则跳转至管理员页面
+    if (userStore.userinfo.role === 'ROLE_ADMIN') {
+      router.push('/admin')
+    } else {
+      router.push('/')
+    }
   } else {
     ElMessage.error('登录失败')
   }
