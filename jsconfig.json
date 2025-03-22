@@ -2,7 +2,12 @@
   "compilerOptions": {
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+    "allowJs": true,
+    "checkJs": false,
+    "jsx": "preserve",
+    "baseUrl": ".",
+    "types": ["element-plus/global"]
   },
   "exclude": ["node_modules", "dist"]
 }

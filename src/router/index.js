@@ -51,13 +51,18 @@ const router = createRouter({
       children: [
         {
           path: 'dashboard',
-          component: () => import('@/views/admin/Dashboard.vue'),
+          component: () => import('@/views/admin/DashBoard.vue'),
           meta: { title: '首页' },
         },
         {
           path: 'booking-review',
           component: () => import('@/views/admin/BookingReview.vue'),
           meta: { title: '预定审核' },
+        },
+        {
+          path: 'notice',
+          component: () => import('@/views/admin/Notice.vue'),
+          meta: { title: '通知' },
         },
       ],
     },

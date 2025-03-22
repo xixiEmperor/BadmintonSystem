@@ -19,7 +19,11 @@
         </el-menu-item>
         <el-menu-item index="/admin/booking-review">
           <el-icon><Calendar /></el-icon>
-          <span>预定审核</span>
+          <span>预定信息</span>
+        </el-menu-item>
+        <el-menu-item index="/admin/notice">
+          <el-icon><Notification /></el-icon>
+          <span>发布通知</span>
         </el-menu-item>
       </el-menu>
     </div>
@@ -59,7 +63,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { HomeFilled, Calendar, ArrowDown } from '@element-plus/icons-vue'
+import { HomeFilled, Calendar, ArrowDown, Notification } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
 const route = useRoute()

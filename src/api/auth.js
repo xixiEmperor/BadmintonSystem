@@ -8,9 +8,9 @@ import request from '@/utils/request'
  * @param {string} data.email - 邮箱
  * @returns {Promise}
  */
-export function authRegisterService(data) {
+export const authRegisterService = (data) => {
   return request({
-    url: '/user/register',
+    url: '/api/auth/register',
     method: 'post',
     data,
   })
@@ -23,9 +23,9 @@ export function authRegisterService(data) {
  * @param {string} data.password - 密码
  * @returns {Promise}
  */
-export function authLoginService(data) {
+export const authLoginService = (data) => {
   return request({
-    url: '/user/login',
+    url: '/api/auth/login',
     method: 'post',
     data,
   })
@@ -37,7 +37,7 @@ export function authLoginService(data) {
  * @param {string} data.email - 邮箱
  * @returns {Promise}
  */
-export function authForgetPasswordService(data) {
+export const authForgetPasswordService = (data) => {
   return request({
     url: '/user/forget-password',
     method: 'post',
@@ -52,17 +52,10 @@ export function authForgetPasswordService(data) {
  * @param {string} data.newPassword - 新密码
  * @returns {Promise}
  */
-export function authResetPasswordService(data) {
+export const authResetPasswordService = (data) => {
   return request({
     url: '/user/reset-password',
     method: 'post',
     data,
   })
-}
-
-export default {
-  authRegisterService,
-  authLoginService,
-  authForgetPasswordService,
-  authResetPasswordService,
 }

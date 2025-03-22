@@ -1,6 +1,66 @@
 <script setup>
-import { ref, computed, reactive } from 'vue'
+import { ref, computed, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+
+// 通知公告相关
+const notices = ref([])
+const showNotices = ref(true) // 控制通知区域显示/隐藏
+
+// 切换通知区域显示/隐藏
+const toggleNotices = () => {
+  showNotices.value = !showNotices.value
+}
+
+// 获取通知公告
+const fetchNotices = async () => {
+  try {
+    // 实际项目中应调用API获取通知
+    // 这里使用模拟数据
+    notices.value = [
+      {
+        id: 1,
+        title: '场馆维修通知',
+        content: '2号场地将于2023年11月15日进行维修，当天不可预约，敬请谅解。',
+        type: 'normal',
+        createTime: '2023-11-10 10:30:45',
+      },
+      {
+        id: 2,
+        title: '春节期间场地预约通知',
+        content:
+          '春节期间（2024年2月10日至2月17日）场馆开放时间调整为上午9:00至下午5:00，请各位用户知悉。',
+        type: 'important',
+        createTime: '2023-11-12 14:20:30',
+      },
+      {
+        id: 3,
+        title: '系统升级维护通知',
+        content:
+          '系统将于2023年11月20日凌晨2:00-4:00进行升级维护，期间预约功能暂停使用，给您带来不便敬请谅解。',
+        type: 'urgent',
+        createTime: '2023-11-13 09:15:20',
+      },
+    ]
+  } catch (error) {
+    console.error('获取通知失败', error)
+    ElMessage.error('获取通知失败')
+  }
+}
+
+// 获取通知类型对应的标签类型
+const getNoticeTagType = (type) => {
+  const typeMap = {
+    normal: '',
+    important: 'warning',
+    urgent: 'danger',
+  }
+  return typeMap[type] || ''
+}
+
+// 组件挂载时获取通知
+onMounted(() => {
+  fetchNotices()
+})
 
 const currentDate = ref(new Date(new Date().getTime() + 24 * 60 * 60 * 1000)) // 默认选择第二天
 const isWithinBookingHours = computed(() => {
@@ -318,6 +378,36 @@ const confirmBooking = () => {
 
 <template>
   <div class="booking-container">
+    <!-- 通知公告区域 -->
+    <div class="notice-container" v-if="showNotices && notices.length > 0">
+      <div class="notice-header">
+        <h3>官方公告</h3>
+        <el-button type="text" @click="toggleNotices">
+          {{ showNotices ? '收起' : '展开' }}
+        </el-button>
+      </div>
+      <div class="notice-list" v-if="showNotices">
+        <el-carousel height="120px" indicator-position="none" :autoplay="true" arrow="always">
+          <el-carousel-item v-for="notice in notices" :key="notice.id">
+            <div class="notice-item">
+              <div class="notice-title">
+                <el-tag
+                  :type="getNoticeTagType(notice.type)"
+                  size="small"
+                  v-if="notice.type !== 'normal'"
+                >
+                  {{ notice.type === 'important' ? '重要' : '紧急' }}
+                </el-tag>
+                <span>{{ notice.title }}</span>
+              </div>
+              <div class="notice-content">{{ notice.content }}</div>
+              <div class="notice-time">{{ notice.createTime }}</div>
+            </div>
+          </el-carousel-item>
+        </el-carousel>
+      </div>
+    </div>
+
     <h2>场地预约</h2>
 
     <div class="booking-tools">
@@ -582,17 +672,66 @@ const confirmBooking = () => {
 <style lang="less" scoped>
 .booking-container {
   padding: 20px;
+}
 
-  :deep(.router-link-active),
-  :deep(.router-link-exact-active) {
-    &::after {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      height: 2px;
-      background-color: #ffd04b;
+/* 通知区域样式 */
+.notice-container {
+  background-color: #fff;
+  border-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
+  margin-bottom: 20px;
+  overflow: hidden;
+
+  .notice-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    border-bottom: 1px solid #ebeef5;
+
+    h3 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 500;
+      color: #333;
+    }
+  }
+
+  .notice-list {
+    padding: 10px;
+  }
+
+  .notice-item {
+    padding: 10px;
+    height: 100px;
+
+    .notice-title {
+      font-size: 16px;
+      font-weight: bold;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+
+      .el-tag {
+        margin-right: 8px;
+      }
+    }
+
+    .notice-content {
+      font-size: 14px;
+      color: #606266;
+      margin-bottom: 10px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+
+    .notice-time {
+      font-size: 12px;
+      color: #909399;
+      text-align: right;
     }
   }
 }

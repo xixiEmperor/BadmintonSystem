@@ -1,58 +1,3 @@
-<script>
-export default {
-  name: 'AdminDashboard',
-}
-</script>
-
-<template>
-  <div class="dashboard">
-    <!-- 欢迎信息 -->
-    <div class="welcome">
-      <h2>
-        您好，{{ adminName }}，这是您第 {{ loginCount }} 次登录，上次登录时间：{{ lastLoginTime }}
-      </h2>
-    </div>
-
-    <!-- 内容区 -->
-    <div class="content">
-      <!-- 待办事项区域 -->
-      <div class="todo-section">
-        <el-card class="box-card">
-          <template #header>
-            <div class="card-header">
-              <h3>待办事项</h3>
-            </div>
-          </template>
-          <div class="todo-content">
-            <el-alert title="场地预定审核" type="info" :closable="false" show-icon>
-              <template #default>
-                您有 <span class="todo-count">{{ pendingBookings }}</span> 条未审核的场地预定信息
-              </template>
-            </el-alert>
-            <div class="action-btn">
-              <el-button type="primary" @click="goToReview">去审核</el-button>
-            </div>
-          </div>
-        </el-card>
-      </div>
-
-      <!-- 统计图表区域 -->
-      <div class="stats-section">
-        <el-card class="box-card">
-          <template #header>
-            <div class="card-header">
-              <h3>后台统计</h3>
-            </div>
-          </template>
-          <div class="chart-container" ref="chartContainer">
-            <div id="statsChart" class="chart"></div>
-          </div>
-        </el-card>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
@@ -70,6 +15,7 @@ const pendingBookings = ref(5)
 
 // 图表相关
 let chart = null
+let courtChart = null
 const chartContainer = ref(null)
 
 // 跳转到审核页面
@@ -132,16 +78,81 @@ const initChart = () => {
   chart.setOption(option)
 }
 
+// 初始化场地预定次数统计图表
+const initCourtStatsChart = () => {
+  if (courtChart) {
+    courtChart.dispose()
+  }
+
+  courtChart = echarts.init(document.getElementById('courtStatsChart'))
+
+  const option = {
+    title: {
+      text: '各场地预定次数',
+    },
+    tooltip: {
+      trigger: 'item',
+      formatter: '{a} <br/>{b}: {c} ({d}%)',
+    },
+    legend: {
+      orient: 'vertical',
+      right: 10,
+      top: 'center',
+      data: ['1号场地', '2号场地', '3号场地', '4号场地', '5号场地'],
+    },
+    series: [
+      {
+        name: '预定次数',
+        type: 'pie',
+        radius: ['50%', '70%'],
+        avoidLabelOverlap: false,
+        itemStyle: {
+          borderRadius: 10,
+          borderColor: '#fff',
+          borderWidth: 2,
+        },
+        label: {
+          show: false,
+          position: 'center',
+        },
+        emphasis: {
+          label: {
+            show: true,
+            fontSize: 16,
+            fontWeight: 'bold',
+          },
+        },
+        labelLine: {
+          show: false,
+        },
+        data: [
+          { value: 45, name: '1号场地' },
+          { value: 38, name: '2号场地' },
+          { value: 32, name: '3号场地' },
+          { value: 28, name: '4号场地' },
+          { value: 22, name: '5号场地' },
+        ],
+      },
+    ],
+  }
+
+  courtChart.setOption(option)
+}
+
 // 图表自适应
 const resizeChart = () => {
   if (chart) {
     chart.resize()
+  }
+  if (courtChart) {
+    courtChart.resize()
   }
 }
 
 onMounted(() => {
   // 初始化图表
   initChart()
+  initCourtStatsChart()
 
   // 窗口大小变化时，重新调整图表大小
   window.addEventListener('resize', resizeChart)
@@ -156,16 +167,83 @@ onUnmounted(() => {
     chart.dispose()
     chart = null
   }
+  if (courtChart) {
+    courtChart.dispose()
+    courtChart = null
+  }
 })
 </script>
+
+<template>
+  <div class="dashboard">
+    <!-- 欢迎信息 -->
+    <div class="welcome">
+      <h2 class="welcome-text">
+        您好，{{ adminName }}，这是您第 {{ loginCount }} 次登录，上次登录时间：{{ lastLoginTime }}
+      </h2>
+    </div>
+
+    <!-- 内容区 -->
+    <div class="content">
+      <!-- 待办事项区域 -->
+      <div class="todo-section">
+        <el-card class="box-card">
+          <template #header>
+            <div class="card-header">
+              <h3>待办事项</h3>
+            </div>
+          </template>
+          <div class="todo-content">
+            <el-alert title="场地预定审核" type="info" :closable="false" show-icon>
+              <template #default>
+                您有 <span class="todo-count">{{ pendingBookings }}</span> 条未审核的场地预定信息
+              </template>
+            </el-alert>
+            <div class="action-btn">
+              <el-button type="primary" @click="goToReview">去审核</el-button>
+            </div>
+          </div>
+        </el-card>
+      </div>
+
+      <!-- 统计图表区域 -->
+      <div class="stats-section">
+        <el-card class="box-card">
+          <template #header>
+            <div class="card-header">
+              <h3>后台统计</h3>
+            </div>
+          </template>
+          <div class="chart-container" ref="chartContainer">
+            <div id="statsChart" class="chart"></div>
+          </div>
+        </el-card>
+      </div>
+    </div>
+
+    <!-- 场地预定次数统计 -->
+    <div class="court-stats">
+      <el-card class="box-card">
+        <template #header>
+          <div class="card-header">
+            <h3>场地预定次数统计</h3>
+          </div>
+        </template>
+        <div class="court-chart-container">
+          <div id="courtStatsChart" class="chart"></div>
+        </div>
+      </el-card>
+    </div>
+  </div>
+</template>
 
 <style lang="less" scoped>
 .dashboard {
   .welcome {
     margin-bottom: 20px;
 
-    h2 {
-      font-size: 20px;
+    .welcome-text {
+      font-size: 16px;
       font-weight: 500;
       color: #333;
     }
@@ -174,6 +252,7 @@ onUnmounted(() => {
   .content {
     display: flex;
     margin: 0 -10px;
+    margin-bottom: 20px;
 
     .todo-section {
       width: 25%;
@@ -186,6 +265,7 @@ onUnmounted(() => {
     }
 
     .box-card {
+      height: 460px;
       margin-bottom: 20px;
 
       .card-header {
@@ -216,6 +296,34 @@ onUnmounted(() => {
     }
 
     .chart-container {
+      width: 100%;
+
+      .chart {
+        height: 400px;
+        width: 100%;
+      }
+    }
+  }
+
+  .court-stats {
+    .box-card {
+      margin-bottom: 20px;
+
+      .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+
+        h3 {
+          margin: 0;
+          font-size: 16px;
+          font-weight: 500;
+          color: #333;
+        }
+      }
+    }
+
+    .court-chart-container {
       width: 100%;
 
       .chart {

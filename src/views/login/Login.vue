@@ -15,7 +15,6 @@ const isRegister = ref(false) // 默认显示登录页面
 const formModel = ref({
   username: '',
   password: '',
-  repassword: '',
   email: '', // 新增邮箱字段
 })
 const rules = {
@@ -25,7 +24,7 @@ const rules = {
   ],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
-    { pattern: /^\S{6,15}$/, message: '请输入6-15位非空密码', trigger: 'blur' },
+    { pattern: /^\S{4,15}$/, message: '请输入4-15位非空密码', trigger: 'blur' },
   ],
   repassword: [
     { required: true, message: '请再次输入密码', trigger: 'blur' },
@@ -63,7 +62,7 @@ const register = async () => {
   // 模拟注册服务，实际项目中应调用后端API
   // 在实际项目中，这里应该调用API将用户信息发送到服务器
   const res = await authRegisterService(formModel.value)
-  if (res.code === 200) {
+  if (res.code === 0) {
     ElMessage.success('注册成功')
     isRegister.value = false
   } else {
@@ -79,7 +78,7 @@ const login = async () => {
   // 模拟登录服务，实际项目中应调用后端API验证用户名和密码
   // 这里简单实现，实际项目中应该从服务器获取用户信息和token
   const res = await authLoginService(formModel.value)
-  if (res.code === 200) {
+  if (res.code === 0) {
     ElMessage.success('登录成功')
     localStorage.setItem('token', res.data.token)
     router.push('/')
