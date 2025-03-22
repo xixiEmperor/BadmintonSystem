@@ -5,9 +5,11 @@ import request from '@/utils/request'
  * @returns {Promise<Object>} 用户个人信息
  */
 export const getUserInfoService = (token) => {
-  return request.get('/api/user/info', {
-    params: {
-      token,
+  return request({
+    url: '/api/user/info',
+    method: 'get',
+    headers: {
+      Authorization: `Bearer ${token}`,
     },
   })
 }

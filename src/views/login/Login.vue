@@ -26,7 +26,7 @@ const rules = {
   ],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
-    { pattern: /^\S{4,15}$/, message: '请输入4-15位非空密码', trigger: 'blur' },
+    { pattern: /^\S{6,15}$/, message: '请输入6-15位非空密码', trigger: 'blur' },
   ],
   repassword: [
     { required: true, message: '请再次输入密码', trigger: 'blur' },
@@ -77,25 +77,31 @@ const register = async () => {
 const login = async () => {
   await form.value.validate()
 
-  // 模拟登录服务，实际项目中应调用后端API验证用户名和密码
-  // 这里简单实现，实际项目中应该从服务器获取用户信息和token
-  const res = await authLoginService(formModel.value)
-  if (res.data.token) {
-    ElMessage.success('登录成功')
-    localStorage.setItem('token', res.data.token)
-    userStore.setToken(res.data.token)
+  try {
+    // 调用登录服务
+    const res = await authLoginService(formModel.value)
+    console.log('登录响应:', res)
 
-    // 先获取用户信息
-    await userStore.getUserinfo()
+    if (res.data.token) {
+      ElMessage.success('登录成功')
+      userStore.setToken(res.data.token)
 
-    // 获取到用户信息后再判断角色和跳转
-    if (userStore.userinfo.role === 'ROLE_ADMIN') {
-      router.push('/admin')
+      // 先获取用户信息，注意添加await
+      await userStore.getUserinfo()
+      console.log('获取到的用户信息:', userStore.userinfo)
+
+      // 获取到用户信息后再判断角色和跳转
+      if (userStore.userinfo?.role === 'ROLE_ADMIN') {
+        router.push('/admin')
+      } else {
+        router.push('/')
+      }
     } else {
-      router.push('/')
+      ElMessage.error('登录失败：未获取到token')
     }
-  } else {
-    ElMessage.error('登录失败')
+  } catch (error) {
+    console.error('登录错误:', error)
+    ElMessage.error(`登录失败: ${error.response?.data?.message || error.message || '未知错误'}`)
   }
 }
 </script>
