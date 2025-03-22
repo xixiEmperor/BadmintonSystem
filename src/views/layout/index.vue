@@ -23,6 +23,7 @@ const userInfo = ref({
 
 // 检查登录状态
 const checkLogin = () => {
+  // TODO: 调用API验证用户登录状态
   const userInfoStr = localStorage.getItem('userInfo')
   if (userInfoStr) {
     try {
@@ -38,16 +39,19 @@ const checkLogin = () => {
 
 // 跳转到个人中心
 const goToUserCenter = () => {
-  router.push('/user-center')
+  const routeUrl = router.resolve('/user-center')
+  window.open(routeUrl.href, '_blank')
 }
 
 // 跳转到登录页面
 const goToLogin = () => {
-  router.push('/login')
+  const routeUrl = router.resolve('/login')
+  window.open(routeUrl.href, '_blank')
 }
 
 // 退出登录
 const logout = () => {
+  // TODO: 调用API进行退出登录
   localStorage.removeItem('userInfo')
   isLogin.value = false
   userInfo.value = {

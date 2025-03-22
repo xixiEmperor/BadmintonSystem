@@ -10,10 +10,10 @@ const instance = axios.create({
   },
 })
 
-// 请求拦截器
-instance.interceptors.request.use(
+// axios请求拦截器
+axios.interceptors.request.use(
   (config) => {
-    // 从localStorage获取token
+    // 添加token等操作
     const token = localStorage.getItem('token')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
@@ -21,77 +21,26 @@ instance.interceptors.request.use(
     return config
   },
   (error) => {
-    console.error('请求错误', error)
     return Promise.reject(error)
   },
 )
 
-// 响应拦截器
-instance.interceptors.response.use(
+// axios响应拦截器
+axios.interceptors.response.use(
   (response) => {
-    const res = response.data
-
-    // 如果返回的状态码不是200，说明接口请求有误
-    if (res.code !== 200) {
-      ElMessage({
-        message: res.message || '请求失败',
-        type: 'error',
-        duration: 3000,
-      })
-
-      // 如果返回401，说明token已经过期，需要重新登录
-      if (res.code === 401) {
-        // 清除本地token
-        localStorage.removeItem('token')
-        // 重定向到登录页
-        setTimeout(() => {
-          window.location.href = '/login'
-        }, 1500)
-      }
-
-      return Promise.reject(new Error(res.message || '请求失败'))
+    // 这里需要判断code值，而不是HTTP状态码
+    if (response.data.code === 0) {
+      // 业务成功的情况
+      return response.data
     } else {
-      return res.data
+      // 业务失败的情况，虽然HTTP状态是200，但业务状态是失败
+      ElMessage.error(response.data.message || '请求失败')
+      return Promise.reject(response.data)
     }
   },
   (error) => {
-    console.error('响应错误', error)
-    let message = '网络错误，请稍后重试'
-
-    if (error.response) {
-      switch (error.response.status) {
-        case 400:
-          message = '请求错误'
-          break
-        case 401:
-          message = '未授权，请登录'
-          // 清除本地token
-          localStorage.removeItem('token')
-          // 重定向到登录页
-          setTimeout(() => {
-            window.location.href = '/login'
-          }, 1500)
-          break
-        case 403:
-          message = '拒绝访问'
-          break
-        case 404:
-          message = '请求地址出错'
-          break
-        case 500:
-          message = '服务器内部错误'
-          break
-        default:
-          message = `连接错误${error.response.status}`
-      }
-    }
-
-    ElMessage({
-      message: message,
-      type: 'error',
-      duration: 3000,
-    })
-
+    // 这里处理HTTP层面的错误
+    ElMessage.error('网络错误，请稍后重试')
     return Promise.reject(error)
   },
 )

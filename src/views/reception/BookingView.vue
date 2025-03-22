@@ -14,7 +14,7 @@ const toggleNotices = () => {
 // 获取通知公告
 const fetchNotices = async () => {
   try {
-    // 实际项目中应调用API获取通知
+    // TODO: 调用API获取通知列表
     // 这里使用模拟数据
     notices.value = [
       {
@@ -358,6 +358,7 @@ const backToInfo = () => {
 
 // 确认预约
 const confirmBooking = () => {
+  // TODO: 调用API提交预约信息到后端
   // 更新场地预约状态
   const courtIndex = courts.value.findIndex((c) => c.id === selectedCourt.value.id)
   if (courtIndex !== -1) {
@@ -379,7 +380,7 @@ const confirmBooking = () => {
 <template>
   <div class="booking-container">
     <!-- 通知公告区域 -->
-    <div class="notice-container" v-if="showNotices && notices.length > 0">
+    <div class="notice-container">
       <div class="notice-header">
         <h3>官方公告</h3>
         <el-button type="text" @click="toggleNotices">

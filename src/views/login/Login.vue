@@ -6,11 +6,9 @@ export default {
 <script setup>
 import { User, Lock, Message } from '@element-plus/icons-vue'
 import { ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { authRegisterService, authLoginService } from '@/api/auth'
 
-const router = useRouter()
 const isRegister = ref(false) // 默认显示登录页面
 const formModel = ref({
   username: '',
@@ -81,7 +79,8 @@ const login = async () => {
   if (res.code === 0) {
     ElMessage.success('登录成功')
     localStorage.setItem('token', res.data.token)
-    router.push('/')
+    // 跳转回首页，使用当前标签页
+    window.location.href = '/'
   } else {
     ElMessage.error('登录失败')
   }

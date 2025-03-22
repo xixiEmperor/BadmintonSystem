@@ -84,7 +84,11 @@ const logout = () => {
   localStorage.removeItem('userInfo')
   localStorage.removeItem('token')
   ElMessage.success('退出登录成功')
-  router.push('/login')
+  // 使用新标签页打开登录页
+  const routeUrl = router.resolve('/login')
+  window.open(routeUrl.href, '_blank')
+  // 关闭当前页面
+  window.close()
 }
 </script>
 

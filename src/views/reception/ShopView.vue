@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 
 const products = ref([
   {
@@ -52,6 +52,11 @@ const products = ref([
   },
 ])
 
+// 获取商品列表
+const fetchProducts = () => {
+  // TODO: 调用API从后端获取商品列表
+}
+
 const categories = ref(['全部', '羽毛球拍', '羽毛球', '配件', '服装鞋帽'])
 
 const activeCategory = ref('全部')
@@ -64,6 +69,11 @@ const filteredProducts = computed(() => {
 function changeCategory(category) {
   activeCategory.value = category
 }
+
+// 组件挂载时获取商品数据
+onMounted(() => {
+  fetchProducts()
+})
 </script>
 
 <template>

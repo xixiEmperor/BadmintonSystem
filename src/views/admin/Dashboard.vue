@@ -10,8 +10,12 @@ const adminName = ref('管理员')
 const loginCount = ref(42)
 const lastLoginTime = ref('2023-11-08 15:30:45')
 
+// TODO: 调用API获取管理员信息
+
 // 待审核预定数量(模拟数据)
 const pendingBookings = ref(5)
+
+// TODO: 调用API获取待审核预定数量
 
 // 图表相关
 let chart = null
@@ -31,6 +35,7 @@ const initChart = () => {
 
   chart = echarts.init(document.getElementById('statsChart'))
 
+  // TODO: 调用API获取系统数据统计信息
   const option = {
     title: {
       text: '系统数据统计',
@@ -86,6 +91,7 @@ const initCourtStatsChart = () => {
 
   courtChart = echarts.init(document.getElementById('courtStatsChart'))
 
+  // TODO: 调用API获取场地预定次数统计数据
   const option = {
     title: {
       text: '各场地预定次数',
@@ -98,7 +104,14 @@ const initCourtStatsChart = () => {
       orient: 'vertical',
       right: 10,
       top: 'center',
-      data: ['1号场地', '2号场地', '3号场地', '4号场地', '5号场地'],
+      data: [
+        '羽毛球场1号',
+        '羽毛球场2号',
+        '羽毛球场3号',
+        '羽毛球场4号',
+        '羽毛球场5号',
+        '羽毛球场6号',
+      ],
     },
     series: [
       {
@@ -126,11 +139,12 @@ const initCourtStatsChart = () => {
           show: false,
         },
         data: [
-          { value: 45, name: '1号场地' },
-          { value: 38, name: '2号场地' },
-          { value: 32, name: '3号场地' },
-          { value: 28, name: '4号场地' },
-          { value: 22, name: '5号场地' },
+          { value: 45, name: '羽毛球场1号' },
+          { value: 38, name: '羽毛球场2号' },
+          { value: 32, name: '羽毛球场3号' },
+          { value: 28, name: '羽毛球场4号' },
+          { value: 22, name: '羽毛球场5号' },
+          { value: 18, name: '羽毛球场6号' },
         ],
       },
     ],

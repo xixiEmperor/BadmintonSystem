@@ -9,36 +9,43 @@ const router = createRouter({
       component: () => import('@/views/layout/index.vue'),
       // 重定向
       redirect: '/home',
+      meta: { title: '武汉理工大学南湖校区羽毛球场预定前台' },
       // 二级路由
       children: [
         {
           path: '/home',
           component: () => import('@/views/reception/HomeView.vue'),
+          meta: { title: '武汉理工大学南湖校区羽毛球场预定前台' },
         },
         {
           path: '/booking',
           component: () => import('@/views/reception/BookingView.vue'),
+          meta: { title: '武汉理工大学南湖校区羽毛球场预定前台' },
         },
         {
           path: '/shop',
           component: () => import('@/views/reception/ShopView.vue'),
+          meta: { title: '武汉理工大学南湖校区羽毛球场预定前台' },
         },
         {
           path: '/forum',
           component: () => import('@/views/forum/ForumView.vue'),
+          meta: { title: '武汉理工大学南湖校区羽毛球场预定前台' },
         },
         {
           path: '/user-center',
           component: () => import('@/views/reception/UserCenter.vue'),
-          meta: { requiresAuth: true }, // 需要登录才能访问
+          meta: { requiresAuth: true, title: '武汉理工大学南湖校区羽毛球场预定前台' }, // 需要登录才能访问
         },
         {
           path: '/publish-post',
           component: () => import('@/views/forum/PublishPost.vue'),
+          meta: { title: '武汉理工大学南湖校区羽毛球场预定前台' },
         },
         {
           path: '/post/:id',
           component: () => import('@/views/forum/PostDetail.vue'),
+          meta: { title: '武汉理工大学南湖校区羽毛球场预定前台' },
         },
       ],
     },
@@ -48,33 +55,40 @@ const router = createRouter({
       component: () => import('@/views/admin/layout/AdminLayout.vue'),
       // meta: { requiresAdmin: true }, // 需要管理员权限
       redirect: '/admin/dashboard',
+      meta: { title: '预订系统后台' },
       children: [
         {
           path: 'dashboard',
           component: () => import('@/views/admin/DashBoard.vue'),
-          meta: { title: '首页' },
+          meta: { title: '预订系统后台' },
         },
         {
           path: 'booking-review',
           component: () => import('@/views/admin/BookingReview.vue'),
-          meta: { title: '预定审核' },
+          meta: { title: '预订系统后台' },
         },
         {
           path: 'notice',
           component: () => import('@/views/admin/Notice.vue'),
-          meta: { title: '通知' },
+          meta: { title: '预订系统后台' },
         },
       ],
     },
     {
       path: '/login',
       component: () => import('@/views/login/Login.vue'),
+      meta: { title: '登录/注册' },
     },
   ],
 })
 
 // 全局前置守卫，检查用户是否已登录
 router.beforeEach((to, from, next) => {
+  // 设置页面标题
+  if (to.meta.title) {
+    document.title = to.meta.title
+  }
+
   // 判断路由是否需要登录
   if (to.meta.requiresAuth) {
     // 从 localStorage 获取用户信息

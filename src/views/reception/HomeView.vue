@@ -5,15 +5,18 @@ import { Calendar, User, ChatLineRound } from '@element-plus/icons-vue'
 const router = useRouter()
 
 const goToBooking = () => {
-  router.push('/booking')
+  const routeUrl = router.resolve('/booking')
+  window.open(routeUrl.href, '_blank')
 }
 
 const goToShop = () => {
-  router.push('/shop')
+  const routeUrl = router.resolve('/shop')
+  window.open(routeUrl.href, '_blank')
 }
 
 const goToForum = () => {
-  router.push('/forum')
+  const routeUrl = router.resolve('/forum')
+  window.open(routeUrl.href, '_blank')
 }
 </script>
 

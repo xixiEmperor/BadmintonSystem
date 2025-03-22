@@ -66,6 +66,7 @@ export default {
           layout="total, sizes, prev, pager, next, jumper"
           :total="total"
           :page-size="pageSize"
+          :page-sizes="[5, 8, 10, 15]"
           :current-page="currentPage"
           @size-change="handleSizeChange"
           @current-change="handleCurrentChange"
@@ -128,7 +129,7 @@ const loading = ref(false)
 
 // 分页相关
 const currentPage = ref(1)
-const pageSize = ref(10)
+const pageSize = ref(5)
 const total = ref(0)
 
 // 通知列表数据 (模拟数据)
@@ -192,7 +193,7 @@ const getTypeText = (type) => {
 const submitForm = () => {
   noticeFormRef.value.validate((valid) => {
     if (valid) {
-      // 这里应该调用接口发布通知
+      // TODO: 调用API发布通知
       // 模拟发布成功
       const newNotice = {
         id: noticeList.value.length + 1,
@@ -235,7 +236,7 @@ const handleEdit = (row) => {
 const updateNotice = () => {
   editFormRef.value.validate((valid) => {
     if (valid) {
-      // 这里应该调用接口更新通知
+      // TODO: 调用API更新通知
       // 模拟更新成功
       const index = noticeList.value.findIndex((item) => item.id === editForm.id)
       if (index !== -1) {
@@ -266,7 +267,7 @@ const handleDelete = (row) => {
     type: 'warning',
   })
     .then(() => {
-      // 这里应该调用接口删除通知
+      // TODO: 调用API删除通知
       // 模拟删除成功
       const index = noticeList.value.findIndex((item) => item.id === row.id)
       if (index !== -1) {
@@ -302,7 +303,9 @@ const handleCurrentChange = (page) => {
 
 // 初始化
 onMounted(() => {
-  // 这里可以调用接口获取通知列表
+  // TODO: 调用API获取通知列表
+  // 初始化通知总数
+  total.value = noticeList.value.length
 })
 </script>
 

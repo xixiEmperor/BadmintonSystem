@@ -47,6 +47,7 @@ const publishPost = () => {
     return
   }
 
+  // TODO: 调用API发布帖子
   // 模拟发布成功
   ElMessage.success('发布成功')
 

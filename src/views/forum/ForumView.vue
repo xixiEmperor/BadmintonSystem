@@ -22,9 +22,10 @@ const searchKeyword = ref('')
 
 // 分页相关
 const currentPage = ref(1)
-const pageSize = ref(10)
+const pageSize = ref(5)
 const total = ref(50)
 
+// TODO: 调用API获取帖子列表数据
 const topics = ref([
   {
     id: 1,
@@ -225,17 +226,21 @@ const navigateToPublish = () => {
   if (!userInfoStr) {
     // 未登录，跳转到登录页面
     ElMessage.warning('请先登录后再发布文章')
-    router.push('/login')
+    const routeUrl = router.resolve('/login')
+    window.open(routeUrl.href, '_blank')
     return
   }
 
-  // 已登录，跳转到发布页面
-  router.push('/publish-post')
+  // 已登录，在新标签页跳转到发布页面
+  const routeUrl = router.resolve('/publish-post')
+  window.open(routeUrl.href, '_blank')
 }
 
 // 跳转到文章详情
 const navigateToDetail = (postId) => {
-  router.push(`/post/${postId}`)
+  // 在新标签页打开
+  const routeUrl = router.resolve(`/post/${postId}`)
+  window.open(routeUrl.href, '_blank')
 }
 
 // 搜索功能

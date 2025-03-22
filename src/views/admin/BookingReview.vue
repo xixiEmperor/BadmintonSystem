@@ -10,7 +10,7 @@ const filterForm = reactive({
 
 // 分页相关
 const currentPage = ref(1)
-const pageSize = ref(10)
+const pageSize = ref(5)
 const total = ref(0)
 
 // 加载状态
@@ -157,7 +157,7 @@ const handleCancel = (row) => {
     },
   )
     .then(() => {
-      // 这里应该调用接口进行取消操作
+      // TODO: 调用API取消预定
       // 模拟取消成功
       const index = allBookingList.value.findIndex((item) => item.id === row.id)
       if (index !== -1) {
@@ -230,6 +230,7 @@ const timeOptions = [
 
 // 初始化
 onMounted(() => {
+  // TODO: 调用API获取预定列表
   // 设置初始总数
   total.value = allBookingList.value.length
 })
@@ -246,6 +247,8 @@ onMounted(() => {
           <el-select
             v-model="filterForm.courtId"
             placeholder="场地号"
+            size="large"
+            style="width: 120px"
             clearable
             @change="handleFilter"
           >
@@ -318,6 +321,7 @@ onMounted(() => {
           layout="total, sizes, prev, pager, next, jumper"
           :total="filteredTotal"
           :page-size="pageSize"
+          :page-sizes="[5, 8, 10, 15]"
           :current-page="currentPage"
           @size-change="handleSizeChange"
           @current-change="handleCurrentChange"
@@ -422,7 +426,7 @@ onMounted(() => {
   top: 50% !important;
   left: 50% !important;
   transform: translate(-50%, -50%) !important;
-  max-width: 90% !important;
+  max-width: 50% !important;
   margin: 0 !important;
 }
 </style>

@@ -68,6 +68,7 @@ const beforeAvatarUpload = (file) => {
 
 // 头像上传成功的钩子
 const handleAvatarSuccess = (response, uploadFile) => {
+  // TODO: 调用API将头像上传到后端服务器
   // 实际项目中，这里应该获取返回的图片URL
   if (uploadFile.raw) {
     avatarUrl.value = URL.createObjectURL(uploadFile.raw)
@@ -81,6 +82,7 @@ const saveUserInfo = async () => {
     loading.value = true
     await userFormRef.value.validate()
 
+    // TODO: 调用API将用户信息更新到后端
     // 获取当前存储的用户信息
     const storedUserInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
 
@@ -104,6 +106,7 @@ const saveUserInfo = async () => {
 
 // 初始化用户信息
 const initUserInfo = () => {
+  // TODO: 调用API从后端获取用户信息
   const storedUserInfo = localStorage.getItem('userInfo')
   if (storedUserInfo) {
     try {

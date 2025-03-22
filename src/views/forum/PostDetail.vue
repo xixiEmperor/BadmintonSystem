@@ -12,6 +12,7 @@ const goBack = () => {
   router.back()
 }
 
+// TODO: 调用API根据ID获取帖子详情
 // 文章详情数据
 const postDetail = ref({
   id: 1,
@@ -42,6 +43,7 @@ const postDetail = ref({
   `,
 })
 
+// TODO: 调用API获取帖子评论列表
 // 评论列表
 const comments = ref([
   {
@@ -173,28 +175,29 @@ const isCurrentUserComment = (author) => {
   return currentUser && currentUser.username === author
 }
 
-// 发布评论
+// 点赞评论
+const likeComment = (comment) => {
+  // TODO: 调用API更新评论点赞状态
+  if (comment.isLiked) {
+    comment.likes -= 1
+  } else {
+    comment.likes += 1
+  }
+  comment.isLiked = !comment.isLiked
+}
+
+// 发表评论
 const submitComment = () => {
-  if (!commentContent.value.trim()) {
+  if (commentContent.value.trim() === '') {
     ElMessage.warning('评论内容不能为空')
     return
   }
 
-  // 获取用户信息，判断是否登录
-  const userInfoStr = localStorage.getItem('userInfo')
-  if (!userInfoStr) {
-    ElMessage.warning('请先登录后再评论')
-    router.push('/login')
-    return
-  }
-
-  const userInfo = JSON.parse(userInfoStr)
-
-  // 添加新评论
+  // TODO: 调用API提交评论
   const newComment = {
-    id: Date.now(),
-    author: userInfo.username || '匿名用户',
-    avatar: userInfo.avatar || '',
+    id: comments.value.length + 100, // 假设ID自增
+    author: '当前用户',
+    avatar: '',
     content: commentContent.value,
     publishTime: '刚刚',
     likes: 0,
@@ -202,27 +205,10 @@ const submitComment = () => {
   }
 
   comments.value.unshift(newComment)
-  commentCount.value += 1
   commentContent.value = ''
+  commentCount.value += 1
 
-  // TODO: 调用后端API提交评论
-  console.log('提交评论:', newComment)
-}
-
-// 切换点赞状态
-const toggleLike = (comment) => {
-  if (comment.isLiked) {
-    // 取消点赞
-    comment.likes -= 1
-    comment.isLiked = false
-  } else {
-    // 添加点赞
-    comment.likes += 1
-    comment.isLiked = true
-  }
-
-  // TODO: 调用后端API更新点赞状态
-  console.log('更新点赞状态:', comment.id, comment.isLiked)
+  ElMessage.success('评论发表成功')
 }
 
 // 删除评论
@@ -439,7 +425,7 @@ onMounted(() => {
               <div class="comment-actions">
                 <span
                   class="comment-like"
-                  @click="toggleLike(comment)"
+                  @click="likeComment(comment)"
                   :class="{ 'is-liked': comment.isLiked }"
                 >
                   <el-icon><CaretTop /></el-icon>
@@ -504,7 +490,7 @@ onMounted(() => {
                     <div class="reply-actions">
                       <span
                         class="reply-like"
-                        @click="toggleLike(reply)"
+                        @click="likeComment(reply)"
                         :class="{ 'is-liked': reply.isLiked }"
                       >
                         点赞 {{ reply.likes }}
