@@ -20,49 +20,50 @@ const inventory = {
 const products = ref([
   {
     id: 1,
-    name: 'YONEX羽毛球拍',
-    price: 599,
-    image: 'https://via.placeholder.com/200',
+    name: '天斧100ZZ古红色 4UG5 力量+速度+控制',
+    price: 1468,
+    image: 'https://img.alicdn.com/imgextra/i3/418340688/O1CN010eNZ8q1Gx9EQl2l6Y_!!418340688.jpg',
     category: '羽毛球拍',
     sales: 256,
   },
   {
     id: 2,
-    name: '李宁羽毛球拍',
-    price: 399,
-    image: 'https://via.placeholder.com/200',
+    name: '雷霆100 4U【送李宁羽线+手胶】',
+    price: 1353,
+    image:
+      'https://img.alicdn.com/imgextra/i2/2212018753248/O1CN01j4CnC31ZrdRkfmSXE_!!2212018753248.jpg',
     category: '羽毛球拍',
     sales: 199,
   },
   {
     id: 3,
-    name: '球友系列羽毛球',
-    price: 89,
-    image: 'https://via.placeholder.com/200',
+    name: '亚狮龙3号',
+    price: 175,
+    image: 'https://img.alicdn.com/imgextra/i4/4125027058/O1CN01aWa8Cv220cIBLvtV3_!!4125027058.jpg',
     category: '羽毛球',
     sales: 568,
   },
   {
     id: 4,
-    name: '专业比赛羽毛球',
-    price: 159,
-    image: 'https://via.placeholder.com/200',
+    name: 'YONEX尤尼克斯羽毛球AS05球12只装',
+    price: 199,
+    image: 'https://img.alicdn.com/imgextra/i4/2929073922/O1CN01kWNU5k1eqKPR1UZOh_!!2929073922.jpg',
     category: '羽毛球',
     sales: 305,
   },
   {
     id: 5,
-    name: '运动护腕',
-    price: 39,
-    image: 'https://via.placeholder.com/200',
+    name: '李宁护腕手腕tfcc羽毛球扭伤男女款',
+    price: 22,
+    image: 'https://img.alicdn.com/imgextra/i2/1867303559/O1CN01CXZ0XO1cA4cb9KMWJ_!!1867303559.jpg',
     category: '配件',
     sales: 423,
   },
   {
     id: 6,
-    name: '羽毛球鞋',
-    price: 499,
-    image: 'https://via.placeholder.com/200',
+    name: '尤尼克斯 AC994CR 羽毛球拍印花手胶',
+    price: 56,
+    image: 'https://img.alicdn.com/imgextra/i2/3696234826/O1CN01bceEQ21lWMNti39OP_!!3696234826.jpg',
     category: '服装鞋帽',
     sales: 189,
   },
@@ -198,7 +199,13 @@ onMounted(() => {
     <el-dialog v-model="buyDialogVisible" title="立即购买" width="500px" destroy-on-close>
       <div v-if="selectedProduct" class="buy-dialog-content">
         <div class="selected-product">
-          <el-image :src="selectedProduct.image" class="product-image" fit="cover"></el-image>
+          <el-image
+            :src="selectedProduct.image"
+            class="product-image"
+            fit="contain"
+            :preview-src-list="[selectedProduct.image]"
+            preview-teleported
+          ></el-image>
           <div class="product-details">
             <h3>{{ selectedProduct.name }}</h3>
             <div class="product-price">¥{{ selectedProduct.price }}</div>
@@ -294,6 +301,14 @@ h2 {
 .product-image {
   position: relative;
   margin-bottom: 10px;
+  height: 250px;
+  overflow: hidden;
+}
+
+.product-image .el-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .product-sales {
@@ -348,6 +363,8 @@ h2 {
   height: 100px;
   margin-right: 15px;
   border-radius: 4px;
+  overflow: hidden;
+  object-fit: contain;
 }
 
 .selected-product .product-details {

@@ -1,6 +1,13 @@
 <script setup>
 import { useRouter } from 'vue-router'
-import { Calendar, User, ChatLineRound } from '@element-plus/icons-vue'
+import {
+  Calendar,
+  User,
+  ChatLineRound,
+  Ticket,
+  ShoppingBag,
+  ChatDotRound,
+} from '@element-plus/icons-vue'
 
 const router = useRouter()
 
@@ -38,7 +45,7 @@ const goToForum = () => {
           </div>
         </template>
         <div class="card-content">
-          <el-image src="https://via.placeholder.com/150" class="card-image"></el-image>
+          <el-icon :size="80" color="#2b6fc2"><Ticket /></el-icon>
           <p>点击下方按钮快速预约羽毛球场地</p>
           <el-button type="primary" @click="goToBooking">立即预约</el-button>
         </div>
@@ -51,7 +58,7 @@ const goToForum = () => {
           </div>
         </template>
         <div class="card-content">
-          <el-image src="https://via.placeholder.com/150" class="card-image"></el-image>
+          <el-icon :size="80" color="#67c23a"><ShoppingBag /></el-icon>
           <p>查看热门羽毛球装备</p>
           <el-button type="success" @click="goToShop">去商城</el-button>
         </div>
@@ -64,7 +71,7 @@ const goToForum = () => {
           </div>
         </template>
         <div class="card-content">
-          <el-image src="https://via.placeholder.com/150" class="card-image"></el-image>
+          <el-icon :size="80" color="#e6a23c"><ChatDotRound /></el-icon>
           <p>加入羽毛球爱好者社区</p>
           <el-button type="warning" @click="goToForum">进入论坛</el-button>
         </div>
@@ -174,6 +181,10 @@ h2 {
     flex-direction: column;
     align-items: center;
     padding: 20px;
+
+    .el-icon {
+      margin-bottom: 15px;
+    }
   }
 
   .card-image {
