@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useUserStore } from '@/stores'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -6,7 +7,7 @@ const router = createRouter({
     {
       path: '/',
       // 页面懒加载
-      component: () => import('@/views/layout/index.vue'),
+      component: () => import('@/views/layout/LayOut.vue'),
       // 重定向
       redirect: '/home',
       meta: { title: '武汉理工大学南湖校区羽毛球场预定前台' },
@@ -78,6 +79,13 @@ const router = createRouter({
       path: '/login',
       component: () => import('@/views/login/Login.vue'),
       meta: { title: '登录/注册' },
+      children: [
+        {
+          path: 'forget-password',
+          component: () => import('@/views/login/ForgetPassword.vue'),
+          meta: { title: '找回密码' },
+        },
+      ],
     },
   ],
 })
@@ -90,10 +98,10 @@ router.beforeEach((to, from, next) => {
   }
 
   // 判断路由是否需要登录
+  const userStore = useUserStore()
   if (to.meta.requiresAuth) {
-    // 从 localStorage 获取用户信息
-    const userInfo = localStorage.getItem('userInfo')
-    if (userInfo) {
+    // 从 userStore 获取用户信息
+    if (userStore.token) {
       // 已登录，允许访问
       next()
     } else {
@@ -102,19 +110,11 @@ router.beforeEach((to, from, next) => {
     }
   } else if (to.meta.requiresAdmin) {
     // 判断是否为管理员
-    const userInfo = localStorage.getItem('userInfo')
-    if (userInfo) {
-      const user = JSON.parse(userInfo)
-      // 这里应该根据实际情况判断是否为管理员，暂时简化处理
-      if (user.isAdmin) {
-        next()
-      } else {
-        // 非管理员，跳转到首页
-        next('/')
-      }
+    if (userStore.userinfo.role === 'ROLE_ADMIN') {
+      next()
     } else {
-      // 未登录，跳转到登录页
-      next('/login')
+      // 非管理员，跳转到首页
+      next('/')
     }
   } else {
     // 不需要登录，直接放行

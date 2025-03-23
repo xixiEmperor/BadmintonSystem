@@ -1,6 +1,6 @@
 <script>
 export default {
-  name: 'LoginPage',
+  name: 'LoginView',
 }
 </script>
 <script setup>
@@ -104,10 +104,18 @@ const login = async () => {
     ElMessage.error(`登录失败: ${error.response?.data?.message || error.message || '未知错误'}`)
   }
 }
+
+// 修改忘记密码的跳转路径
+const goToForgetPassword = () => {
+  router.push('/login/forget-password')
+}
 </script>
 
 <template>
-  <el-row class="login-page">
+  <!-- 添加router-view用于显示子路由 -->
+  <router-view v-if="$route.path !== '/login'"></router-view>
+
+  <el-row class="login-page" v-if="$route.path === '/login'">
     <el-col :span="12" class="bg"></el-col>
     <el-col :span="6" :offset="3" class="form">
       <el-form
@@ -184,7 +192,9 @@ const login = async () => {
         <el-form-item class="flex">
           <div class="flex">
             <el-checkbox>记住我</el-checkbox>
-            <el-link type="primary" :underline="false">忘记密码？</el-link>
+            <el-link type="primary" :underline="false" @click="goToForgetPassword"
+              >忘记密码？</el-link
+            >
           </div>
         </el-form-item>
         <el-form-item>

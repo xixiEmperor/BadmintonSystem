@@ -1,8 +1,9 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
-import { User, Location, Iphone, Calendar, Avatar } from '@element-plus/icons-vue'
+import { User, Location, Iphone, Calendar } from '@element-plus/icons-vue'
+import { useUserStore } from '@/stores'
 
+const userStore = useUserStore()
 // 用户信息表单
 const userInfo = reactive({
   username: '',
@@ -71,8 +72,13 @@ const handleAvatarSuccess = (response, uploadFile) => {
   // TODO: 调用API将头像上传到后端服务器
   // 实际项目中，这里应该获取返回的图片URL
   if (uploadFile.raw) {
-    avatarUrl.value = URL.createObjectURL(uploadFile.raw)
-    userInfo.avatar = avatarUrl.value
+    // 将文件转换为 base64 格式，确保页面刷新后依然可见
+    const reader = new FileReader()
+    reader.readAsDataURL(uploadFile.raw)
+    reader.onload = () => {
+      avatarUrl.value = reader.result
+      userInfo.avatar = reader.result
+    }
   }
 }
 
@@ -83,8 +89,8 @@ const saveUserInfo = async () => {
     await userFormRef.value.validate()
 
     // TODO: 调用API将用户信息更新到后端
-    // 获取当前存储的用户信息
-    const storedUserInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+    // 从userStore获取当前存储的用户信息
+    const storedUserInfo = userStore.userinfo
 
     // 合并新旧信息
     const updatedUserInfo = {
@@ -92,8 +98,8 @@ const saveUserInfo = async () => {
       ...userInfo,
     }
 
-    // 保存到本地存储
-    localStorage.setItem('userInfo', JSON.stringify(updatedUserInfo))
+    // 保存到userStore
+    userStore.setUserinfo(updatedUserInfo)
 
     ElMessage.success('保存成功')
   } catch (error) {
@@ -107,10 +113,10 @@ const saveUserInfo = async () => {
 // 初始化用户信息
 const initUserInfo = () => {
   // TODO: 调用API从后端获取用户信息
-  const storedUserInfo = localStorage.getItem('userInfo')
+  const storedUserInfo = userStore.userinfo
   if (storedUserInfo) {
     try {
-      const parsedInfo = JSON.parse(storedUserInfo)
+      const parsedInfo = storedUserInfo
       // 填充表单
       Object.keys(userInfo).forEach((key) => {
         if (parsedInfo[key]) {
@@ -121,6 +127,9 @@ const initUserInfo = () => {
       // 设置头像URL
       if (parsedInfo.avatar) {
         avatarUrl.value = parsedInfo.avatar
+      } else {
+        // 没有头像时，不设置avatarUrl，会显示默认头像
+        avatarUrl.value = ''
       }
     } catch (e) {
       console.error('解析用户信息失败', e)
@@ -164,10 +173,7 @@ onMounted(() => {
             "
           >
             <img v-if="avatarUrl" :src="avatarUrl" class="avatar" />
-            <div v-else class="avatar-placeholder">
-              <el-icon><Avatar /></el-icon>
-              <span>点击上传头像</span>
-            </div>
+            <img v-else src="../../assets/default_avatar.png" class="avatar" alt="默认头像" />
           </el-upload>
         </el-form-item>
 
@@ -303,21 +309,6 @@ onMounted(() => {
 
     &:hover {
       border-color: #409eff;
-    }
-  }
-
-  .avatar-placeholder {
-    width: 150px;
-    height: 150px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    color: #8c939d;
-
-    .el-icon {
-      font-size: 40px;
-      margin-bottom: 10px;
     }
   }
 

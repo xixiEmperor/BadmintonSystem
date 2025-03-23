@@ -1,10 +1,11 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { useUserStore } from '@/stores'
+import { navigate } from '@/utils/router'
 
 const router = useRouter()
-
+const userStore = useUserStore()
 // 分类选项卡
 const tabs = ref([
   { name: 'all', label: '全部帖子' },
@@ -222,25 +223,21 @@ const updateTotal = () => {
 // 跳转到发布页面
 const navigateToPublish = () => {
   // 检查用户是否已登录
-  const userInfoStr = localStorage.getItem('userInfo')
-  if (!userInfoStr) {
+  if (!userStore.token) {
     // 未登录，跳转到登录页面
     ElMessage.warning('请先登录后再发布文章')
-    const routeUrl = router.resolve('/login')
-    window.open(routeUrl.href, '_blank')
+    navigate('/login')
     return
   }
 
   // 已登录，在新标签页跳转到发布页面
-  const routeUrl = router.resolve('/publish-post')
-  window.open(routeUrl.href, '_blank')
+  router.push('/publish-post')
 }
 
 // 跳转到文章详情
 const navigateToDetail = (postId) => {
   // 在新标签页打开
-  const routeUrl = router.resolve(`/post/${postId}`)
-  window.open(routeUrl.href, '_blank')
+  navigate(`/post/${postId}`)
 }
 
 // 搜索功能

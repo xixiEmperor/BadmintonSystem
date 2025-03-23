@@ -1,13 +1,14 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, ArrowDown } from '@element-plus/icons-vue'
 import AIChatDialog from '@/components/AiChatDialog.vue'
-import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores'
+import { useRouter } from 'vue-router'
+import { navigate } from '@/utils/router'
 
 // 路由
-const router = useRouter()
 const userStore = useUserStore()
+const router = useRouter()
 
 // AI助手对话框控制
 const showAIChat = ref(false)
@@ -18,19 +19,14 @@ const toggleAIChat = () => {
 
 // 用户相关
 const isLogin = ref(false)
-const userInfo = ref({
-  username: '',
-  avatar: '',
-})
+const userInfo = ref({})
+userInfo.value = userStore.userinfo
 
 // 检查登录状态
 const checkLogin = () => {
   // TODO: 调用API验证用户登录状态
-  const userInfoStr = localStorage.getItem('userInfo')
-  if (userInfoStr) {
+  if (userStore.token) {
     try {
-      const savedUserInfo = JSON.parse(userInfoStr)
-      userInfo.value = savedUserInfo
       isLogin.value = true
     } catch (e) {
       console.error('解析用户信息失败', e)
@@ -41,40 +37,39 @@ const checkLogin = () => {
 
 // 跳转到个人中心
 const goToUserCenter = () => {
-  const routeUrl = router.resolve('/user-center')
-  window.open(routeUrl.href, '_blank')
+  router.push('/user-center')
 }
 
 // 跳转到登录页面
 const goToLogin = () => {
-  const routeUrl = router.resolve('/login')
-  window.open(routeUrl.href, '_blank')
+  navigate('/login')
 }
 
 // 退出登录
 const logout = () => {
-  // 使用store的logout方法统一处理登出逻辑
-  userStore.logout()
-  isLogin.value = false
-  userInfo.value = {
-    username: '',
-    avatar: '',
-  }
-  // 如果当前在个人中心页面，退出登录后跳转到首页
-  if (router.currentRoute.value.path === '/user-center') {
-    router.push('/')
-  }
+  ElMessageBox.confirm('确定要退出登录吗？', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning',
+  }).then(() => {
+    // 使用store的logout方法统一处理登出逻辑
+    userStore.logout()
+    isLogin.value = false
+    userInfo.value = {
+      username: '',
+      avatar: '',
+    }
+    // 如果当前在个人中心页面，退出登录后跳转到首页
+    if (router.currentRoute.value.path === '/user-center') {
+      router.push('/')
+    }
+  })
 }
 
 // 组件挂载时检查登录状态
 onMounted(() => {
   checkLogin()
 })
-</script>
-<script>
-export default {
-  name: 'LayoutPage',
-}
 </script>
 
 <template>
@@ -98,14 +93,16 @@ export default {
             <div v-if="isLogin" class="user-info">
               <div class="user-avatar">
                 <img v-if="userInfo.avatar" :src="userInfo.avatar" alt="头像" />
-                <div v-else class="default-avatar">
-                  {{ userInfo.username.charAt(0).toUpperCase() }}
-                </div>
+                <img
+                  v-else
+                  src="https://tse1-mm.cn.bing.net/th/id/OIP-C.gaAkkFf8LStn-oc4l8iM0wAAAA?w=160&h=180&c=7&r=0&o=5&dpr=1.5&pid=1.7"
+                  alt="默认头像"
+                />
               </div>
               <span class="username">{{ userInfo.username }}</span>
-              <el-dropdown>
+              <el-dropdown trigger="click">
                 <span class="el-dropdown-link">
-                  <i class="el-icon-arrow-down"></i>
+                  <el-icon><ArrowDown /></el-icon>
                 </span>
                 <template #dropdown>
                   <el-dropdown-menu>
@@ -267,24 +264,23 @@ export default {
             height: 100%;
             object-fit: cover;
           }
-
-          .default-avatar {
-            width: 100%;
-            height: 100%;
-            background-color: #1e88e5;
-            color: #fff;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            font-weight: bold;
-          }
         }
 
         .username {
           color: #fff;
           font-size: 16px;
           margin-right: 5px;
+        }
+
+        .el-dropdown-link {
+          cursor: pointer;
+          color: #fff;
+          display: flex;
+          align-items: center;
+
+          &:hover {
+            color: #ffd04b;
+          }
         }
       }
 

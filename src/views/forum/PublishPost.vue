@@ -2,7 +2,6 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { QuillEditor } from '@vueup/vue-quill'
-import { ElMessage } from 'element-plus'
 import '@vueup/vue-quill/dist/vue-quill.snow.css'
 
 const router = useRouter()
@@ -37,7 +36,7 @@ const publishPost = () => {
     return
   }
 
-  if (!postContent.value.trim()) {
+  if (!postContent.value || postContent.value === '') {
     ElMessage.warning('请输入帖子内容')
     return
   }
