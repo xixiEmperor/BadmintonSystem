@@ -1,14 +1,21 @@
 <script setup>
-import { ref, onMounted } from 'vue'
-import { Plus, ArrowDown } from '@element-plus/icons-vue'
+import { ref, onMounted, computed } from 'vue'
+import { Plus, ArrowDown, User, ShoppingCart } from '@element-plus/icons-vue'
 import AIChatDialog from '@/components/AiChatDialog.vue'
-import { useUserStore } from '@/stores'
+import { useUserStore, useCartStore } from '@/stores'
 import { useRouter } from 'vue-router'
 import { navigate } from '@/utils/router'
+import { ElMessageBox } from 'element-plus'
 
 // 路由
 const userStore = useUserStore()
+const cartStore = useCartStore()
 const router = useRouter()
+
+// 获取购物车商品数量
+const cartItemCount = computed(() => {
+  return cartStore.totalItems()
+})
 
 // AI助手对话框控制
 const showAIChat = ref(false)
@@ -43,6 +50,11 @@ const goToUserCenter = () => {
 // 跳转到登录页面
 const goToLogin = () => {
   navigate('/login')
+}
+
+// 跳转到购物车页面
+const goToCart = () => {
+  router.push('/cart')
 }
 
 // 退出登录
@@ -84,9 +96,18 @@ onMounted(() => {
 
           <!-- 用户信息区域 -->
           <div class="user-area">
+            <!-- 购物车入口 -->
+            <el-button v-if="isLogin" type="text" class="cart-btn" @click="goToCart">
+              <el-badge :value="cartItemCount" :hidden="cartItemCount === 0">
+                <el-icon><ShoppingCart /></el-icon>
+              </el-badge>
+              <span>购物车</span>
+            </el-button>
+
             <!-- 个人中心入口 -->
             <el-button v-if="isLogin" type="text" class="user-center-btn" @click="goToUserCenter">
-              个人中心
+              <el-icon><User /></el-icon>
+              <span>个人中心</span>
             </el-button>
 
             <!-- 登录后显示用户信息 -->
@@ -239,10 +260,19 @@ onMounted(() => {
       display: flex;
       align-items: center;
 
+      .cart-btn,
       .user-center-btn {
         color: #fff;
         font-size: 16px;
         margin-right: 20px;
+        display: flex;
+        align-items: center;
+
+        .el-icon {
+          margin-right: 5px;
+          font-size: 18px;
+        }
+
         &:hover {
           color: #ffd04b;
         }

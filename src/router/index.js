@@ -29,6 +29,11 @@ const router = createRouter({
           meta: { title: '武汉理工大学南湖校区羽毛球场预定前台' },
         },
         {
+          path: '/cart',
+          component: () => import('@/views/reception/CartView.vue'),
+          meta: { requiresAuth: true, title: '购物车 - 武汉理工大学南湖校区羽毛球场预定前台' },
+        },
+        {
           path: '/forum',
           component: () => import('@/views/forum/ForumView.vue'),
           meta: { title: '武汉理工大学南湖校区羽毛球场预定前台' },

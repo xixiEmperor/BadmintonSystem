@@ -1,5 +1,9 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useCartStore } from '@/stores'
+import { ElMessage } from 'element-plus'
+
+const cartStore = useCartStore()
 
 const products = ref([
   {
@@ -70,6 +74,15 @@ function changeCategory(category) {
   activeCategory.value = category
 }
 
+// 加入购物车
+const addToCart = (product) => {
+  cartStore.addToCart(product)
+  ElMessage({
+    message: `已将 ${product.name} 加入购物车`,
+    type: 'success',
+  })
+}
+
 // 组件挂载时获取商品数据
 onMounted(() => {
   fetchProducts()
@@ -105,7 +118,9 @@ onMounted(() => {
               <div class="product-price">¥{{ product.price }}</div>
             </div>
             <div class="product-actions">
-              <el-button type="danger" size="small">加入购物车</el-button>
+              <el-button type="danger" size="small" @click="addToCart(product)"
+                >加入购物车</el-button
+              >
               <el-button type="warning" size="small">立即购买</el-button>
             </div>
           </el-card>
