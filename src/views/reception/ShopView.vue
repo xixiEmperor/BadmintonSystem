@@ -2,8 +2,20 @@
 import { ref, computed, onMounted } from 'vue'
 import { useCartStore } from '@/stores'
 import { ElMessage } from 'element-plus'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const cartStore = useCartStore()
+
+// 商品库存信息（模拟数据）
+const inventory = {
+  1: 50,
+  2: 35,
+  3: 100,
+  4: 80,
+  5: 200,
+  6: 30,
+}
 
 const products = ref([
   {
@@ -55,6 +67,58 @@ const products = ref([
     sales: 189,
   },
 ])
+
+// 立即购买弹窗控制
+const buyDialogVisible = ref(false)
+const selectedProduct = ref(null)
+const buyQuantity = ref(1)
+const userAddress = ref('')
+
+// 打开立即购买弹窗
+const openBuyDialog = (product) => {
+  selectedProduct.value = product
+  buyQuantity.value = 1
+  buyDialogVisible.value = true
+}
+
+// 增加购买数量
+const increaseBuyQuantity = () => {
+  if (buyQuantity.value < inventory[selectedProduct.value.id]) {
+    buyQuantity.value++
+  } else {
+    ElMessage.warning('已达到最大库存数量')
+  }
+}
+
+// 减少购买数量
+const decreaseBuyQuantity = () => {
+  if (buyQuantity.value > 1) {
+    buyQuantity.value--
+  }
+}
+
+// 直接购买商品
+const buyNow = () => {
+  if (!userAddress.value) {
+    ElMessage.warning('请填写收货地址')
+    return
+  }
+
+  // 创建订单对象
+  const orderInfo = {
+    product: selectedProduct.value,
+    quantity: buyQuantity.value,
+    address: userAddress.value,
+    totalAmount: selectedProduct.value.price * buyQuantity.value,
+  }
+
+  // 存储到localStorage以便结算页面使用
+  localStorage.setItem('checkout_order', JSON.stringify(orderInfo))
+
+  // 关闭弹窗并跳转到结算页面
+  buyDialogVisible.value = false
+  router.push('/checkout')
+}
 
 // 获取商品列表
 const fetchProducts = () => {
@@ -121,12 +185,64 @@ onMounted(() => {
               <el-button type="danger" size="small" @click="addToCart(product)"
                 >加入购物车</el-button
               >
-              <el-button type="warning" size="small">立即购买</el-button>
+              <el-button type="warning" size="small" @click="openBuyDialog(product)"
+                >立即购买</el-button
+              >
             </div>
           </el-card>
         </el-col>
       </el-row>
     </div>
+
+    <!-- 立即购买弹窗 -->
+    <el-dialog v-model="buyDialogVisible" title="立即购买" width="500px" destroy-on-close>
+      <div v-if="selectedProduct" class="buy-dialog-content">
+        <div class="selected-product">
+          <el-image :src="selectedProduct.image" class="product-image" fit="cover"></el-image>
+          <div class="product-details">
+            <h3>{{ selectedProduct.name }}</h3>
+            <div class="product-price">¥{{ selectedProduct.price }}</div>
+            <div class="product-stock">库存: {{ inventory[selectedProduct.id] }}件</div>
+          </div>
+        </div>
+
+        <div class="buy-quantity">
+          <span class="label">购买数量:</span>
+          <div class="quantity-control">
+            <el-button :disabled="buyQuantity <= 1" @click="decreaseBuyQuantity">-</el-button>
+            <span class="quantity">{{ buyQuantity }}</span>
+            <el-button
+              :disabled="buyQuantity >= inventory[selectedProduct.id]"
+              @click="increaseBuyQuantity"
+              >+</el-button
+            >
+          </div>
+        </div>
+
+        <div class="address-input">
+          <span class="label">收货地址:</span>
+          <el-input
+            v-model="userAddress"
+            type="textarea"
+            :rows="2"
+            placeholder="请输入详细收货地址"
+          >
+          </el-input>
+        </div>
+
+        <div class="total-price">
+          <span>总计:</span>
+          <span class="price">¥{{ (selectedProduct.price * buyQuantity).toFixed(2) }}</span>
+        </div>
+      </div>
+
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="buyDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="buyNow">立即结算</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -214,5 +330,89 @@ h2 {
   display: flex;
   justify-content: space-between;
   padding: 0 10px 10px;
+}
+
+.buy-dialog-content {
+  padding: 10px;
+}
+
+.selected-product {
+  display: flex;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.selected-product .product-image {
+  width: 100px;
+  height: 100px;
+  margin-right: 15px;
+  border-radius: 4px;
+}
+
+.selected-product .product-details {
+  flex: 1;
+}
+
+.selected-product h3 {
+  margin: 0 0 10px 0;
+  font-size: 18px;
+}
+
+.selected-product .product-price {
+  color: #f56c6c;
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.selected-product .product-stock {
+  color: #67c23a;
+  font-size: 14px;
+}
+
+.buy-quantity {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.label {
+  width: 100px;
+  font-weight: bold;
+}
+
+.quantity-control {
+  display: flex;
+  align-items: center;
+}
+
+.quantity-control .quantity {
+  margin: 0 10px;
+  min-width: 30px;
+  text-align: center;
+}
+
+.address-input {
+  display: flex;
+  margin-bottom: 20px;
+}
+
+.total-price {
+  text-align: right;
+  font-size: 16px;
+  font-weight: bold;
+  margin-top: 20px;
+}
+
+.total-price .price {
+  color: #f56c6c;
+  font-size: 20px;
+  margin-left: 10px;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
 }
 </style>

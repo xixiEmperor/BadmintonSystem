@@ -3,7 +3,9 @@ import { ref, computed } from 'vue'
 import { useCartStore } from '@/stores'
 import { Delete, Minus, Plus, Edit } from '@element-plus/icons-vue'
 import { ElMessageBox } from 'element-plus'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const cartStore = useCartStore()
 
 // 编辑模式
@@ -57,22 +59,24 @@ const totalPrice = computed(() => {
   return cartStore.totalPrice()
 })
 
-// 结算
-const checkout = () => {
+// 从购物车结算
+const checkoutFromCart = () => {
   if (cartStore.cartItems.length === 0) {
     ElMessageBox.alert('购物车是空的，请先添加商品！', '提示')
     return
   }
 
-  ElMessageBox.confirm('确认结算当前购物车商品吗？', '确认结算', {
-    confirmButtonText: '确认结算',
-    cancelButtonText: '取消',
-    type: 'info',
-  }).then(() => {
-    // TODO: 实现结算逻辑，跳转到支付页面等
-    ElMessageBox.alert('结算成功！', '提示')
-    cartStore.clearCart()
-  })
+  // 创建结算订单对象（多商品）
+  const orderInfo = {
+    products: cartStore.cartItems,
+    totalAmount: cartStore.totalPrice(),
+  }
+
+  // 存储到localStorage以便结算页面使用
+  localStorage.setItem('checkout_order', JSON.stringify(orderInfo))
+
+  // 跳转到结算页面
+  router.push('/checkout')
 }
 </script>
 
@@ -161,7 +165,7 @@ const checkout = () => {
           <span>总计:</span>
           <span class="total-price">¥{{ totalPrice.toFixed(2) }}</span>
         </div>
-        <el-button type="primary" size="large" @click="checkout" :disabled="isEditMode">
+        <el-button type="primary" size="large" @click="checkoutFromCart" :disabled="isEditMode">
           结算
         </el-button>
       </div>
