@@ -5,6 +5,7 @@ import request from '@/utils/request'
  * @returns {Promise<Array>} 场地列表
  */
 export function getCourts() {
+  // TODO: 将场地列表数据保存到Pinia store中
   return request.get('/courts')
 }
 
@@ -23,6 +24,7 @@ export function getCourtDetail(id) {
  * @returns {Promise<Array>} 场地预约状态
  */
 export function getCourtAvailability(date) {
+  // TODO: 考虑将场地可用状态保存到Pinia store中
   return request.get('/courts/availability', {
     params: { date },
   })
@@ -40,6 +42,7 @@ export function getCourtAvailability(date) {
  * @returns {Promise<Object>} 预约结果
  */
 export function createBooking(bookingData) {
+  // TODO: 创建成功后更新Pinia中的预约列表
   return request.post('/bookings', bookingData)
 }
 
@@ -52,6 +55,7 @@ export function createBooking(bookingData) {
  * @returns {Promise<Object>} 用户预约列表
  */
 export function getUserBookings(params = {}) {
+  // TODO: 将用户预约列表保存到Pinia store中
   return request.get('/bookings/user', {
     params: {
       status: params.status || 'all',
@@ -67,6 +71,7 @@ export function getUserBookings(params = {}) {
  * @returns {Promise<Object>} 取消结果
  */
 export function cancelBooking(id) {
+  // TODO: 取消成功后更新Pinia中的预约列表
   return request.post(`/bookings/${id}/cancel`)
 }
 
@@ -77,6 +82,7 @@ export function cancelBooking(id) {
  * @returns {Promise<Object>} 支付结果
  */
 export function payBooking(id, paymentMethod) {
+  // TODO: 支付成功后更新Pinia中的预约数据
   return request.post(`/bookings/${id}/pay`, {
     paymentMethod,
   })

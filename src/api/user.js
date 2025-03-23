@@ -5,6 +5,7 @@ import request from '@/utils/request'
  * @returns {Promise<Object>} 用户个人信息
  */
 export const getUserInfoService = (token) => {
+  // TODO: 将用户信息保存到Pinia store中
   return request({
     url: '/api/user/info',
     method: 'get',
@@ -26,6 +27,7 @@ export const getUserInfoService = (token) => {
  * @returns {Promise<Object>} 更新后的用户信息
  */
 export function updateUserProfile(profileData) {
+  // TODO: 更新成功后，更新Pinia store中的用户信息
   return request.put('/user/profile', profileData)
 }
 
@@ -35,6 +37,7 @@ export function updateUserProfile(profileData) {
  * @returns {Promise<Object>} 上传结果
  */
 export function uploadAvatar(formData) {
+  // TODO: 上传成功后，更新Pinia store中的用户头像信息
   return request.post('/user/avatar', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
@@ -62,6 +65,7 @@ export function changePassword(passwordData) {
  * @returns {Promise<Object>} 用户预约列表
  */
 export function getUserBookings(params = {}) {
+  // TODO: 考虑将预约记录保存到专门的Pinia store中
   return request.get('/user/bookings', {
     params: {
       status: params.status || 'all',
@@ -86,6 +90,7 @@ export function getBookingDetail(id) {
  * @returns {Promise<Object>} 取消结果
  */
 export function cancelBooking(id) {
+  // TODO: 取消成功后，更新Pinia store中的预约记录
   return request.post(`/user/bookings/${id}/cancel`)
 }
 
@@ -113,6 +118,7 @@ export function register(data) {
  * @returns {Promise}
  */
 export function login(data) {
+  // TODO: 登录成功后，保存token和用户信息到Pinia store中
   return request({
     url: '/user/login',
     method: 'post',

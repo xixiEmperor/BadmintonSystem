@@ -11,6 +11,7 @@ export const authRegisterService = (data) => {
 
 // 用户登录
 export const authLoginService = (data) => {
+  // TODO: 登录成功后，将token和用户信息保存到Pinia store中
   return request({
     url: '/api/auth/login',
     method: 'post',
