@@ -1,36 +1,117 @@
-# vue-badminton-manager
+# 羽毛球场馆管理系统
 
-This template should help get you started developing with Vue 3 in Vite.
+## 项目简介
 
-## Recommended IDE Setup
+羽毛球场馆管理系统是一个基于Vue 3开发的现代化Web应用，为羽毛球爱好者提供场地预约、商品购买、论坛交流等一站式服务，同时为场馆管理员提供便捷的场地及用户管理功能。
 
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+## 功能特性
 
-## Customize configuration
+- 用户认证
+  - 登录/注册
+  - 找回密码
+  - 个人信息管理
+- 场地预约
+  - 场地列表与详情查看
+  - 场地可用时间段查询
+  - 在线预约和支付
+  - 预约记录管理
+- 商城系统
+  - 商品分类浏览
+  - 购物车功能
+  - 订单管理
+  - 收货地址管理
+- 论坛交流
 
-See [Vite Configuration Reference](https://vite.dev/config/).
+  - 发布讨论帖
+  - 回复评论
+  - 热门话题
 
-## Project Setup
+- 个人中心
+  - 个人资料维护
+  - 预约记录查询
+  - 订单跟踪
+
+## 技术栈
+
+- 前端框架：Vue 3
+- 状态管理：Pinia
+- UI组件库：Element Plus
+- HTTP请求：Axios
+- 路由管理：Vue Router
+- 构建工具：Vite
+
+## 项目设置
+
+### 安装依赖
 
 ```sh
 pnpm install
 ```
 
-### Compile and Hot-Reload for Development
+### 开发环境运行
 
 ```sh
 pnpm dev
 ```
 
-### Compile and Minify for Production
+### 生产环境构建
 
 ```sh
-npm run build
+pnpm build
 ```
 
-### Lint with [ESLint](https://eslint.org/)
+### 代码检查
 
 ```sh
-npm run lint
+pnpm lint
 ```
-"# site-navigation" 
+
+## 项目结构
+
+```
+src/
+├── api/               # API请求模块
+├── assets/            # 静态资源
+├── components/        # 通用组件
+├── router/            # 路由配置
+├── stores/            # Pinia状态管理
+│   ├── modules/       # 状态管理模块
+├── utils/             # 工具函数
+├── views/             # 页面组件
+├── App.vue            # 根组件
+└── main.js            # 入口文件
+```
+
+## 开发指南
+
+### 状态管理
+
+项目使用Pinia进行状态管理，所有从后端获取的公共数据应存储在相应的store中：
+
+- `user.js` - 用户信息和认证
+- `booking.js` - 场地预约相关数据
+- `forum.js` - 论坛数据
+- `cart.js` - 购物车数据
+
+### API请求
+
+所有后端API请求都应通过`/src/api`目录下的服务模块进行，并确保请求结果适当地更新到Pinia存储中。
+
+### UI组件
+
+项目使用Element Plus作为UI组件库。在使用组件前，请先查阅[Element Plus官方文档](https://element-plus.org/)。
+
+## 接口文档
+
+项目的API接口文档包含以下几个部分：
+
+- 登录注册接口
+- 场地预约接口
+- 个人中心接口
+- 商城接口
+- 论坛接口
+- 后台管理接口
+- 通知接口
+
+详细接口说明请参考项目根目录下的相关接口文档md文件。
+"# site-navigation"

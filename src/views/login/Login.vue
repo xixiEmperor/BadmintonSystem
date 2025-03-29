@@ -64,11 +64,12 @@ const register = async () => {
   // 模拟注册服务，实际项目中应调用后端API
   // 在实际项目中，这里应该调用API将用户信息发送到服务器
   const res = await authRegisterService(formModel.value)
-  if (res.code === 0) {
+  console.log(res)
+  if (res.data.code === 0) {
     ElMessage.success('注册成功')
     isRegister.value = false
   } else {
-    ElMessage.error('注册失败')
+    ElMessage.error(res.data.message)
   }
   isRegister.value = false
 }
