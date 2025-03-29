@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { Plus, ArrowDown, User, ShoppingCart } from '@element-plus/icons-vue'
+import { Plus, ArrowDown, User, ShoppingCart, Calendar } from '@element-plus/icons-vue'
 import AIChatDialog from '@/components/AiChatDialog.vue'
 import { useUserStore, useCartStore } from '@/stores'
 import { useRouter } from 'vue-router'
@@ -57,6 +57,11 @@ const goToCart = () => {
   router.push('/cart')
 }
 
+// 跳转到预订记录页面
+const goToBookingHistory = () => {
+  router.push('/booking-history')
+}
+
 // 退出登录
 const logout = () => {
   ElMessageBox.confirm('确定要退出登录吗？', '提示', {
@@ -104,6 +109,17 @@ onMounted(() => {
               <span>购物车</span>
             </el-button>
 
+            <!-- 预订记录入口 -->
+            <el-button
+              v-if="isLogin"
+              type="text"
+              class="booking-history-btn"
+              @click="goToBookingHistory"
+            >
+              <el-icon><Calendar /></el-icon>
+              <span>预订记录</span>
+            </el-button>
+
             <!-- 个人中心入口 -->
             <el-button v-if="isLogin" type="text" class="user-center-btn" @click="goToUserCenter">
               <el-icon><User /></el-icon>
@@ -128,6 +144,7 @@ onMounted(() => {
                 <template #dropdown>
                   <el-dropdown-menu>
                     <el-dropdown-item @click="goToUserCenter">个人中心</el-dropdown-item>
+                    <el-dropdown-item @click="goToBookingHistory">预订记录</el-dropdown-item>
                     <el-dropdown-item @click="logout">退出登录</el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
@@ -261,6 +278,7 @@ onMounted(() => {
       align-items: center;
 
       .cart-btn,
+      .booking-history-btn,
       .user-center-btn {
         color: #fff;
         font-size: 16px;

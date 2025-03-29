@@ -15,27 +15,27 @@ const router = createRouter({
       children: [
         {
           path: '/home',
-          component: () => import('@/views/reception/HomeView.vue'),
+          component: () => import('@/views/home/HomeView.vue'),
           meta: { title: '武汉理工大学南湖校区羽毛球场预定前台' },
         },
         {
           path: '/booking',
-          component: () => import('@/views/reception/BookingView.vue'),
+          component: () => import('@/views/booking/BookingView.vue'),
           meta: { title: '武汉理工大学南湖校区羽毛球场预定前台' },
         },
         {
           path: '/shop',
-          component: () => import('@/views/reception/ShopView.vue'),
+          component: () => import('@/views/shop/ShopView.vue'),
           meta: { title: '武汉理工大学南湖校区羽毛球场预定前台' },
         },
         {
           path: '/cart',
-          component: () => import('@/views/reception/CartView.vue'),
+          component: () => import('@/views/shop/CartView.vue'),
           meta: { requiresAuth: true, title: '购物车 - 武汉理工大学南湖校区羽毛球场预定前台' },
         },
         {
           path: '/checkout',
-          component: () => import('@/views/reception/CheckoutView.vue'),
+          component: () => import('@/views/shop/CheckoutView.vue'),
           meta: { requiresAuth: true, title: '结算 - 武汉理工大学南湖校区羽毛球场预定前台' },
         },
         {
@@ -45,8 +45,13 @@ const router = createRouter({
         },
         {
           path: '/user-center',
-          component: () => import('@/views/reception/UserCenter.vue'),
+          component: () => import('@/views/userCenter/UserCenter.vue'),
           meta: { requiresAuth: true, title: '武汉理工大学南湖校区羽毛球场预定前台' }, // 需要登录才能访问
+        },
+        {
+          path: '/booking-history',
+          component: () => import('@/views/booking/BookingHistory.vue'),
+          meta: { requiresAuth: true, title: '预订记录 - 武汉理工大学南湖校区羽毛球场预定前台' },
         },
         {
           path: '/publish-post',
