@@ -22,6 +22,7 @@ const showAIChat = ref(false)
 
 const toggleAIChat = () => {
   showAIChat.value = !showAIChat.value
+  console.log('toggleAIChat 被调用，showAIChat.value:', showAIChat.value)
 }
 
 // 用户相关
@@ -204,6 +205,7 @@ onMounted(() => {
           circle
           :icon="Plus"
           class="ai-btn"
+          :class="{ 'ai-btn-active': showAIChat }"
           @click="toggleAIChat"
         ></el-button>
       </div>
@@ -409,5 +411,17 @@ onMounted(() => {
   width: 60px;
   height: 60px;
   font-size: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+  }
+
+  &.ai-btn-active {
+    background-color: #67c23a;
+    transform: rotate(45deg);
+  }
 }
 </style>
