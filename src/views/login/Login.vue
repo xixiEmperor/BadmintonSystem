@@ -80,11 +80,12 @@ const login = async () => {
   try {
     // 调用登录服务
     const res = await authLoginService(formModel.value)
+    console.log(res)
 
     if (res.data.code === 0) {
       ElMessage.success('登录成功')
-      userStore.setToken(res.data.token)
-      localStorage.setItem('token', res.data.token)
+      userStore.setToken(res.data.data.token)
+      localStorage.setItem('token', res.data.data.token)
 
       // 先获取用户信息，注意添加await
       await userStore.getUserinfo()
