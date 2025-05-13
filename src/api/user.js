@@ -7,7 +7,7 @@ import request from '@/utils/request'
 export const getUserInfoService = (token) => {
   // TODO: 将用户信息保存到Pinia store中
   return request({
-    url: '/api/user/info',
+    url: '/api/user/profile',
     method: 'get',
     headers: {
       Authorization: `Bearer ${token}`,
@@ -28,7 +28,7 @@ export const getUserInfoService = (token) => {
  */
 export function updateUserProfile(profileData) {
   // TODO: 更新成功后，更新Pinia store中的用户信息
-  return request.put('/user/profile', profileData)
+  return request.put('/api/user/profile', profileData)
 }
 
 /**
@@ -38,7 +38,7 @@ export function updateUserProfile(profileData) {
  */
 export function uploadAvatar(formData) {
   // TODO: 上传成功后，更新Pinia store中的用户头像信息
-  return request.post('/user/avatar', formData, {
+  return request.post('/api/user/avatar', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },

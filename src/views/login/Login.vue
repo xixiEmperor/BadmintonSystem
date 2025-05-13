@@ -6,7 +6,6 @@ export default {
 <script setup>
 import { User, Lock, Message } from '@element-plus/icons-vue'
 import { ref, watch } from 'vue'
-import { ElMessage } from 'element-plus'
 import { authRegisterService, authLoginService } from '@/api/auth'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores'
@@ -60,9 +59,9 @@ watch(isRegister, () => {
 
 // 注册
 const register = async () => {
+  // 预校验
   await form.value.validate()
-  // 模拟注册服务，实际项目中应调用后端API
-  // 在实际项目中，这里应该调用API将用户信息发送到服务器
+  // 调用注册服务
   const res = await authRegisterService(formModel.value)
   console.log(res)
   if (res.data.code === 0) {
@@ -81,15 +80,14 @@ const login = async () => {
   try {
     // 调用登录服务
     const res = await authLoginService(formModel.value)
-    console.log('登录响应:', res)
 
-    if (res.data.token) {
+    if (res.data.code === 0) {
       ElMessage.success('登录成功')
       userStore.setToken(res.data.token)
+      localStorage.setItem('token', res.data.token)
 
       // 先获取用户信息，注意添加await
       await userStore.getUserinfo()
-      console.log('获取到的用户信息:', userStore.userinfo)
 
       // 获取到用户信息后再判断角色和跳转
       if (userStore.userinfo?.role === 'ROLE_ADMIN') {
@@ -98,10 +96,9 @@ const login = async () => {
         router.push('/')
       }
     } else {
-      ElMessage.error('登录失败：未获取到token')
+      ElMessage.error(res.data.message)
     }
   } catch (error) {
-    console.error('登录错误:', error)
     ElMessage.error(`登录失败: ${error.response?.data?.message || error.message || '未知错误'}`)
   }
 }

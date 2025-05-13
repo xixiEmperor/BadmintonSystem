@@ -6,13 +6,15 @@ export const useUserStore = defineStore(
   'user',
   () => {
     const token = ref('')
+    // 设置token
     const setToken = (t) => {
       token.value = t
     }
+    // 移除token
     const removeToken = () => {
       token.value = ''
     }
-
+    // 获取用户信息
     const userinfo = ref({})
     const getUserinfo = async () => {
       try {
@@ -29,6 +31,13 @@ export const useUserStore = defineStore(
         throw error
       }
     }
+
+    // 设置用户信息
+    const setUserinfo = (info) => {
+      userinfo.value = info
+    }
+
+    // 清除用户信息
     const clearUserinfo = () => {
       userinfo.value = {}
     }
@@ -48,6 +57,7 @@ export const useUserStore = defineStore(
       setToken,
       removeToken,
       logout,
+      setUserinfo,
     }
   },
   {

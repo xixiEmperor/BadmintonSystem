@@ -20,5 +20,23 @@ instance.interceptors.request.use(
     return Promise.reject(error)
   },
 )
+// axios响应拦截器
+instance.interceptors.response.use(
+  function (response) {
+    // 2xx 范围内的状态码都会触发该函数。
+    // 对响应数据做点什么
+    if (response.data.code === 0) {
+      return response
+    }
+    ElMessage.error(response.data.message || '服务异常')
+    return Promise.reject(response.data)
+  },
+  function (error) {
+    // 超出 2xx 范围的状态码都会触发该函数。
+    // 对响应错误做点什么
+    ElMessage.error(error.response.data.message || '服务异常')
+    return Promise.reject(error)
+  }
+)
 
 export default instance

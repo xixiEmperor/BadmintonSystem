@@ -2,6 +2,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { User, Location, Iphone, Calendar } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores'
+import { updateUserProfile, uploadAvatar } from '@/api/user'
 
 const userStore = useUserStore()
 // 用户信息表单
@@ -55,29 +56,53 @@ const rules = {
 
 // 头像上传前的钩子
 const beforeAvatarUpload = (file) => {
-  const isJPG = file.type === 'image/jpeg' || file.type === 'image/png'
+  const isValidFormat = file.type === 'image/jpeg' || file.type === 'image/png' || file.type === 'image/jpg'
   const isLt2M = file.size / 1024 / 1024 < 2
 
-  if (!isJPG) {
-    ElMessage.error('头像只能是 JPG 或 PNG 格式!')
+  if (!isValidFormat) {
+    ElMessage.error('文件格式不支持，请上传jpg、png或jpeg格式图片')
+    return false
   }
   if (!isLt2M) {
     ElMessage.error('头像大小不能超过 2MB!')
+    return false
   }
-  return isJPG && isLt2M
+  return true
 }
 
 // 头像上传成功的钩子
-const handleAvatarSuccess = (response, uploadFile) => {
-  // TODO: 调用API将头像上传到后端服务器
-  // 实际项目中，这里应该获取返回的图片URL
+const handleAvatarSuccess = async (response, uploadFile) => {
   if (uploadFile.raw) {
-    // 将文件转换为 base64 格式，确保页面刷新后依然可见
-    const reader = new FileReader()
-    reader.readAsDataURL(uploadFile.raw)
-    reader.onload = () => {
-      avatarUrl.value = reader.result
-      userInfo.avatar = reader.result
+    try {
+      // 创建FormData对象
+      const formData = new FormData()
+      formData.append('file', uploadFile.raw)
+
+      // 调用API上传头像
+      const res = await uploadAvatar(formData)
+
+      if (res.data.code === 0) {
+        // 更新头像URL
+        avatarUrl.value = res.data.data.avatarUrl
+        userInfo.avatar = res.data.data.avatarUrl
+
+        // 更新用户信息
+        const storedUserInfo = userStore.userinfo
+        const updatedUserInfo = {
+          ...storedUserInfo,
+          avatar: res.data.data.avatarUrl
+        }
+
+        // 更新store中的用户信息
+        userStore.setUserinfo(updatedUserInfo)
+
+        ElMessage.success(res.data.message || '上传成功')
+      } else {
+        ElMessage.error(res.data.message || '上传失败')
+      }
+    } catch (error) {
+      console.error('头像上传失败:', error)
+      ElMessage.error(error.response?.data?.message || '头像上传失败')
     }
   }
 }
@@ -89,22 +114,21 @@ const saveUserInfo = async () => {
     await userFormRef.value.validate()
 
     // TODO: 调用API将用户信息更新到后端
+    const res = await updateUserProfile(userInfo)
+    ElMessage.success(res.data.message)
     // 从userStore获取当前存储的用户信息
     const storedUserInfo = userStore.userinfo
 
     // 合并新旧信息
     const updatedUserInfo = {
       ...storedUserInfo,
-      ...userInfo,
+      ...res.data.data
     }
 
     // 保存到userStore
     userStore.setUserinfo(updatedUserInfo)
-
-    ElMessage.success('保存成功')
   } catch (error) {
-    console.error('表单验证失败', error)
-    ElMessage.error('请检查表单填写是否正确')
+    ElMessage.error(error.response.data.message)
   } finally {
     loading.value = false
   }
@@ -112,27 +136,23 @@ const saveUserInfo = async () => {
 
 // 初始化用户信息
 const initUserInfo = () => {
-  // TODO: 调用API从后端获取用户信息
+  // 从userStore获取当前存储的用户信息
   const storedUserInfo = userStore.userinfo
   if (storedUserInfo) {
     try {
-      const parsedInfo = storedUserInfo
       // 填充表单
       Object.keys(userInfo).forEach((key) => {
-        if (parsedInfo[key]) {
-          userInfo[key] = parsedInfo[key]
+        if (storedUserInfo[key]) {
+          userInfo[key] = storedUserInfo[key]
         }
       })
 
       // 设置头像URL
-      if (parsedInfo.avatar) {
-        avatarUrl.value = parsedInfo.avatar
-      } else {
-        // 没有头像时，不设置avatarUrl，会显示默认头像
-        avatarUrl.value = ''
+      if (storedUserInfo.avatar) {
+        avatarUrl.value = storedUserInfo.avatar
       }
     } catch (e) {
-      console.error('解析用户信息失败', e)
+      ElMessage.error(e.response.data.message)
     }
   }
 }
@@ -159,21 +179,16 @@ onMounted(() => {
         <el-form-item label="头像" class="avatar-uploader-container">
           <el-upload
             class="avatar-uploader"
-            action="#"
+            action="/api/user/avatar"
             :show-file-list="false"
             :on-success="handleAvatarSuccess"
             :before-upload="beforeAvatarUpload"
-            :auto-upload="false"
-            :http-request="
-              (options) => {
-                if (options.file) {
-                  handleAvatarSuccess(null, { raw: options.file })
-                }
-              }
-            "
+            :auto-upload="true"
+            name="file"
           >
             <img v-if="avatarUrl" :src="avatarUrl" class="avatar" />
             <img v-else src="../../assets/default_avatar.png" class="avatar" alt="默认头像" />
+            <div class="avatar-hover-text">点击更换头像</div>
           </el-upload>
         </el-form-item>
 
@@ -309,6 +324,10 @@ onMounted(() => {
 
     &:hover {
       border-color: #409eff;
+
+      .avatar-hover-text {
+        display: flex;
+      }
     }
   }
 
@@ -317,6 +336,20 @@ onMounted(() => {
     height: 150px;
     display: block;
     object-fit: cover;
+  }
+
+  .avatar-hover-text {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    font-size: 14px;
   }
 
   .save-btn {
