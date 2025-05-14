@@ -15,14 +15,12 @@ export const useUserStore = defineStore(
       token.value = ''
     }
     // 获取用户信息
-    const userinfo = ref({})
+    const userinfo = ref()
     const getUserinfo = async () => {
       try {
-        console.log('获取用户信息，当前token:', token.value)
         const res = await getUserInfoService(token.value)
-        console.log('用户信息响应:', res)
         if (res.data) {
-          userinfo.value = res.data
+          userinfo.value = res.data.data
         } else {
           console.error('获取用户信息失败: 响应中没有data字段')
         }

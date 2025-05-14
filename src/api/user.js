@@ -32,7 +32,7 @@ export function updateUserProfile(profileData) {
     const date = new Date(profileData.birthday);
     profileData.birthday = date.toISOString().split('T')[0];
   }
-  
+
   // TODO: 更新成功后，更新Pinia store中的用户信息
   return request.put('/api/user/profile', profileData)
 }

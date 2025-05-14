@@ -179,11 +179,10 @@ onMounted(() => {
         <el-form-item label="头像" class="avatar-uploader-container">
           <el-upload
             class="avatar-uploader"
-            action="/api/user/avatar"
             :show-file-list="false"
             :on-success="handleAvatarSuccess"
             :before-upload="beforeAvatarUpload"
-            :auto-upload="true"
+            :auto-upload="false"
             name="file"
           >
             <img v-if="avatarUrl" :src="avatarUrl" class="avatar" />
@@ -197,7 +196,7 @@ onMounted(() => {
           <h3>基本信息</h3>
 
           <el-form-item label="账号">
-            <el-input v-model="userInfo.username" disabled placeholder="账号不可修改"></el-input>
+            <el-input v-model="userInfo.username" disabled placeholder="userinfo.username"></el-input>
           </el-form-item>
 
           <el-form-item label="昵称" prop="nickname">
