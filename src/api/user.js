@@ -27,6 +27,12 @@ export const getUserInfoService = (token) => {
  * @returns {Promise<Object>} 更新后的用户信息
  */
 export function updateUserProfile(profileData) {
+  // 添加日期格式转换
+  if (profileData.birthday) {
+    const date = new Date(profileData.birthday);
+    profileData.birthday = date.toISOString().split('T')[0];
+  }
+  
   // TODO: 更新成功后，更新Pinia store中的用户信息
   return request.put('/api/user/profile', profileData)
 }
