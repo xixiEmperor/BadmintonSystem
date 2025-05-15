@@ -1,12 +1,14 @@
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores'
 import { navigate } from '@/utils/router'
 import { getForumList } from '@/api/forum'
+import { useForumStore } from '@/stores/modules/forum'
 
 const router = useRouter()
 const userStore = useUserStore()
+const forumStore = useForumStore()
 // 分类选项卡
 const tabs = ref([
   { name: 'all', label: '全部帖子' },
@@ -21,166 +23,15 @@ const activeTab = ref('all')
 
 // 搜索关键词
 const searchKeyword = ref('')
+// 防抖定时器
+let searchTimer = null
 
 // 分页相关
 const currentPage = ref(1)
 const pageSize = ref(5)
-const total = ref(50)
+const total = ref(0)
 
 // TODO: 调用API获取帖子列表数据
-const topics = ref([
-  {
-    id: 1,
-    title: '新手请教：如何选择适合自己的羽毛球拍？',
-    author: '羽球新手',
-    publishTime: '2024-03-15',
-    views: 256,
-    replies: 18,
-    lastReply: '2024-03-18',
-    cate: '求助问答',
-  },
-  {
-    id: 2,
-    title: '分享一些羽毛球基本步法训练方法',
-    author: '球技达人',
-    publishTime: '2024-03-14',
-    views: 389,
-    replies: 24,
-    lastReply: '2024-03-18',
-    cate: '经验交流',
-  },
-  {
-    id: 3,
-    title: '南湖校区羽毛球馆环境如何？',
-    author: '校园爱好者',
-    publishTime: '2024-03-12',
-    views: 175,
-    replies: 12,
-    lastReply: '2024-03-17',
-    cate: '求助问答',
-  },
-  {
-    id: 4,
-    title: '羽毛球拍线的选择和保养经验分享',
-    author: '资深玩家',
-    publishTime: '2024-03-10',
-    views: 452,
-    replies: 36,
-    lastReply: '2024-03-18',
-    cate: '经验交流',
-  },
-  {
-    id: 5,
-    title: '求组队：每周末南湖校区打球',
-    author: '找队友',
-    publishTime: '2024-03-08',
-    views: 321,
-    replies: 29,
-    lastReply: '2024-03-17',
-    cate: '打球组队',
-  },
-  {
-    id: 6,
-    title: '【重要通知】羽毛球馆装修升级公告',
-    author: '管理员',
-    publishTime: '2024-03-18',
-    views: 589,
-    replies: 45,
-    lastReply: '2024-03-19',
-    cate: '公告通知',
-  },
-  {
-    id: 7,
-    title: '羽毛球双打配合技巧分享',
-    author: '双打专家',
-    publishTime: '2024-03-16',
-    views: 423,
-    replies: 31,
-    lastReply: '2024-03-19',
-    cate: '经验交流',
-  },
-  {
-    id: 8,
-    title: '寻找固定双打搭档',
-    author: '单打选手',
-    publishTime: '2024-03-15',
-    views: 267,
-    replies: 15,
-    lastReply: '2024-03-18',
-    cate: '打球组队',
-  },
-  {
-    id: 9,
-    title: '羽毛球拍线断了，求推荐穿线地点',
-    author: '新手求助',
-    publishTime: '2024-03-14',
-    views: 198,
-    replies: 12,
-    lastReply: '2024-03-17',
-    cate: '求助问答',
-  },
-  {
-    id: 10,
-    title: '【活动】周末羽毛球友谊赛报名开始',
-    author: '活动组织者',
-    publishTime: '2024-03-13',
-    views: 678,
-    replies: 89,
-    lastReply: '2024-03-19',
-    cate: '公告通知',
-  },
-  {
-    id: 11,
-    title: '羽毛球单打战术分析',
-    author: '战术大师',
-    publishTime: '2024-03-12',
-    views: 534,
-    replies: 42,
-    lastReply: '2024-03-18',
-    cate: '经验交流',
-  },
-  {
-    id: 12,
-    title: '新手求教：如何提高发球质量？',
-    author: '发球新手',
-    publishTime: '2024-03-11',
-    views: 345,
-    replies: 28,
-    lastReply: '2024-03-17',
-    cate: '求助问答',
-  },
-  {
-    id: 13,
-    title: '寻找周末固定球友',
-    author: '周末球友',
-    publishTime: '2024-03-10',
-    views: 289,
-    replies: 23,
-    lastReply: '2024-03-16',
-    cate: '打球组队',
-  },
-  {
-    id: 14,
-    title: '羽毛球馆会员卡办理指南',
-    author: '管理员',
-    publishTime: '2024-03-09',
-    views: 456,
-    replies: 34,
-    lastReply: '2024-03-15',
-    cate: '公告通知',
-  },
-  {
-    id: 15,
-    title: '羽毛球体能训练计划分享',
-    author: '体能教练',
-    publishTime: '2024-03-08',
-    views: 567,
-    replies: 47,
-    lastReply: '2024-03-14',
-    cate: '经验交流',
-  },
-])
-
 const getForumListData = async () => {
   const res = await getForumList({
     page: currentPage.value,
@@ -188,51 +39,16 @@ const getForumListData = async () => {
     keyword: searchKeyword.value,
     category: activeTab.value,
   })
-  topics.value = res.data.data
+  if (res.data.code === 0) {
+    // 将帖子列表数据存储到论坛store中
+    forumStore.setPosts(res.data.data.list)
+  } else {
+    ElMessage.error(res.data.message)
+  }
 }
 onMounted(async () => {
   await getForumListData()
 })
-
-// 根据分类过滤文章
-const filteredTopics = computed(() => {
-  // 根据搜索关键词和分类标签进行过滤
-  let result = topics.value
-
-  // 如果有搜索关键词，按关键词过滤
-  if (searchKeyword.value) {
-    const keyword = searchKeyword.value.toLowerCase()
-    result = result.filter(
-      (topic) =>
-        topic.title.toLowerCase().includes(keyword) || topic.author.toLowerCase().includes(keyword),
-    )
-  }
-
-  // 如果不是全部分类，继续按分类过滤
-  if (activeTab.value !== 'all') {
-    const categoryMap = {
-      hot: '打球组队',
-      notice: '公告通知',
-      help: '求助问答',
-      exp: '经验交流',
-    }
-    result = result.filter((topic) => topic.cate === categoryMap[activeTab.value])
-  }
-
-  return result
-})
-
-// 分页后的文章列表
-const paginatedTopics = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value
-  const end = start + pageSize.value
-  return filteredTopics.value.slice(start, end)
-})
-
-// 更新总条数
-const updateTotal = () => {
-  total.value = filteredTopics.value.length
-}
 
 // 跳转到发布页面
 const navigateToPublish = () => {
@@ -254,13 +70,18 @@ const navigateToDetail = (postId) => {
   navigate(`/post/${postId}`)
 }
 
-// 搜索功能
+// 搜索功能（添加防抖）
 const handleSearch = () => {
-  currentPage.value = 1 // 重置页码
-  // TODO: 调用后端API进行搜索
-  getForumListData()
-  // 更新总数，搜索功能通过计算属性filteredTopics实现
-  updateTotal()
+  // 清除之前的定时器
+  if (searchTimer) {
+    clearTimeout(searchTimer)
+  }
+
+  // 设置新的定时器，500ms后执行搜索
+  searchTimer = setTimeout(() => {
+    currentPage.value = 1 // 重置页码
+    getForumListData()
+  }, 500)
 }
 
 // 分页变化
@@ -283,6 +104,11 @@ watch(activeTab, () => {
   updateTotal()
 })
 
+// 监听搜索关键词变化，触发防抖搜索
+watch(searchKeyword, () => {
+  handleSearch()
+})
+
 // 初始化总条数
 onMounted(() => {
   updateTotal()
@@ -299,7 +125,6 @@ onMounted(() => {
         v-model="searchKeyword"
         placeholder="搜索论坛内容"
         class="search-input"
-        @keyup.enter="handleSearch"
       >
         <template #append>
           <el-button @click="handleSearch">搜索</el-button>
