@@ -15,21 +15,29 @@ export const getForumDetail = (postId) => {
 }
 
 // 获取帖子评论
-export const getForumComments = (postId, sortType = 'new') => {
+export const getForumCommentsService = (postId, sortType) => {
   return request.get('/api/forum/comments', {
     params: { postId, sortType }
   })
 }
 
 // 发布评论
-export const createComment = (data) => {
+export const createCommentService = (data) => {
   return request.post('/api/forum/comments/create', data)
 }
 
 // 点赞评论
-export const likeComment = (commentId, action) => {
+export const likeCommentService = (commentId, action) => {
   return request.post('/api/forum/comments/like', {
     commentId,
+    action
+  })
+}
+
+// 点赞帖子
+export const likePostService = (postId, action) => {
+  return request.post('/api/forum/posts/like', {
+    postId,
     action
   })
 }

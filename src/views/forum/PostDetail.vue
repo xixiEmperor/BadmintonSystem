@@ -1,11 +1,16 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { View, Delete, CaretTop } from '@element-plus/icons-vue'
-// import { getForumDetail, getForumComments, createComment } from '@/api/forum'
+import { View, Delete, CaretTop, Star } from '@element-plus/icons-vue'
+import { useUserStore } from '@/stores/index'
+// import { getForumDetail, getForumCommentsService, createCommentService, likeCommentService } from '@/api/forum'
 
 const route = useRoute()
 const router = useRouter()
+const userStore = useUserStore()
+
+const userInfo = ref()
+userInfo.value = userStore.userInfo
 
 // TODO: 调用API根据ID获取帖子详情
 // 文章详情数据
@@ -15,6 +20,8 @@ const postDetail = ref({
   author: '羽球新手',
   publishTime: '2024-03-15',
   views: 256,
+  likes: 42,  // 新增：帖子点赞数
+  isLiked: false,  // 新增：当前用户是否已点赞
   content: `
     <p>大家好，我是一名羽毛球初学者，最近想购买自己的第一支球拍，但是对球拍的选择不太了解，想请教一下各位前辈。</p>
 
@@ -38,6 +45,21 @@ const postDetail = ref({
   `,
 })
 
+// 获取文章详情
+const getPostDetail = async () => {
+  const postId = route.params.id
+  // TODO: 调用后端API获取文章详情
+  const res = await getForumDetail(postId)
+  if (res.data.code === 0) {
+    postDetail.value = res.data.data
+  } else {
+    ElMessage.error(res.data.message)
+  }
+}
+
+onMounted(() => {
+  getPostDetail()
+})
 // TODO: 调用API获取帖子评论列表
 // 评论列表
 const comments = ref([
@@ -106,6 +128,25 @@ const comments = ref([
   },
 ])
 
+// 排序方式
+const sortType = ref('hot') // 'hot' 或 'new'
+
+// 获取帖子评论列表
+const getForumComments = async () => {
+  const postId = route.params.id
+  const res = await getForumCommentsService(postId, sortType.value)
+  if (res.data.code === 0) {
+    comments.value = res.data.data
+  } else {
+    ElMessage.error(res.data.message)
+  }
+}
+
+// 组件挂载时获取帖子评论列表
+onMounted(() => {
+  getForumComments()
+})
+
 // 新评论
 const commentContent = ref('')
 const commentCount = ref(comments.value.length) // 评论总数
@@ -117,9 +158,6 @@ const replyingTo = ref({
   content: '',
   placeholder: '',
 })
-
-// 排序方式
-const sortType = ref('hot') // 'hot' 或 'new'
 
 // 是否展开全部评论
 const expandedComments = ref(false)
@@ -157,17 +195,9 @@ const displayedComments = computed(() => {
   }
 })
 
-// 获取当前登录用户
-const getCurrentUser = () => {
-  const userInfoStr = localStorage.getItem('userInfo')
-  if (!userInfoStr) return null
-  return JSON.parse(userInfoStr)
-}
-
-// 检查评论是否是当前用户发布的
+// 检查评论是否是当前用户发布的(用于删除评论的权限判断)(此处可以用一个自定义指令来实现权限级按钮v-auth)
 const isCurrentUserComment = (author) => {
-  const currentUser = getCurrentUser()
-  return currentUser && currentUser.username === author
+  return userInfo.value && userInfo.value.nickname === author
 }
 
 // 点赞评论
@@ -280,20 +310,18 @@ const submitReply = (comment) => {
   }
 
   // 获取用户信息，判断是否登录
-  const userInfoStr = localStorage.getItem('userInfo')
-  if (!userInfoStr) {
+  const token = userStore.token
+  if (!token) {
     ElMessage.warning('请先登录后再回复')
     router.push('/login')
     return
   }
 
-  const userInfo = JSON.parse(userInfoStr)
-
   // 添加新回复
   const newReply = {
     id: Date.now(), // 使用时间戳作为临时ID
-    author: userInfo.username || '匿名用户',
-    avatar: userInfo.avatar || '',
+    author: userInfo.value.username || '匿名用户',
+    avatar: userInfo.value.avatar || '',
     content: replyingTo.value.content,
     publishTime: '刚刚',
     likes: 0,
@@ -332,16 +360,31 @@ const changeSortType = (type) => {
   sortType.value = type
 }
 
-// 获取文章详情
-const getPostDetail = () => {
-  const postId = route.params.id
-  // TODO: 调用后端API获取文章详情
-  console.log('获取文章ID：', postId)
-}
+// 点赞文章
+const likePost = () => {
+  // 检查用户是否登录
+  const token = userStore.token
+  if (!token) {
+    ElMessage.warning('请先登录后再点赞')
+    router.push('/login')
+    return
+  }
 
-onMounted(() => {
-  getPostDetail()
-})
+  // TODO: 调用API更新文章点赞状态
+  if (postDetail.value.isLiked) {
+    postDetail.value.likes -= 1
+  } else {
+    postDetail.value.likes += 1
+  }
+  postDetail.value.isLiked = !postDetail.value.isLiked
+
+  // 显示提示信息
+  if (postDetail.value.isLiked) {
+    ElMessage.success('点赞成功')
+  } else {
+    ElMessage.warning('已取消点赞')
+  }
+}
 </script>
 
 <template>
@@ -355,9 +398,15 @@ onMounted(() => {
             <div class="publish-time">{{ postDetail.publishTime }}</div>
           </div>
         </div>
-        <div class="view-count">
-          <el-icon><View /></el-icon>
-          <span>{{ postDetail.views }} 次浏览</span>
+        <div class="post-meta">
+          <div class="view-count">
+            <el-icon><View /></el-icon>
+            <span>{{ postDetail.views }} 次浏览</span>
+          </div>
+          <div class="like-count" @click="likePost" :class="{ 'is-liked': postDetail.isLiked }">
+            <el-icon><Star /></el-icon>
+            <span>{{ postDetail.likes }} 点赞</span>
+          </div>
         </div>
       </div>
     </div>
@@ -365,6 +414,19 @@ onMounted(() => {
     <div class="post-content">
       <h1 class="post-title">{{ postDetail.title }}</h1>
       <div class="content" v-html="postDetail.content"></div>
+
+      <!-- 文章底部点赞区 -->
+      <div class="post-action-bar">
+        <el-button
+          type="primary"
+          :plain="!postDetail.isLiked"
+          @click="likePost"
+          class="like-button"
+        >
+          <el-icon><Star /></el-icon>
+          {{ postDetail.isLiked ? '已点赞' : '点赞' }} {{ postDetail.likes }}
+        </el-button>
+      </div>
     </div>
 
     <!-- 评论区 -->
@@ -609,12 +671,26 @@ onMounted(() => {
   color: #999;
 }
 
-.view-count {
+.post-meta {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.view-count, .like-count {
   display: flex;
   align-items: center;
   gap: 5px;
   color: #999;
   font-size: 14px;
+}
+
+.like-count {
+  cursor: pointer;
+}
+
+.like-count:hover, .like-count.is-liked {
+  color: #2b6fc2;
 }
 
 .post-content {
@@ -944,5 +1020,20 @@ onMounted(() => {
 .view-more-replies:hover,
 .view-more-comments:hover {
   background-color: #f0f2f5;
+}
+
+.post-action-bar {
+  margin-top: 30px;
+  display: flex;
+  justify-content: center;
+}
+
+.like-button {
+  padding: 10px 25px;
+  font-size: 16px;
+}
+
+.like-button :deep(.el-icon) {
+  margin-right: 8px;
 }
 </style>

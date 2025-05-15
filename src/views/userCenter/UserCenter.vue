@@ -266,7 +266,7 @@ onMounted(() => {
         class="user-form"
       >
         <!-- 头像上传 -->
-        <el-form-item label="头像" class="avatar-uploader-container">
+        <el-form-item class="avatar-uploader-container">
           <el-upload
             class="avatar-uploader"
             :show-file-list="false"
