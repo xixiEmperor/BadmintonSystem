@@ -129,7 +129,7 @@ const comments = ref([
 ])
 
 // 排序方式
-const sortType = ref('hot') // 'hot' 或 'new'
+const sortType = ref('new') // 'hot' 或 'new'
 
 // 获取帖子评论列表
 const getForumComments = async () => {
