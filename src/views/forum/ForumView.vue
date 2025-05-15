@@ -229,7 +229,7 @@ const paginatedTopics = computed(() => {
   return filteredTopics.value.slice(start, end)
 })
 
-// 更新总页数
+// 更新总条数
 const updateTotal = () => {
   total.value = filteredTopics.value.length
 }
@@ -258,8 +258,7 @@ const navigateToDetail = (postId) => {
 const handleSearch = () => {
   currentPage.value = 1 // 重置页码
   // TODO: 调用后端API进行搜索
-  console.log('搜索关键词：', searchKeyword.value)
-
+  getForumListData()
   // 更新总数，搜索功能通过计算属性filteredTopics实现
   updateTotal()
 }
@@ -267,23 +266,24 @@ const handleSearch = () => {
 // 分页变化
 const handlePageChange = (page) => {
   currentPage.value = page
-  // TODO: 调用后端API获取对应页的数据
-  console.log('当前页码：', page)
+  getForumListData()
 }
 
 // 分页大小变化
 const handleSizeChange = (size) => {
   pageSize.value = size
   currentPage.value = 1
+  getForumListData()
 }
 
 // 监听分类变化，重置分页
 watch(activeTab, () => {
   currentPage.value = 1
+  getForumListData()
   updateTotal()
 })
 
-// 初始化总页数
+// 初始化总条数
 onMounted(() => {
   updateTotal()
 })

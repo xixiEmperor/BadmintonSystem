@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { QuillEditor } from '@vueup/vue-quill'
+import { createPost } from '@/api/forum'
 import '@vueup/vue-quill/dist/vue-quill.snow.css'
 
 const router = useRouter()
@@ -11,6 +12,9 @@ const postTitle = ref('')
 
 // 帖子内容
 const postContent = ref('')
+
+// 编辑器实例引用
+const editorRef = ref(null)
 
 // 选择的标签/分类
 const selectedCategory = ref('')
@@ -25,11 +29,10 @@ const categoryOptions = [
 
 // 字数统计
 const textCount = ref(0)
-const lineCount = ref(0)
-const chineseTextCount = ref(0)
+const maxTextCount = ref(100)
 
 // 发布帖子
-const publishPost = () => {
+const publishPost = async () => {
   // 表单验证
   if (!postTitle.value.trim()) {
     ElMessage.warning('请输入帖子标题')
@@ -47,11 +50,20 @@ const publishPost = () => {
   }
 
   // TODO: 调用API发布帖子
-  // 模拟发布成功
-  ElMessage.success('发布成功')
+  const res = await createPost({
+    title: postTitle.value,
+    content: postContent.value,
+    category: selectedCategory.value,
+  })
+  if (res.data.code === 0) {
+    // 模拟发布成功
+    ElMessage.success(res.data.message)
 
-  // 跳转回论坛页
-  router.push('/forum')
+    // 跳转回论坛页
+    router.push('/forum')
+  } else {
+    ElMessage.error(res.data.message)
+  }
 }
 
 // 取消发布，返回论坛页面
@@ -60,15 +72,22 @@ const cancelPublish = () => {
 }
 
 // 文本变化时更新字数统计
-const updateCount = (content) => {
-  postContent.value = content
-  textCount.value = content.length
-  lineCount.value = content.split('\n').length
+const updateCount = () => {
+  if (editorRef.value && editorRef.value.getQuill) {
+    const quill = editorRef.value.getQuill()
+    if (quill) {
+      // 获取纯文本内容
+      const text = quill.getText() || ''
+      // 移除最后的换行符（Quill 编辑器默认添加）
+      const cleanText = text.endsWith('\n') ? text.slice(0, -1) : text
+      textCount.value = cleanText.length
+    }
+  }
+}
 
-  // 计算中文字符数
-  const chineseRegex = /[\u4e00-\u9fa5]/g
-  const chineseChars = content.match(chineseRegex)
-  chineseTextCount.value = chineseChars ? chineseChars.length : 0
+// 当编辑器内容变化时调用
+const onEditorChange = () => {
+  updateCount()
 }
 </script>
 
@@ -90,9 +109,11 @@ const updateCount = (content) => {
       </div>
 
       <div class="editor-container">
+        <div class="word-count">{{ textCount }} / {{ maxTextCount }}</div>
         <QuillEditor
-          v-model="postContent"
-          @text-change="updateCount($event)"
+          ref="editorRef"
+          v-model:content="postContent"
+          @text-change="onEditorChange"
           placeholder="在此输入帖子内容..."
           theme="snow"
           class="content-editor"
@@ -100,12 +121,6 @@ const updateCount = (content) => {
       </div>
 
       <div class="post-footer">
-        <div class="post-stats">
-          <span>字符数: {{ textCount }}</span>
-          <span>行数: {{ lineCount }}</span>
-          <span>中文字数: {{ chineseTextCount }}</span>
-        </div>
-
         <div class="post-options">
           <el-select v-model="selectedCategory" placeholder="选择分类">
             <el-option
@@ -165,6 +180,19 @@ const updateCount = (content) => {
   .editor-container {
     margin-bottom: 20px;
     height: 400px;
+    position: relative;
+
+    .word-count {
+      position: absolute;
+      top: 10px;
+      right: 20px;
+      font-size: 12px;
+      color: #999;
+      background-color: rgba(255, 255, 255, 0.8);
+      padding: 2px 8px;
+      border-radius: 10px;
+      z-index: 10;
+    }
 
     .content-editor {
       font-size: 16px;
@@ -184,13 +212,6 @@ const updateCount = (content) => {
     gap: 15px;
     padding-top: 30px; // 增加顶部填充，避免边框线压到按钮上
     border-top: 1px solid #eaeaea;
-
-    .post-stats {
-      display: flex;
-      gap: 10px;
-      font-size: 12px;
-      color: #999;
-    }
 
     .post-options {
       flex-grow: 1;

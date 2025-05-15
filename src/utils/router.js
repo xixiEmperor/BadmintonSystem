@@ -11,7 +11,7 @@ import router from '@/router'
  */
 export const navigate = (path, query = {}) => {
   // 需要在新标签页中打开的路径
-  const newTabPaths = ['/', '/login', '/admin', '/post']
+  const newTabPaths = ['/post']
 
   // 判断是否需要在新标签页中打开
   const shouldOpenInNewTab = newTabPaths.some(

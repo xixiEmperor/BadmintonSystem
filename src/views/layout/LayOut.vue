@@ -32,7 +32,6 @@ userInfo.value = userStore.userinfo
 
 // 监听用户头像更新事件
 const handleUserAvatarUpdated = (event) => {
-  console.log('头像已更新，正在刷新导航栏头像', event.detail)
   // 从事件中获取新头像URL
   const { avatarUrl } = event.detail
 

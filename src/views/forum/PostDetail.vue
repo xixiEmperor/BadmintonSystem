@@ -1,16 +1,11 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { View, ArrowLeft, Delete, CaretTop } from '@element-plus/icons-vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { View, Delete, CaretTop } from '@element-plus/icons-vue'
+// import { getForumDetail, getForumComments, createComment } from '@/api/forum'
 
 const route = useRoute()
 const router = useRouter()
-
-// 返回上一页
-const goBack = () => {
-  router.back()
-}
 
 // TODO: 调用API根据ID获取帖子详情
 // 文章详情数据
@@ -351,13 +346,6 @@ onMounted(() => {
 
 <template>
   <div class="post-detail-container">
-    <div class="back-button">
-      <el-button type="text" @click="goBack">
-        <el-icon><ArrowLeft /></el-icon>
-        返回
-      </el-button>
-    </div>
-
     <div class="post-header">
       <div class="post-info">
         <div class="author-info">
