@@ -3,6 +3,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores'
 import { navigate } from '@/utils/router'
+import { getForumList } from '@/api/forum'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -179,6 +180,19 @@ const topics = ref([
     cate: '经验交流',
   },
 ])
+
+const getForumListData = async () => {
+  const res = await getForumList({
+    page: currentPage.value,
+    pageSize: pageSize.value,
+    keyword: searchKeyword.value,
+    category: activeTab.value,
+  })
+  topics.value = res.data.data
+}
+onMounted(async () => {
+  await getForumListData()
+})
 
 // 根据分类过滤文章
 const filteredTopics = computed(() => {
