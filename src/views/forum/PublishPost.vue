@@ -13,6 +13,9 @@ const postTitle = ref('')
 // 帖子内容
 const postContent = ref('')
 
+// 纯文本内容
+const plainTextContent = ref('')
+
 // 编辑器实例引用
 const editorRef = ref(null)
 
@@ -21,10 +24,10 @@ const selectedCategory = ref('')
 
 // 分类选项
 const categoryOptions = [
-  { value: 'question', label: '新手求助' },
+  { value: 'team', label: '打球组队' },
   { value: 'notice', label: '公告通知' },
-  { value: 'activity', label: '打球组队' },
-  { value: 'experience', label: '经验交流' },
+  { value: 'help', label: '求助问答' },
+  { value: 'exp', label: '经验交流' },
 ]
 
 // 字数统计
@@ -39,7 +42,7 @@ const publishPost = async () => {
     return
   }
 
-  if (!postContent.value || postContent.value === '') {
+  if (!plainTextContent.value || plainTextContent.value === '') {
     ElMessage.warning('请输入帖子内容')
     return
   }
@@ -49,20 +52,20 @@ const publishPost = async () => {
     return
   }
 
-  // TODO: 调用API发布帖子
+  // 调用API发布帖子
   const res = await createPost({
     title: postTitle.value,
-    content: postContent.value,
+    content: plainTextContent.value, // 使用纯文本内容
     category: selectedCategory.value,
   })
   if (res.data.code === 0) {
-    // 模拟发布成功
-    ElMessage.success(res.data.message)
+    // 发布成功
+    ElMessage.success(res.data.msg)
 
     // 跳转回论坛页
     router.push('/forum')
   } else {
-    ElMessage.error(res.data.message)
+    ElMessage.error(res.data.msg)
   }
 }
 
@@ -81,6 +84,9 @@ const updateCount = () => {
       // 移除最后的换行符（Quill 编辑器默认添加）
       const cleanText = text.endsWith('\n') ? text.slice(0, -1) : text
       textCount.value = cleanText.length
+
+      // 保存纯文本内容
+      plainTextContent.value = cleanText
     }
   }
 }
@@ -112,7 +118,7 @@ const onEditorChange = () => {
         <div class="word-count">{{ textCount }} / {{ maxTextCount }}</div>
         <QuillEditor
           ref="editorRef"
-          v-model:content="postContent"
+          v-model="postContent"
           @text-change="onEditorChange"
           placeholder="在此输入帖子内容..."
           theme="snow"
