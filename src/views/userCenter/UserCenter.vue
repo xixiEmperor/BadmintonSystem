@@ -3,6 +3,12 @@ import { ref, reactive, onMounted } from 'vue'
 import { User, Location, Iphone, Calendar } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores'
 import { updateUserProfile, uploadAvatar } from '@/api/user'
+import { useRouter, useRoute } from 'vue-router'
+
+const router = useRouter()
+const route = useRoute()
+// 保存来源路由，用于返回
+const fromRoute = ref('/')
 
 const userStore = useUserStore()
 // 用户信息表单
@@ -153,6 +159,14 @@ const handleAvatarSuccess = async (response, uploadFile) => {
         // 更新store中的用户信息
         userStore.setUserinfo(updatedUserInfo)
 
+        // 方法1：使用自定义事件通知导航栏更新头像
+        window.dispatchEvent(new CustomEvent('user-avatar-updated', {
+          detail: { avatarUrl: res.data.data.avatarUrl }
+        }))
+
+        // 方法2：如果上面的自定义事件不起作用，可以尝试强制刷新页面组件
+        // location.reload()
+
         ElMessage.success(res.data.message || '上传成功')
       } else {
         ElMessage.error(res.data.message || '上传失败')
@@ -179,7 +193,7 @@ const saveUserInfo = async () => {
 
     // TODO: 调用API将用户信息更新到后端
     const res = await updateUserProfile(userInfo)
-    ElMessage.success(res.data.message)
+    ElMessage.success(res.data.msg)
     // 从userStore获取当前存储的用户信息
     const storedUserInfo = userStore.userinfo
 
@@ -191,6 +205,9 @@ const saveUserInfo = async () => {
 
     // 保存到userStore
     userStore.setUserinfo(updatedUserInfo)
+
+    // 返回到来源页面
+    router.push(fromRoute.value)
   } catch (error) {
     ElMessage.error(error.response.data.message)
   } finally {
@@ -218,6 +235,15 @@ const initUserInfo = () => {
     } catch (e) {
       ElMessage.error(e.response.data.message)
     }
+  }
+
+  // 获取来源路由
+  if (route.query.from) {
+    fromRoute.value = route.query.from
+  } else if (document.referrer && document.referrer.includes(window.location.origin)) {
+    // 如果有referrer且来自同一域名，提取路径部分
+    const url = new URL(document.referrer)
+    fromRoute.value = url.pathname + url.search
   }
 }
 

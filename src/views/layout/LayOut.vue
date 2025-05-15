@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, onBeforeUnmount } from 'vue'
 import { Plus, ArrowDown, User, ShoppingCart, Calendar } from '@element-plus/icons-vue'
 import AIChatDialog from '@/components/AiChatDialog.vue'
 import { useUserStore, useCartStore } from '@/stores'
@@ -29,6 +29,21 @@ const toggleAIChat = () => {
 const isLogin = ref(false)
 const userInfo = ref({})
 userInfo.value = userStore.userinfo
+
+// 监听用户头像更新事件
+const handleUserAvatarUpdated = (event) => {
+  console.log('头像已更新，正在刷新导航栏头像', event.detail)
+  // 从事件中获取新头像URL
+  const { avatarUrl } = event.detail
+
+  // 更新本地显示的用户信息
+  if (userInfo.value) {
+    userInfo.value = {
+      ...userInfo.value,
+      avatar: avatarUrl
+    }
+  }
+}
 
 // 检查登录状态
 const checkLogin = () => {
@@ -84,9 +99,17 @@ const logout = () => {
   })
 }
 
-// 组件挂载时检查登录状态
+// 组件挂载时检查登录状态并添加事件监听
 onMounted(() => {
   checkLogin()
+
+  // 添加头像更新事件监听
+  window.addEventListener('user-avatar-updated', handleUserAvatarUpdated)
+})
+
+// 组件卸载前移除事件监听
+onBeforeUnmount(() => {
+  window.removeEventListener('user-avatar-updated', handleUserAvatarUpdated)
 })
 </script>
 
