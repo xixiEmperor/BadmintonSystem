@@ -57,32 +57,89 @@ const rules = {
 // 头像上传前的钩子
 const beforeAvatarUpload = (file) => {
   const isValidFormat = file.type === 'image/jpeg' || file.type === 'image/png' || file.type === 'image/jpg'
-  const isLt2M = file.size / 1024 / 1024 < 2
+  const isLt10M = file.size / 1024 / 1024 < 10
 
   if (!isValidFormat) {
     ElMessage.error('文件格式不支持，请上传jpg、png或jpeg格式图片')
     return false
   }
-  if (!isLt2M) {
-    ElMessage.error('头像大小不能超过 2MB!')
+  if (!isLt10M) {
+    ElMessage.error('头像大小不能超过 10MB!')
     return false
   }
   return true
+}
+
+// 处理图片压缩
+const compressImage = (file, quality = 0.8) => {
+  return new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.readAsDataURL(file)
+    reader.onload = (e) => {
+      const img = new Image()
+      img.src = e.target.result
+      img.onload = () => {
+        // 创建canvas
+        const canvas = document.createElement('canvas')
+        const ctx = canvas.getContext('2d')
+
+        // 设置大小，最大宽高为800px
+        let width = img.width
+        let height = img.height
+        const maxSize = 800
+
+        if (width > height && width > maxSize) {
+          height = Math.round((height * maxSize) / width)
+          width = maxSize
+        } else if (height > maxSize) {
+          width = Math.round((width * maxSize) / height)
+          height = maxSize
+        }
+
+        canvas.width = width
+        canvas.height = height
+
+        // 绘制图片
+        ctx.clearRect(0, 0, width, height)
+        ctx.drawImage(img, 0, 0, width, height)
+
+        // 转为Blob
+        canvas.toBlob((blob) => {
+          // 创建新的File对象
+          const newFile = new File([blob], file.name, {
+            type: file.type,
+            lastModified: Date.now()
+          })
+          resolve(newFile)
+        }, file.type, quality)
+      }
+    }
+  })
 }
 
 // 头像上传成功的钩子
 const handleAvatarSuccess = async (response, uploadFile) => {
   if (uploadFile.raw) {
     try {
+      // 压缩图片
+      const compressedFile = await compressImage(uploadFile.raw)
+
       // 创建FormData对象
       const formData = new FormData()
-      formData.append('file', uploadFile.raw)
+      formData.append('file', compressedFile)
+
+      // 临时显示本地预览
+      const reader = new FileReader()
+      reader.readAsDataURL(compressedFile)
+      reader.onload = () => {
+        avatarUrl.value = reader.result
+      }
 
       // 调用API上传头像
       const res = await uploadAvatar(formData)
 
       if (res.data.code === 0) {
-        // 更新头像URL
+        // 更新头像URL为服务器返回的URL
         avatarUrl.value = res.data.data.avatarUrl
         userInfo.avatar = res.data.data.avatarUrl
 
@@ -104,6 +161,13 @@ const handleAvatarSuccess = async (response, uploadFile) => {
       console.error('头像上传失败:', error)
       ElMessage.error(error.response?.data?.message || '头像上传失败')
     }
+  }
+}
+
+// 处理头像变更
+const handleAvatarChange = (uploadFile) => {
+  if (uploadFile.raw && beforeAvatarUpload(uploadFile.raw)) {
+    handleAvatarSuccess(null, uploadFile)
   }
 }
 
@@ -180,13 +244,13 @@ onMounted(() => {
           <el-upload
             class="avatar-uploader"
             :show-file-list="false"
-            :on-success="handleAvatarSuccess"
+            :on-change="handleAvatarChange"
             :before-upload="beforeAvatarUpload"
             :auto-upload="false"
             name="file"
           >
             <img v-if="avatarUrl" :src="avatarUrl" class="avatar" />
-            <img v-else src="../../assets/default_avatar.png" class="avatar" alt="默认头像" />
+            <img v-else src="https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png" class="avatar" alt="默认头像" />
             <div class="avatar-hover-text">点击更换头像</div>
           </el-upload>
         </el-form-item>
