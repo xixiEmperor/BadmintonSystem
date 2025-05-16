@@ -45,7 +45,7 @@ onMounted(() => {
 const comments = computed(() => forumStore.comments || [])
 
 // 排序方式
-const sortType = ref('hot') // 'hot' or 'new'
+const sortType = ref('time') // 'likes' or 'time'
 
 // 获取帖子评论列表
 const getForumComments = async () => {
