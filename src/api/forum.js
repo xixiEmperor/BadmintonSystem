@@ -1,50 +1,84 @@
 import request from '@/utils/request'
 
 // 获取论坛帖子列表
-export const getForumList = (data) => {
-  return request.get('/api/forum/posts', {
-    params: data
+export function getForumList(params) {
+  return request({
+    url: '/api/forum/posts',
+    method: 'get',
+    params
   })
 }
 
 // 获取论坛帖子详情
-export const getForumDetail = (postId) => {
-  return request.get('/api/forum/posts/detail', {
+export function getForumDetail(postId) {
+  return request({
+    url: '/api/forum/posts/detail',
+    method: 'get',
     params: { postId }
   })
 }
 
-// 获取帖子评论
-export const getForumCommentsService = (postId, sortType) => {
-  return request.get('/api/forum/comments', {
-    params: { postId, sortType }
-  })
-}
-
-// 发布评论
-export const createCommentService = (data) => {
-  return request.post('/api/forum/comments/create', data)
-}
-
-// 点赞评论
-export const likeCommentService = (commentId, action) => {
-  return request.post('/api/forum/comments/like', {
-    commentId,
-    action
+// 获取帖子回复
+export function getForumCommentsService(postId, orderBy) {
+  return request({
+    url: `/api/forum/posts/${postId}/replies`,
+    method: 'get',
+    params: { orderBy }
   })
 }
 
 // 点赞帖子
-export const likePostService = (postId, action) => {
-  return request.post('/api/forum/posts/like', {
-    postId,
-    action
+export function likePostService(postId) {
+  return request({
+    url: `/api/forum/posts/${postId}/like`,
+    method: 'post'
+  })
+}
+
+// 取消点赞帖子
+export function unlikePostService(postId) {
+  return request({
+    url: `/api/forum/posts/${postId}/like`,
+    method: 'delete'
   })
 }
 
 // 发布帖子
-export const createPost = (data) => {
+export function createPost(data) {
   return request.post('/api/forum/posts/create', data)
+}
+
+// 添加评论/回复
+export function addCommentService(postId, data) {
+  return request({
+    url: `/api/forum/posts/${postId}/replies`,
+    method: 'post',
+    data
+  })
+}
+
+// 删除评论/回复
+export function deleteCommentService(postId, replyId) {
+  return request({
+    url: `/api/forum/posts/${postId}/replies/${replyId}`,
+    method: 'delete'
+  })
+}
+
+// 点赞评论
+export function likeCommentService(postId, replyId) {
+  return request({
+    url: `/api/forum/posts/${postId}/replies/${replyId}/like`,
+    method: 'post'
+  })
+}
+
+// 取消点赞评论
+export function unlikeCommentService(postId, replyId) {
+  return request({
+    url: `/api/forum/posts/${postId}/replies/${replyId}/like`,
+    method: 'delete'
+  })
 }
 
 

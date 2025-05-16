@@ -5,6 +5,7 @@ import { useUserStore } from '@/stores'
 import { navigate } from '@/utils/router'
 import { getForumList } from '@/api/forum'
 import { useForumStore } from '@/stores/modules/forum'
+import { formatDateTime } from '@/utils/format'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -12,7 +13,7 @@ const forumStore = useForumStore()
 // 分类选项卡
 const tabs = ref([
   { name: 'all', label: '全部帖子' },
-  { name: 'hot', label: '打球组队' },
+  { name: 'team', label: '打球组队' },
   { name: 'notice', label: '公告通知' },
   { name: 'help', label: '求助问答' },
   { name: 'exp', label: '经验交流' },
@@ -31,7 +32,7 @@ const currentPage = ref(1)
 const pageSize = ref(5)
 const total = ref(0)
 
-// TODO: 调用API获取帖子列表数据
+// 调用API获取帖子列表数据
 const getForumListData = async () => {
   const res = await getForumList({
     page: currentPage.value,
@@ -40,10 +41,18 @@ const getForumListData = async () => {
     category: activeTab.value,
   })
   if (res.data.code === 0) {
+    console.log(res)
+    // 格式化日期时间
+    const formattedList = res.data.data.list.map(post => {
+      return {
+        ...post,
+        publishTime: formatDateTime(post.publishTime),
+        lastReply: formatDateTime(post.lastReply)
+      }
+    })
     // 将帖子列表数据存储到论坛store中
-    forumStore.setPosts(res.data.data.list)
-  } else {
-    ElMessage.error(res.data.message)
+    forumStore.setPosts(formattedList)
+    total.value = res.data.data.total
   }
 }
 onMounted(async () => {
@@ -101,17 +110,11 @@ const handleSizeChange = (size) => {
 watch(activeTab, () => {
   currentPage.value = 1
   getForumListData()
-  updateTotal()
 })
 
 // 监听搜索关键词变化，触发防抖搜索
 watch(searchKeyword, () => {
   handleSearch()
-})
-
-// 初始化总条数
-onMounted(() => {
-  updateTotal()
 })
 </script>
 
@@ -143,7 +146,7 @@ onMounted(() => {
       </el-tabs>
 
       <div class="topics-container">
-        <el-table :data="paginatedTopics" style="width: 100%">
+        <el-table :data="forumStore.posts" style="width: 100%">
           <el-table-column prop="title" label="主题" min-width="300">
             <template #default="scope">
               <div class="topic-title" @click="navigateToDetail(scope.row.id)">

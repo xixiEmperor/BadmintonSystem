@@ -2,143 +2,57 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { View, Delete, CaretTop, Star } from '@element-plus/icons-vue'
-import { useUserStore } from '@/stores/index'
-// import { getForumDetail, getForumCommentsService, createCommentService, likeCommentService } from '@/api/forum'
+import { useUserStore, useForumStore } from '@/stores/index'
+import { getForumDetail, getForumCommentsService } from '@/api/forum'
+// 导入点赞、评论等相关接口
+import {
+  likePostService,
+  unlikePostService,
+  addCommentService,
+  likeCommentService,
+  unlikeCommentService,
+  deleteCommentService
+} from '@/api/forum'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
+const forumStore = useForumStore() // 引入论坛store
 
 const userInfo = ref()
 userInfo.value = userStore.userInfo
 
-// TODO: 调用API根据ID获取帖子详情
-// 文章详情数据
-const postDetail = ref({
-  id: 1,
-  title: '新手请教：如何选择适合自己的羽毛球拍？',
-  author: '羽球新手',
-  publishTime: '2024-03-15',
-  views: 256,
-  likes: 42,  // 新增：帖子点赞数
-  isLiked: false,  // 新增：当前用户是否已点赞
-  content: `
-    <p>大家好，我是一名羽毛球初学者，最近想购买自己的第一支球拍，但是对球拍的选择不太了解，想请教一下各位前辈。</p>
+// 使用Pinia store管理帖子详情
+const storePostDetail = computed(() => forumStore.currentPost || {})
 
-    <p>我的情况是：</p>
-    <ul>
-      <li>身高175cm，体重65kg</li>
-      <li>每周打2-3次球，每次1-2小时</li>
-      <li>目前还在学习基本动作阶段</li>
-      <li>预算在300-500元之间</li>
-    </ul>
-
-    <p>想请教的问题：</p>
-    <ol>
-      <li>对于初学者来说，应该选择什么重量的球拍？</li>
-      <li>球拍平衡点应该选择头重还是头轻？</li>
-      <li>这个价位有什么推荐的品牌和型号吗？</li>
-      <li>购买时需要注意哪些参数？</li>
-    </ol>
-
-    <p>希望各位前辈能给出一些建议，谢谢！</p>
-  `,
-})
-
-// 获取文章详情
-const getPostDetail = async () => {
+// 获取文章详情（使用Pinia store管理状态）
+const getPostDetailWithStore = async () => {
   const postId = route.params.id
-  // TODO: 调用后端API获取文章详情
   const res = await getForumDetail(postId)
   if (res.data.code === 0) {
-    postDetail.value = res.data.data
+    // 将数据存入store
+    forumStore.setCurrentPost(res.data.data)
   } else {
-    ElMessage.error(res.data.message)
+    ElMessage.error(res.data.msg)
   }
 }
 
 onMounted(() => {
-  getPostDetail()
+  getPostDetailWithStore()
 })
-// TODO: 调用API获取帖子评论列表
+
 // 评论列表
-const comments = ref([
-  {
-    id: 1,
-    author: 'WP',
-    avatar: '',
-    content: '太水了，诗人谢我吃，代码下了没？连个自己玩的demo都不放两张，就在这儿分享',
-    publishTime: '1天前',
-    likes: 0,
-    isLiked: false,
-  },
-  {
-    id: 2,
-    author: '百万前端向前冲',
-    avatar: '',
-    content: '任何一个网页手绘？结果是canvas手绘风',
-    publishTime: '15天前',
-    likes: 1,
-    isLiked: false,
-    replies: [
-      {
-        id: 3,
-        author: '米塔',
-        content: '意思是自己手绘不是把某个网页元素直接变风格吗',
-        publishTime: '13天前',
-        likes: 0,
-        isLiked: false,
-      },
-      {
-        id: 4,
-        author: '百万前端向前冲',
-        content: '回复 米塔：对网页整体的风格如何变呢',
-        publishTime: '13天前',
-        likes: 0,
-        isLiked: false,
-      },
-    ],
-  },
-  {
-    id: 5,
-    author: '羽球达人',
-    avatar: '',
-    content: '初学者推荐选择5U或4U重量的球拍，平衡点偏中杆或者头轻一些的比较容易控制',
-    publishTime: '2天前',
-    likes: 5,
-    isLiked: false,
-  },
-  {
-    id: 6,
-    author: '球友一号',
-    avatar: '',
-    content: '300-500元价位推荐李宁或者威克多的入门级球拍，性价比很高',
-    publishTime: '3天前',
-    likes: 3,
-    isLiked: false,
-  },
-  {
-    id: 7,
-    author: '教练指导',
-    avatar: '',
-    content: '购买时注意球拍的重量、平衡点和弹性，这三个参数最重要',
-    publishTime: '4天前',
-    likes: 8,
-    isLiked: false,
-  },
-])
+const comments = computed(() => forumStore.comments || [])
 
 // 排序方式
-const sortType = ref('new') // 'hot' 或 'new'
+const sortType = ref('hot') // 'hot' or 'new'
 
 // 获取帖子评论列表
 const getForumComments = async () => {
   const postId = route.params.id
   const res = await getForumCommentsService(postId, sortType.value)
   if (res.data.code === 0) {
-    comments.value = res.data.data
-  } else {
-    ElMessage.error(res.data.message)
+    forumStore.setComments(res.data.data)
   }
 }
 
@@ -149,7 +63,7 @@ onMounted(() => {
 
 // 新评论
 const commentContent = ref('')
-const commentCount = ref(comments.value.length) // 评论总数
+const commentCount = computed(() => comments.value ? comments.value.length : 0) // 评论总数
 
 // 控制回复框显示
 const replyingTo = ref({
@@ -166,22 +80,18 @@ const expandedReplies = ref({})
 
 // 根据排序方式获取评论
 const sortedComments = computed(() => {
+  if (!comments.value) return []
   const allComments = [...comments.value]
   if (sortType.value === 'hot') {
     // 按点赞数从多到少排序
     return allComments.sort((a, b) => b.likes - a.likes)
   } else {
-    // 按发布时间排序，这里假设 publishTime 已经是可比较的格式
-    // 实际项目中，可能需要先将日期字符串转换为 Date 对象
+    // 按回复时间排序，从新到旧
     return allComments.sort((a, b) => {
-      // 简化处理，假设最近的在前面
-      if (a.publishTime.includes('刚刚')) return -1
-      if (b.publishTime.includes('刚刚')) return 1
-
-      // 提取天数并转为数字，小的天数（更近的日期）排在前面
-      const daysA = parseInt(a.publishTime.match(/\d+/)[0] || 999)
-      const daysB = parseInt(b.publishTime.match(/\d+/)[0] || 999)
-      return daysA - daysB
+      // 将时间字符串转为时间戳进行比较
+      const timeA = new Date(a.replyTime).getTime()
+      const timeB = new Date(b.replyTime).getTime()
+      return timeB - timeA
     })
   }
 })
@@ -195,45 +105,84 @@ const displayedComments = computed(() => {
   }
 })
 
-// 检查评论是否是当前用户发布的(用于删除评论的权限判断)(此处可以用一个自定义指令来实现权限级按钮v-auth)
-const isCurrentUserComment = (author) => {
-  return userInfo.value && userInfo.value.nickname === author
+// 检查评论是否是当前用户发布的(用于删除评论的权限判断)
+const isCurrentUserComment = (nickname) => {
+  return userInfo.value && userInfo.value.nickname === nickname
 }
 
 // 点赞评论
-const likeComment = (comment) => {
-  // TODO: 调用API更新评论点赞状态
-  if (comment.isLiked) {
-    comment.likes -= 1
-  } else {
-    comment.likes += 1
+const likeComment = async (comment) => {
+  // 检查用户是否登录
+  if (!userStore.token) {
+    ElMessage.warning('请先登录后再点赞')
+    router.push('/login')
+    return
   }
-  comment.isLiked = !comment.isLiked
+
+  try {
+    const postId = route.params.id
+    const commentId = comment.id
+
+    if (comment.isLiked) {
+      // 取消点赞
+      const res = await unlikeCommentService(postId, commentId)
+      if (res.data.code === 0) {
+        comment.likes -= 1
+        comment.isLiked = false
+        ElMessage.success('已取消点赞')
+      } else {
+        ElMessage.error(res.data.msg || '操作失败')
+      }
+    } else {
+      // 点赞
+      const res = await likeCommentService(postId, commentId)
+      if (res.data.code === 0) {
+        comment.likes += 1
+        comment.isLiked = true
+        ElMessage.success('点赞成功')
+      } else {
+        ElMessage.error(res.data.msg || '操作失败')
+      }
+    }
+  } catch (error) {
+    console.error('点赞操作失败', error)
+    ElMessage.error('操作失败，请稍后重试')
+  }
 }
 
 // 发表评论
-const submitComment = () => {
+const submitComment = async () => {
   if (commentContent.value.trim() === '') {
     ElMessage.warning('评论内容不能为空')
     return
   }
 
-  // TODO: 调用API提交评论
-  const newComment = {
-    id: comments.value.length + 100, // 假设ID自增
-    author: '当前用户',
-    avatar: '',
-    content: commentContent.value,
-    publishTime: '刚刚',
-    likes: 0,
-    isLiked: false,
+  // 检查用户是否登录
+  if (!userStore.token) {
+    ElMessage.warning('请先登录后再评论')
+    router.push('/login')
+    return
   }
 
-  comments.value.unshift(newComment)
-  commentContent.value = ''
-  commentCount.value += 1
+  try {
+    const postId = route.params.id
+    const res = await addCommentService(postId, {
+      content: commentContent.value,
+      parentId: null // 一级评论parentId为null
+    })
 
-  ElMessage.success('评论发表成功')
+    if (res.data.code === 0) {
+      // 评论成功，重新获取评论列表
+      await getForumComments()
+      commentContent.value = ''
+      ElMessage.success('评论发表成功')
+    } else {
+      ElMessage.error(res.data.msg || '评论发表失败')
+    }
+  } catch (error) {
+    console.error('评论发表失败', error)
+    ElMessage.error('评论发表失败，请稍后重试')
+  }
 }
 
 // 删除评论
@@ -243,29 +192,33 @@ const deleteComment = (comment, parentComment = null) => {
     cancelButtonText: '取消',
     type: 'warning',
   })
-    .then(() => {
-      if (parentComment) {
-        // 删除回复
-        const replyIndex = parentComment.replies.findIndex((reply) => reply.id === comment.id)
-        if (replyIndex !== -1) {
-          parentComment.replies.splice(replyIndex, 1)
+    .then(async () => {
+      try {
+        const postId = route.params.id
+        const commentId = comment.id
+
+        const res = await deleteCommentService(postId, commentId)
+
+        if (res.data.code === 0) {
+          if (parentComment) {
+            // 删除回复
+            const replyIndex = parentComment.children.findIndex((reply) => reply.id === comment.id)
+            if (replyIndex !== -1) {
+              parentComment.children.splice(replyIndex, 1)
+            }
+          } else {
+            // 删除主评论，重新获取评论列表
+            await getForumComments()
+          }
+
+          ElMessage.success('删除成功')
+        } else {
+          ElMessage.error(res.data.msg || '删除失败')
         }
-      } else {
-        // 删除主评论
-        const commentIndex = comments.value.findIndex((c) => c.id === comment.id)
-        if (commentIndex !== -1) {
-          comments.value.splice(commentIndex, 1)
-          commentCount.value -= 1
-        }
+      } catch (error) {
+        console.error('删除评论失败', error)
+        ElMessage.error('删除失败，请稍后重试')
       }
-
-      // TODO: 调用后端API删除评论
-      console.log('删除评论:', comment.id)
-
-      ElMessage({
-        type: 'success',
-        message: '删除成功',
-      })
     })
     .catch(() => {
       // 取消删除
@@ -274,12 +227,19 @@ const deleteComment = (comment, parentComment = null) => {
 
 // 显示回复框
 const showReplyBox = (comment, replyToComment = null) => {
-  let placeholder = `回复 ${comment.author}：`
+  // 检查用户是否登录
+  if (!userStore.token) {
+    ElMessage.warning('请先登录后再回复')
+    router.push('/login')
+    return
+  }
+
+  let placeholder = `回复 ${comment.nickname}：`
   let commentId = comment.id
   let replyId = null
 
   if (replyToComment) {
-    placeholder = `回复 ${replyToComment.author}：`
+    placeholder = `回复 ${replyToComment.nickname}：`
     commentId = replyToComment.id
     replyId = comment.id
   }
@@ -303,43 +263,41 @@ const cancelReply = () => {
 }
 
 // 提交回复
-const submitReply = (comment) => {
+const submitReply = async (comment) => {
   if (!replyingTo.value.content.trim()) {
     ElMessage.warning('回复内容不能为空')
     return
   }
 
-  // 获取用户信息，判断是否登录
-  const token = userStore.token
-  if (!token) {
-    ElMessage.warning('请先登录后再回复')
-    router.push('/login')
-    return
+  try {
+    const postId = route.params.id
+
+    // 调用API提交回复
+    const res = await addCommentService(postId, {
+      content: replyingTo.value.content,
+      parentId: replyingTo.value.commentId // 二级回复需要指定parentId
+    })
+
+    if (res.data.code === 0) {
+      // 回复成功，重新获取评论列表
+      await getForumComments()
+      // 展开该评论的回复列表
+      expandedReplies.value = {
+        ...expandedReplies.value,
+        [comment.id]: true
+      }
+
+      // 重置回复框
+      cancelReply()
+
+      ElMessage.success('回复成功')
+    } else {
+      ElMessage.error(res.data.msg || '回复失败')
+    }
+  } catch (error) {
+    console.error('提交回复失败', error)
+    ElMessage.error('回复失败，请稍后重试')
   }
-
-  // 添加新回复
-  const newReply = {
-    id: Date.now(), // 使用时间戳作为临时ID
-    author: userInfo.value.username || '匿名用户',
-    avatar: userInfo.value.avatar || '',
-    content: replyingTo.value.content,
-    publishTime: '刚刚',
-    likes: 0,
-    isLiked: false,
-  }
-
-  // 确保评论有replies数组
-  if (!comment.replies) {
-    comment.replies = []
-  }
-
-  comment.replies.push(newReply)
-
-  // TODO: 调用后端API提交回复
-  console.log('提交回复:', newReply)
-
-  // 重置回复框
-  cancelReply()
 }
 
 // 切换评论展开状态
@@ -358,73 +316,97 @@ const toggleExpandReplies = (commentId) => {
 // 切换排序方式
 const changeSortType = (type) => {
   sortType.value = type
+  getForumComments() // 切换排序方式后重新获取评论
 }
 
 // 点赞文章
-const likePost = () => {
+const likePost = async () => {
   // 检查用户是否登录
-  const token = userStore.token
-  if (!token) {
+  if (!userStore.token) {
     ElMessage.warning('请先登录后再点赞')
     router.push('/login')
     return
   }
 
-  // TODO: 调用API更新文章点赞状态
-  if (postDetail.value.isLiked) {
-    postDetail.value.likes -= 1
-  } else {
-    postDetail.value.likes += 1
-  }
-  postDetail.value.isLiked = !postDetail.value.isLiked
+  try {
+    const postId = route.params.id
 
-  // 显示提示信息
-  if (postDetail.value.isLiked) {
-    ElMessage.success('点赞成功')
-  } else {
-    ElMessage.warning('已取消点赞')
+    if (storePostDetail.value.isLiked) {
+      // 已点赞，执行取消点赞
+      const res = await unlikePostService(postId)
+      if (res.data.code === 0) {
+        // 更新状态
+        const updatedPost = {
+          ...storePostDetail.value,
+          isLiked: false,
+          likes: storePostDetail.value.likes - 1
+        }
+        forumStore.setCurrentPost(updatedPost)
+        ElMessage.success('已取消点赞')
+      } else {
+        ElMessage.error(res.data.msg || '操作失败')
+      }
+    } else {
+      // 未点赞，执行点赞操作
+      const res = await likePostService(postId)
+      if (res.data.code === 0) {
+        // 更新状态
+        const updatedPost = {
+          ...storePostDetail.value,
+          isLiked: true,
+          likes: storePostDetail.value.likes + 1
+        }
+        forumStore.setCurrentPost(updatedPost)
+        ElMessage.success('点赞成功')
+      } else {
+        ElMessage.error(res.data.msg || '操作失败')
+      }
+    }
+  } catch (error) {
+    console.error('点赞操作失败', error)
+    ElMessage.error('操作失败，请稍后重试')
   }
 }
 </script>
 
 <template>
   <div class="post-detail-container">
-    <div class="post-header">
+    <div class="post-header" v-if="storePostDetail">
       <div class="post-info">
         <div class="author-info">
-          <el-avatar :size="40" class="author-avatar">{{ postDetail.author[0] }}</el-avatar>
+          <el-avatar :size="40" :src="storePostDetail.authorAvatar" class="author-avatar"></el-avatar>
           <div class="author-detail">
-            <div class="author-name">{{ postDetail.author }}</div>
-            <div class="publish-time">{{ postDetail.publishTime }}</div>
+            <div class="author-name">{{ storePostDetail.author }}</div>
+            <div class="publish-time">{{ storePostDetail.publishTime }}</div>
           </div>
         </div>
         <div class="post-meta">
           <div class="view-count">
             <el-icon><View /></el-icon>
-            <span>{{ postDetail.views }} 次浏览</span>
+            <span>{{ storePostDetail.views }} 次浏览</span>
           </div>
-          <div class="like-count" @click="likePost" :class="{ 'is-liked': postDetail.isLiked }">
+          <div class="like-count" @click="likePost" :class="{ 'is-liked': storePostDetail.isLiked }">
             <el-icon><Star /></el-icon>
-            <span>{{ postDetail.likes }} 点赞</span>
+            <span>{{ storePostDetail.likes }} 点赞</span>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="post-content">
-      <h1 class="post-title">{{ postDetail.title }}</h1>
-      <div class="content" v-html="postDetail.content"></div>
+    <div class="post-content" v-if="storePostDetail">
+      <h1 class="post-title">{{ storePostDetail.title }}</h1>
+      <div class="content" v-html="storePostDetail.content"></div>
 
       <!-- 文章底部点赞区 -->
       <div class="post-action-bar">
         <el-button
           type="primary"
-          :plain="!postDetail.isLiked"
+          :plain="!storePostDetail.isLiked"
           @click="likePost"
           class="like-button"
         >
           <el-icon><Star /></el-icon>
-          {{ postDetail.isLiked ? '已点赞' : '点赞' }} {{ postDetail.likes }}
+          {{ storePostDetail.isLiked ? '已点赞' : '点赞' }} {{ storePostDetail.likes }}
         </el-button>
       </div>
     </div>
@@ -463,12 +445,12 @@ const likePost = () => {
       <div class="comment-list">
         <div v-for="comment in displayedComments" :key="comment.id" class="comment-item">
           <div class="comment-user">
-            <el-avatar :size="36">{{ comment.author[0] }}</el-avatar>
+            <el-avatar :size="36" :src="comment.avatar">{{ comment.nickname[0] }}</el-avatar>
           </div>
           <div class="comment-content">
             <div class="comment-header">
-              <span class="comment-author">{{ comment.author }}</span>
-              <span class="comment-time">{{ comment.publishTime }}</span>
+              <span class="comment-author">{{ comment.nickname }}</span>
+              <span class="comment-time">{{ comment.replyTime }}</span>
             </div>
             <div class="comment-text">{{ comment.content }}</div>
             <div class="comment-footer">
@@ -483,7 +465,7 @@ const likePost = () => {
                 </span>
                 <span class="comment-reply" @click="showReplyBox(comment)">回复</span>
               </div>
-              <div v-if="isCurrentUserComment(comment.author)" class="comment-delete-wrapper">
+              <div v-if="isCurrentUserComment(comment.nickname)" class="comment-delete-wrapper">
                 <span class="comment-delete" @click="deleteComment(comment)">
                   <el-icon><Delete /></el-icon>
                   删除
@@ -518,22 +500,22 @@ const likePost = () => {
             </div>
 
             <!-- 回复列表 -->
-            <div v-if="comment.replies && comment.replies.length" class="reply-list">
+            <div v-if="comment.children && comment.children.length" class="reply-list">
               <!-- 显示前3条回复或全部回复 -->
               <div
                 v-for="reply in expandedReplies[comment.id]
-                  ? comment.replies
-                  : comment.replies.slice(0, 3)"
+                  ? comment.children
+                  : comment.children.slice(0, 3)"
                 :key="reply.id"
                 class="reply-item"
               >
                 <div class="reply-user">
-                  <el-avatar :size="30">{{ reply.author[0] }}</el-avatar>
+                  <el-avatar :size="30" :src="reply.avatar">{{ reply.nickname[0] }}</el-avatar>
                 </div>
                 <div class="reply-content">
                   <div class="reply-header">
-                    <span class="reply-author">{{ reply.author }}</span>
-                    <span class="reply-time">{{ reply.publishTime }}</span>
+                    <span class="reply-author">{{ reply.nickname }}</span>
+                    <span class="reply-time">{{ reply.replyTime }}</span>
                   </div>
                   <div class="reply-text">{{ reply.content }}</div>
                   <div class="reply-footer">
@@ -547,7 +529,7 @@ const likePost = () => {
                       </span>
                       <span class="reply-button" @click="showReplyBox(reply, comment)">回复</span>
                     </div>
-                    <div v-if="isCurrentUserComment(reply.author)" class="reply-delete-wrapper">
+                    <div v-if="isCurrentUserComment(reply.nickname)" class="reply-delete-wrapper">
                       <span class="reply-delete" @click="deleteComment(reply, comment)">
                         <el-icon><Delete /></el-icon>
                         删除
@@ -562,7 +544,7 @@ const likePost = () => {
                 v-if="
                   replyingTo.commentId &&
                   replyingTo.replyId &&
-                  comment.replies.some((r) => r.id === replyingTo.replyId)
+                  comment.children.some((r) => r.id === replyingTo.replyId)
                 "
                 class="reply-form nested-reply-form"
               >
@@ -589,14 +571,14 @@ const likePost = () => {
 
               <!-- 查看全部回复 -->
               <div
-                v-if="comment.replies.length > 3"
+                v-if="comment.children.length > 3"
                 class="view-more-replies"
                 @click="toggleExpandReplies(comment.id)"
               >
                 {{
                   expandedReplies[comment.id]
                     ? '收起回复'
-                    : `查看全部 ${comment.replies.length} 条回复`
+                    : `查看全部 ${comment.children.length} 条回复`
                 }}
               </div>
             </div>

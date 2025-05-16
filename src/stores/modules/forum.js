@@ -1,31 +1,48 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { formatDateTime } from '@/utils/format'
 
 export const useForumStore = defineStore(
   'forum',
   () => {
     // 论坛帖子列表
-    const posts = ref([])
+    const posts = ref()
 
-    // 分类列表
-    const categories = ref([])
+    // 当前查看的帖子详情
+    const currentPost = ref(null)
 
     // 热门帖子
-    const hotPosts = ref([])
+    const hotPosts = ref()
 
     // 设置帖子列表
     const setPosts = (postList) => {
-      posts.value = postList
-    }
-
-    // 设置分类列表
-    const setCategories = (categoryList) => {
-      categories.value = categoryList
+      // 确保日期格式一致性
+      if (postList && postList.length > 0) {
+        posts.value = postList.map(post => {
+          if (post.publishTime && !post.publishTime.includes('-')) {
+            post.publishTime = formatDateTime(post.publishTime)
+          }
+          if (post.lastReply && !post.lastReply.includes('-')) {
+            post.lastReply = formatDateTime(post.lastReply)
+          }
+          return post
+        })
+      } else {
+        posts.value = postList
+      }
     }
 
     // 设置热门帖子
     const setHotPosts = (hotPostList) => {
       hotPosts.value = hotPostList
+    }
+
+    // 设置当前查看的帖子详情
+    const setCurrentPost = (post) => {
+      if (post && post.publishTime && !post.publishTime.includes('-')) {
+        post.publishTime = formatDateTime(post.publishTime)
+      }
+      currentPost.value = post
     }
 
     // 添加新帖子
@@ -39,6 +56,11 @@ export const useForumStore = defineStore(
       if (index !== -1) {
         posts.value[index] = updatedPost
       }
+
+      // 如果当前查看的就是被更新的帖子，也更新详情
+      if (currentPost.value && currentPost.value.id === updatedPost.id) {
+        setCurrentPost(updatedPost)
+      }
     }
 
     // 删除帖子
@@ -47,18 +69,33 @@ export const useForumStore = defineStore(
       if (index !== -1) {
         posts.value.splice(index, 1)
       }
+
+      // 如果当前查看的就是被删除的帖子，清空详情
+      if (currentPost.value && currentPost.value.id === postId) {
+        currentPost.value = null
+      }
+    }
+
+    // 帖子评论列表
+    const comments = ref([])
+
+    // 设置帖子评论列表
+    const setComments = (commentList) => {
+      comments.value = commentList
     }
 
     return {
       posts,
-      categories,
+      currentPost,
       hotPosts,
       setPosts,
-      setCategories,
       setHotPosts,
+      setCurrentPost,
       addPost,
       updatePost,
       deletePost,
+      comments,
+      setComments,
     }
   },
   {
