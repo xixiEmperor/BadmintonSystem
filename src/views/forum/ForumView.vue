@@ -177,8 +177,8 @@ watch(searchKeyword, () => {
 
       <div class="pagination-container">
         <el-pagination
-          v-model:current-page="currentPage"
-          v-model:page-size="pageSize"
+          v-model="currentPage"
+          :page-size="pageSize"
           :total="total"
           :page-sizes="[5, 8, 10, 15]"
           layout="total, sizes, prev, pager, next"

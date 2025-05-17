@@ -63,6 +63,11 @@ const router = createRouter({
           component: () => import('@/views/forum/PostDetail.vue'),
           meta: { title: '武汉理工大学南湖校区羽毛球场预定前台' },
         },
+        {
+          path: '/my-history-post',
+          component: () => import('@/views/forum/MyHistoryPost.vue'),
+          meta: { requiresAuth: true, title: '我的发帖 - 武汉理工大学南湖校区羽毛球场预定前台' },
+        },
       ],
     },
     // 后台管理系统路由

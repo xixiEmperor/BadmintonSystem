@@ -62,6 +62,11 @@ const goToUserCenter = () => {
   router.push('/user-center')
 }
 
+// 跳转到我的发帖
+const goToMyPost = () => {
+  router.push('/my-history-post')
+}
+
 // 跳转到登录页面
 const goToLogin = () => {
   navigate('/login')
@@ -146,27 +151,27 @@ onBeforeUnmount(() => {
             <!-- 个人中心入口 -->
             <el-button v-if="isLogin" type="text" class="user-center-btn" @click="goToUserCenter">
               <el-icon><User /></el-icon>
-              <span>个人中心</span>
+              <span>我的发帖</span>
             </el-button>
 
             <!-- 登录后显示用户信息 -->
             <div v-if="isLogin" class="user-info">
-              <div class="user-avatar">
-                <img v-if="userInfo.avatar" :src="userInfo.avatar" alt="头像" />
-                <img
-                  v-else
-                  src="https://tse1-mm.cn.bing.net/th/id/OIP-C.gaAkkFf8LStn-oc4l8iM0wAAAA?w=160&h=180&c=7&r=0&o=5&dpr=1.5&pid=1.7"
-                  alt="默认头像"
-                />
-              </div>
-              <span class="username">{{ userInfo.username }}</span>
               <el-dropdown trigger="click">
-                <span class="el-dropdown-link">
-                  <el-icon><ArrowDown /></el-icon>
-                </span>
+                <div class="user-info-wrapper">
+                  <div class="user-avatar">
+                    <img v-if="userInfo.avatar" :src="userInfo.avatar" alt="头像" />
+                    <img
+                      v-else
+                      src="https://tse1-mm.cn.bing.net/th/id/OIP-C.gaAkkFf8LStn-oc4l8iM0wAAAA?w=160&h=180&c=7&r=0&o=5&dpr=1.5&pid=1.7"
+                      alt="默认头像"
+                    />
+                  </div>
+                  <span class="username">{{ userInfo.username }}</span>
+                </div>
                 <template #dropdown>
                   <el-dropdown-menu>
                     <el-dropdown-item @click="goToUserCenter">个人中心</el-dropdown-item>
+                    <el-dropdown-item @click="goToMyPost">我的发帖</el-dropdown-item>
                     <el-dropdown-item @click="goToBookingHistory">预订记录</el-dropdown-item>
                     <el-dropdown-item @click="logout">退出登录</el-dropdown-item>
                   </el-dropdown-menu>
@@ -233,7 +238,7 @@ onBeforeUnmount(() => {
       </div>
 
       <!-- AI助手对话框 -->
-      <AIChatDialog v-model:visible="showAIChat" />
+      <AIChatDialog v-model="showAIChat" />
     </el-footer>
   </el-container>
 </template>
@@ -323,36 +328,54 @@ onBeforeUnmount(() => {
       .user-info {
         display: flex;
         align-items: center;
+      }
 
-        .user-avatar {
-          width: 40px;
-          height: 40px;
-          border-radius: 50%;
-          overflow: hidden;
-          margin-right: 10px;
+      .user-info-wrapper {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        padding: 5px;
+        border-radius: 20px;
+        transition: background-color 0.3s ease;
 
-          img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-          }
+        &:hover {
+          background-color: rgba(255, 255, 255, 0.1);
+        }
+      }
+
+      .user-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        overflow: hidden;
+        margin-right: 10px;
+        transition: transform 0.3s ease;
+
+        img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
         }
 
-        .username {
-          color: #fff;
-          font-size: 16px;
-          margin-right: 5px;
+        &:hover {
+          transform: scale(1.1);
         }
+      }
 
-        .el-dropdown-link {
-          cursor: pointer;
-          color: #fff;
-          display: flex;
-          align-items: center;
+      .username {
+        color: #fff;
+        font-size: 16px;
+        margin-right: 5px;
+      }
 
-          &:hover {
-            color: #ffd04b;
-          }
+      .el-dropdown-link {
+        cursor: pointer;
+        color: #fff;
+        display: flex;
+        align-items: center;
+
+        &:hover {
+          color: #ffd04b;
         }
       }
 

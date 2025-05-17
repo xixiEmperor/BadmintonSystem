@@ -89,6 +89,15 @@ export function deletePostService(postId) {
   })
 }
 
+// 获取用户发帖列表
+export function getUserPosts(params) {
+  return request({
+    url: '/api/forum/posts/user',
+    method: 'get',
+    params
+  })
+}
+
 
 
 
