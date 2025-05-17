@@ -11,7 +11,8 @@ import {
   addCommentService,
   likeCommentService,
   unlikeCommentService,
-  deleteCommentService
+  deleteCommentService,
+  deletePostService
 } from '@/api/forum'
 
 const route = useRoute()
@@ -104,11 +105,6 @@ const displayedComments = computed(() => {
     return sortedComments.value.slice(0, 3)
   }
 })
-
-// 检查评论是否是当前用户发布的(用于删除评论的权限判断)
-const isCurrentUserComment = (nickname) => {
-  return userInfo.value && userInfo.value.nickname === nickname
-}
 
 // 点赞评论
 const likeComment = async (comment) => {
@@ -367,6 +363,35 @@ const likePost = async () => {
     ElMessage.error('操作失败，请稍后重试')
   }
 }
+
+// 删除帖子
+const deletePost = () => {
+  ElMessageBox.confirm('确定要删除这篇帖子吗？', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning',
+  })
+    .then(async () => {
+      try {
+        const postId = route.params.id
+        const res = await deletePostService(postId)
+
+        if (res.data.code === 0) {
+          ElMessage.success('帖子删除成功')
+          // 删除成功后返回帖子列表页
+          router.push('/forum')
+        } else {
+          ElMessage.error(res.data.msg || '删除失败')
+        }
+      } catch (error) {
+        console.error('删除帖子失败', error)
+        ElMessage.error('删除失败，请稍后重试')
+      }
+    })
+    .catch(() => {
+      // 取消删除
+    })
+}
 </script>
 
 <template>
@@ -388,6 +413,12 @@ const likePost = async () => {
           <div class="like-count" @click="likePost" :class="{ 'is-liked': storePostDetail.isLiked }">
             <el-icon><Star /></el-icon>
             <span>{{ storePostDetail.likes }} 点赞</span>
+          </div>
+          <div v-auth="storePostDetail.author" class="delete-post">
+            <el-button type="danger" size="small" @click="deletePost">
+              <el-icon><Delete /></el-icon>
+              删除帖子
+            </el-button>
           </div>
         </div>
       </div>
@@ -465,7 +496,7 @@ const likePost = async () => {
                 </span>
                 <span class="comment-reply" @click="showReplyBox(comment)">回复</span>
               </div>
-              <div v-if="isCurrentUserComment(comment.nickname)" class="comment-delete-wrapper">
+              <div v-auth="comment.nickname" class="comment-delete-wrapper">
                 <span class="comment-delete" @click="deleteComment(comment)">
                   <el-icon><Delete /></el-icon>
                   删除
@@ -529,7 +560,7 @@ const likePost = async () => {
                       </span>
                       <span class="reply-button" @click="showReplyBox(reply, comment)">回复</span>
                     </div>
-                    <div v-if="isCurrentUserComment(reply.nickname)" class="reply-delete-wrapper">
+                    <div v-auth="reply.nickname" class="reply-delete-wrapper">
                       <span class="reply-delete" @click="deleteComment(reply, comment)">
                         <el-icon><Delete /></el-icon>
                         删除
@@ -673,6 +704,19 @@ const likePost = async () => {
 
 .like-count:hover, .like-count.is-liked {
   color: #2b6fc2;
+}
+
+.delete-post {
+  margin-left: 10px;
+}
+
+.delete-post :deep(.el-button) {
+  display: flex;
+  align-items: center;
+}
+
+.delete-post :deep(.el-icon) {
+  margin-right: 4px;
 }
 
 .post-content {

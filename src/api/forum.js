@@ -81,6 +81,14 @@ export function unlikeCommentService(postId, replyId) {
   })
 }
 
+// 删除帖子
+export function deletePostService(postId) {
+  return request({
+    url: `/api/forum/posts/${postId}`,
+    method: 'delete'
+  })
+}
+
 
 
 
