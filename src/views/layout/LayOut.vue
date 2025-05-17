@@ -149,7 +149,7 @@ onBeforeUnmount(() => {
             </el-button>
 
             <!-- 个人中心入口 -->
-            <el-button v-if="isLogin" type="text" class="user-center-btn" @click="goToUserCenter">
+            <el-button v-if="isLogin" type="text" class="user-center-btn" @click="goToMyPost">
               <el-icon><User /></el-icon>
               <span>我的发帖</span>
             </el-button>
