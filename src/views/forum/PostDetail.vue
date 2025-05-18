@@ -46,7 +46,8 @@ onMounted(() => {
 const comments = computed(() => forumStore.comments || [])
 
 // 排序方式
-const sortType = ref('time') // 'likes' or 'time'
+const sortType = ref('time_desc') // 默认按时间降序排序
+const activeSortTab = ref('new') // 默认选中"最新"选项卡
 
 // 获取帖子评论列表
 const getForumComments = async () => {
@@ -64,12 +65,21 @@ onMounted(() => {
 
 // 新评论
 const commentContent = ref('')
-const commentCount = computed(() => comments.value ? comments.value.length : 0) // 评论总数
+// 修改评论数量的获取方式，从后端返回的数据中获取
+const commentCount = computed(() => {
+  // 如果后端返回了replyCount字段，优先使用
+  if (storePostDetail.value && storePostDetail.value.replyCount !== undefined) {
+    return storePostDetail.value.replyCount
+  }
+  // 后备方案：如果没有replyCount，则使用前端计算的评论数量
+  return comments.value ? comments.value.length : 0
+})
 
 // 控制回复框显示
 const replyingTo = ref({
-  commentId: null,
-  replyId: null,
+  commentId: null,     // 父回复ID (parentId)
+  replyId: null,       // 实际回复的评论ID (replyToId)
+  replyToUserId: null, // 添加这个字段，记录回复目标用户的ID
   content: '',
   placeholder: '',
 })
@@ -82,19 +92,7 @@ const expandedReplies = ref({})
 // 根据排序方式获取评论
 const sortedComments = computed(() => {
   if (!comments.value) return []
-  const allComments = [...comments.value]
-  if (sortType.value === 'hot') {
-    // 按点赞数从多到少排序
-    return allComments.sort((a, b) => b.likes - a.likes)
-  } else {
-    // 按回复时间排序，从新到旧
-    return allComments.sort((a, b) => {
-      // 将时间字符串转为时间戳进行比较
-      const timeA = new Date(a.replyTime).getTime()
-      const timeB = new Date(b.replyTime).getTime()
-      return timeB - timeA
-    })
-  }
+  return comments.value
 })
 
 // 分页后的评论列表
@@ -170,6 +168,8 @@ const submitComment = async () => {
     if (res.data.code === 0) {
       // 评论成功，重新获取评论列表
       await getForumComments()
+      // 重新获取帖子详情，更新评论数量
+      await getPostDetailWithStore()
       commentContent.value = ''
       ElMessage.success('评论发表成功')
     } else {
@@ -206,6 +206,9 @@ const deleteComment = (comment, parentComment = null) => {
             // 删除主评论，重新获取评论列表
             await getForumComments()
           }
+          
+          // 重新获取帖子详情，更新评论数量
+          await getPostDetailWithStore()
 
           ElMessage.success('删除成功')
         } else {
@@ -222,7 +225,7 @@ const deleteComment = (comment, parentComment = null) => {
 }
 
 // 显示回复框
-const showReplyBox = (comment, replyToComment = null) => {
+const showReplyBox = (comment, parentComment = null) => {
   // 检查用户是否登录
   if (!userStore.token) {
     ElMessage.warning('请先登录后再回复')
@@ -230,19 +233,29 @@ const showReplyBox = (comment, replyToComment = null) => {
     return
   }
 
+  // 根据回复文档要求修改
   let placeholder = `回复 ${comment.nickname}：`
-  let commentId = comment.id
-  let replyId = null
+  let parentId = null
+  let replyToId = comment.id
+  let replyToUserId = comment.userId
 
-  if (replyToComment) {
-    placeholder = `回复 ${replyToComment.nickname}：`
-    commentId = replyToComment.id
-    replyId = comment.id
+  if (parentComment) {
+    // 回复二级或更深层级的评论
+    parentId = parentComment.id // 父回复ID
+    replyToId = comment.id      // 实际回复的评论ID
+    replyToUserId = comment.userId
+    placeholder = `回复 @${comment.nickname}：`
+  } else {
+    // 回复一级评论
+    parentId = comment.id // 父回复即当前回复
+    replyToId = comment.id
+    replyToUserId = comment.userId
   }
 
   replyingTo.value = {
-    commentId,
-    replyId,
+    commentId: parentId,
+    replyId: replyToId,
+    replyToUserId: replyToUserId,
     content: '',
     placeholder,
   }
@@ -253,6 +266,7 @@ const cancelReply = () => {
   replyingTo.value = {
     commentId: null,
     replyId: null,
+    replyToUserId: null,
     content: '',
     placeholder: '',
   }
@@ -268,15 +282,29 @@ const submitReply = async (comment) => {
   try {
     const postId = route.params.id
 
-    // 调用API提交回复
-    const res = await addCommentService(postId, {
+    // 按照接口文档要求构建参数
+    const replyData = {
       content: replyingTo.value.content,
-      parentId: replyingTo.value.commentId // 二级回复需要指定parentId
-    })
+      parentId: replyingTo.value.commentId // 父回复ID
+    }
+
+    // 如果有回复目标ID和用户ID，添加到请求中
+    if (replyingTo.value.replyId) {
+      replyData.replyToId = replyingTo.value.replyId
+    }
+
+    if (replyingTo.value.replyToUserId) {
+      replyData.replyToUserId = replyingTo.value.replyToUserId
+    }
+
+    // 调用API提交回复
+    const res = await addCommentService(postId, replyData)
 
     if (res.data.code === 0) {
       // 回复成功，重新获取评论列表
       await getForumComments()
+      // 重新获取帖子详情，更新评论数量
+      await getPostDetailWithStore()
       // 展开该评论的回复列表
       expandedReplies.value = {
         ...expandedReplies.value,
@@ -311,7 +339,16 @@ const toggleExpandReplies = (commentId) => {
 
 // 切换排序方式
 const changeSortType = (type) => {
-  sortType.value = type
+  // 将前端排序类型转换为API请求所需的排序参数
+  if (type === 'hot') {
+    sortType.value = 'likes'
+  } else if (type === 'new') {
+    sortType.value = 'time_desc'
+  } else if (type === 'old') {
+    sortType.value = 'time_asc'
+  } else {
+    sortType.value = 'time_desc' // 默认
+  }
   getForumComments() // 切换排序方式后重新获取评论
 }
 
@@ -466,9 +503,10 @@ const deletePost = () => {
 
       <!-- 排序标签 -->
       <div class="comment-sort">
-        <el-tabs v-model="sortType" @tab-change="changeSortType">
+        <el-tabs v-model="activeSortTab" @tab-change="changeSortType">
           <el-tab-pane label="最热" name="hot"></el-tab-pane>
           <el-tab-pane label="最新" name="new"></el-tab-pane>
+          <el-tab-pane label="最早" name="old"></el-tab-pane>
         </el-tabs>
       </div>
 
@@ -548,7 +586,12 @@ const deletePost = () => {
                     <span class="reply-author">{{ reply.nickname }}</span>
                     <span class="reply-time">{{ reply.replyTime }}</span>
                   </div>
-                  <div class="reply-text">{{ reply.content }}</div>
+                  <div class="reply-text">
+                    <template v-if="reply.replyToNickname">
+                      <span class="reply-to">回复 @{{ reply.replyToNickname }}：</span>
+                    </template>
+                    {{ reply.content }}
+                  </div>
                   <div class="reply-footer">
                     <div class="reply-actions">
                       <span
@@ -1015,9 +1058,16 @@ const deletePost = () => {
 }
 
 .reply-text {
-  margin-bottom: 8px;
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.6;
+  margin: 8px 0;
+  word-break: break-word;
+}
+
+.reply-to {
+  color: #2b6fc2;
+  font-weight: bold;
+  margin-right: 5px;
 }
 
 .reply-footer {
