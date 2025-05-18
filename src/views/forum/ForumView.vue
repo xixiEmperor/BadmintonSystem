@@ -162,7 +162,7 @@ watch(searchKeyword, () => {
           <el-table-column prop="replies" label="回复/查看" width="120">
             <template #default="scope">
               <div class="topic-stats">
-                <div>{{ scope.row.replies }} 回复</div>
+                <div>{{ scope.row.replyCount || 0 }} 回复</div>
                 <div>{{ scope.row.views }} 查看</div>
               </div>
             </template>
