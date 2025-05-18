@@ -2,9 +2,10 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores'
-import { View, Delete, Edit } from '@element-plus/icons-vue'
+import { View, Delete, Edit, Top } from '@element-plus/icons-vue'
 import { formatDateTime } from '@/utils/format'
 import { navigate } from '@/utils/router'
+import { getUserPosts, deletePostService } from '@/api/forum'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -16,121 +17,56 @@ userInfo.value = userStore.userinfo || {}
 // 分页相关
 const currentPage = ref(1)
 const pageSize = ref(10)
-const total = ref(25) // 模拟总数据量
-
-// 模拟数据
-const mockPosts = [
-  {
-    id: 1,
-    title: '有人今天晚上一起打球吗？',
-    author: '羽球爱好者',
-    category: 'team',
-    publishTime: '2023-11-15 18:30',
-    replies: 12,
-    views: 156,
-    content: '今天晚上7点有空，想找人一起打球，有意者请联系我。'
-  },
-  {
-    id: 2,
-    title: '分享我的训练心得',
-    author: '技术流',
-    category: 'exp',
-    publishTime: '2023-11-10 14:20',
-    replies: 8,
-    views: 98,
-    content: '今天分享一下我的训练方法，希望对大家有帮助。'
-  },
-  {
-    id: 3,
-    title: '关于场地预订的问题',
-    author: '新手上路',
-    category: 'help',
-    publishTime: '2023-11-05 09:15',
-    replies: 5,
-    views: 67,
-    content: '请问场地预订后多久内可以取消？'
-  },
-  {
-    id: 4,
-    title: '羽毛球拍推荐',
-    author: '装备控',
-    category: 'exp',
-    publishTime: '2023-10-28 16:45',
-    replies: 15,
-    views: 210,
-    content: '给大家推荐几款性价比高的羽毛球拍。'
-  },
-  {
-    id: 5,
-    title: '周末比赛通知',
-    author: '活动组织者',
-    category: 'notice',
-    publishTime: '2023-10-20 10:30',
-    replies: 20,
-    views: 300,
-    content: '本周末将举办校内友谊赛，欢迎报名参加。'
-  },
-  {
-    id: 6,
-    title: '求教如何提高杀球力量',
-    author: '进阶球友',
-    category: 'help',
-    publishTime: '2023-10-15 20:10',
-    replies: 9,
-    views: 125,
-    content: '最近杀球总是缺乏力量，请教如何提高？'
-  },
-  {
-    id: 7,
-    title: '寻找固定球友',
-    author: '固定搭子',
-    category: 'team',
-    publishTime: '2023-10-10 19:00',
-    replies: 7,
-    views: 87,
-    content: '想找个水平相当的球友，每周固定打球。'
-  },
-  {
-    id: 8,
-    title: '分享一些步伐训练方法',
-    author: '灵活脚步',
-    category: 'exp',
-    publishTime: '2023-10-05 15:30',
-    replies: 11,
-    views: 165,
-    content: '今天分享几个提升步伐的训练方法。'
-  }
-]
+const total = ref(0)
 
 // 用户的发帖列表
 const userPosts = ref([])
 const loading = ref(false)
 
-// 加载用户发帖列表（使用模拟数据）
-const loadUserPosts = () => {
+// 加载用户发帖列表
+const loadUserPosts = async () => {
+  if (!userStore.userinfo?.id) {
+    ElMessage.warning('请先登录')
+    router.push('/login')
+    return
+  }
+
   loading.value = true
+  try {
+    const params = {
+      userId: userStore.userinfo.id,
+      page: currentPage.value,
+      pageSize: pageSize.value
+    }
 
-  // 模拟异步请求延迟
-  setTimeout(() => {
-    // 根据当前页码和页面大小计算起始索引
-    const startIndex = (currentPage.value - 1) * pageSize.value
-    const endIndex = startIndex + pageSize.value
+    const response = await getUserPosts(params)
+    if (response.data.code === 0) {
+      userPosts.value = response.data.data.list || []
+      total.value = response.data.data.total || 0
 
-    // 获取当前页的数据
-    userPosts.value = mockPosts.slice(startIndex, endIndex)
-
+      // 格式化日期
+      userPosts.value.forEach(post => {
+        if (post.publishTime) {
+          post.publishTime = formatDateTime(post.publishTime)
+        }
+        if (post.lastReply) {
+          post.lastReply = formatDateTime(post.lastReply)
+        }
+      })
+    } else {
+      ElMessage.error(response.data.msg || '获取发帖记录失败')
+    }
+  } catch (error) {
+    console.error('获取用户发帖记录失败', error)
+    ElMessage.error('获取发帖记录失败')
+  } finally {
     loading.value = false
-  }, 500)
+  }
 }
 
 // 跳转到帖子详情
 const navigateToDetail = (postId) => {
   navigate(`/post/${postId}`)
-}
-
-// 编辑帖子
-const editPost = (postId) => {
-  router.push(`/edit-post/${postId}`)
 }
 
 // 删除帖子
@@ -140,16 +76,15 @@ const deletePost = (post) => {
     cancelButtonText: '取消',
     type: 'warning',
   })
-    .then(() => {
-      // 模拟删除成功
-      ElMessage.success('帖子删除成功')
-
-      // 从模拟数据中移除该帖子
-      const index = mockPosts.findIndex(item => item.id === post.id)
-      if (index !== -1) {
-        mockPosts.splice(index, 1)
+    .then(async () => {
+      try {
+        await deletePostService(post.id)
+        ElMessage.success('帖子删除成功')
         // 重新加载帖子列表
         loadUserPosts()
+      } catch (error) {
+        console.error('删除帖子失败', error)
+        ElMessage.error('删除帖子失败')
       }
     })
     .catch(() => {
@@ -173,6 +108,28 @@ const handleSizeChange = (size) => {
 // 发布新帖
 const navigateToPublish = () => {
   router.push('/publish-post')
+}
+
+// 获取分类名称
+const getCategoryName = (categoryCode) => {
+  const categoryMap = {
+    'team': '打球组队',
+    'notice': '赛事讨论',
+    'help': '求助问答',
+    'exp': '经验交流'
+  }
+  return categoryMap[categoryCode] || '其他'
+}
+
+// 获取分类标签类型
+const getCategoryTagType = (categoryCode) => {
+  const typeMap = {
+    'team': 'success',
+    'notice': 'primary',
+    'help': 'warning',
+    'exp': 'info'
+  }
+  return typeMap[categoryCode] || 'default'
 }
 
 onMounted(() => {
@@ -204,31 +161,26 @@ onMounted(() => {
         <el-table-column prop="title" label="帖子标题" min-width="300">
           <template #default="scope">
             <div class="post-title" @click="navigateToDetail(scope.row.id)">
+              <el-icon v-if="scope.row.isTop" class="top-icon"><Top /></el-icon>
               {{ scope.row.title }}
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="category" label="分类" width="120">
+        <el-table-column prop="categoryCode" label="分类" width="120">
           <template #default="scope">
             <el-tag
-              :type="scope.row.category === 'team' ? 'success' :
-                    scope.row.category === 'notice' ? 'primary' :
-                    scope.row.category === 'help' ? 'warning' :
-                    scope.row.category === 'exp' ? 'info' : 'default'">
-              {{ scope.row.category === 'team' ? '打球组队' :
-                 scope.row.category === 'notice' ? '公告通知' :
-                 scope.row.category === 'help' ? '求助问答' :
-                 scope.row.category === 'exp' ? '经验交流' : '其他' }}
+              :type="getCategoryTagType(scope.row.category)">
+              {{ getCategoryName(scope.row.category) }}
             </el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="publishTime" label="发布时间" width="180">
         </el-table-column>
-        <el-table-column prop="replies" label="回复/查看" width="120">
+        <el-table-column label="回复/查看" width="120">
           <template #default="scope">
             <div class="post-stats">
-              <div>{{ scope.row.replies }} 回复</div>
-              <div>{{ scope.row.views }} 查看</div>
+              <div>{{ scope.row.replyCount || 0 }} 回复</div>
+              <div>{{ scope.row.views || 0 }} 查看</div>
             </div>
           </template>
         </el-table-column>
@@ -323,10 +275,18 @@ h2 {
   color: #2b6fc2;
   font-weight: bold;
   cursor: pointer;
+  display: flex;
+  align-items: center;
 }
 
 .post-title:hover {
   text-decoration: underline;
+}
+
+.top-icon {
+  margin-right: 8px;
+  color: #f56c6c;
+  font-size: 16px;
 }
 
 .post-stats {

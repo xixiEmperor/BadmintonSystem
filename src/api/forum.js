@@ -98,6 +98,13 @@ export function getUserPosts(params) {
   })
 }
 
-
-
-
+// 设置帖子置顶状态
+export function setPostTopStatus(postId, isTop) {
+  return request({
+    url: `/api/forum/posts/${postId}/top`,
+    method: 'put',
+    params: {
+      isTop
+    }
+  })
+}

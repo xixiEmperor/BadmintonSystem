@@ -25,6 +25,10 @@
           <el-icon><Notification /></el-icon>
           <span>发布通知</span>
         </el-menu-item>
+        <el-menu-item index="/admin/forum">
+          <el-icon><ChatDotRound /></el-icon>
+          <span>论坛管理</span>
+        </el-menu-item>
       </el-menu>
     </div>
 
@@ -63,7 +67,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { HomeFilled, Calendar, ArrowDown, Notification } from '@element-plus/icons-vue'
+import { HomeFilled, Calendar, ArrowDown, Notification, ChatDotRound } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
 const route = useRoute()
