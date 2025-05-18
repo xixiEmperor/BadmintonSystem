@@ -93,6 +93,16 @@ const router = createRouter({
           component: () => import('@/views/admin/Notice.vue'),
           meta: { title: '预订系统后台' },
         },
+        {
+          path: 'forum',
+          component: () => import('@/views/admin/ForumManagement.vue'),
+          meta: { title: '论坛管理 - 预订系统后台' },
+        },
+        {
+          path: 'forum/post/:id',
+          component: () => import('@/views/admin/ForumPostDetail.vue'),
+          meta: { title: '帖子详情 - 预订系统后台' },
+        },
       ],
     },
     {

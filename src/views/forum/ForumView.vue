@@ -6,6 +6,7 @@ import { navigate } from '@/utils/router'
 import { getForumList } from '@/api/forum'
 import { useForumStore } from '@/stores/modules/forum'
 import { formatDateTime } from '@/utils/format'
+import { Top } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -14,7 +15,7 @@ const forumStore = useForumStore()
 const tabs = ref([
   { name: 'all', label: '全部帖子' },
   { name: 'team', label: '打球组队' },
-  { name: 'notice', label: '公告通知' },
+  { name: 'notice', label: '赛事讨论' },
   { name: 'help', label: '求助问答' },
   { name: 'exp', label: '经验交流' },
 ])
@@ -50,6 +51,21 @@ const getForumListData = async () => {
         lastReply: formatDateTime(post.lastReply)
       }
     })
+
+    // 对帖子进行排序，置顶的排在前面
+    formattedList.sort((a, b) => {
+      // 如果a置顶而b不置顶，则a排在前面
+      if (a.isTop && !b.isTop) return -1;
+      // 如果b置顶而a不置顶，则b排在前面
+      if (!a.isTop && b.isTop) return 1;
+      // 如果都置顶，则按置顶时间排序（后置顶的在前面）
+      if (a.isTop && b.isTop) {
+        return new Date(b.topTime || b.publishTime) - new Date(a.topTime || a.publishTime);
+      }
+      // 如果都不置顶，保持原有顺序（按发布时间倒序）
+      return new Date(b.publishTime) - new Date(a.publishTime);
+    });
+
     // 将帖子列表数据存储到论坛store中
     forumStore.setPosts(formattedList)
     total.value = res.data.data.total
@@ -116,6 +132,11 @@ watch(activeTab, () => {
 watch(searchKeyword, () => {
   handleSearch()
 })
+
+// 自定义行样式
+const tableRowClassName = ({ row }) => {
+  return row.isTop ? 'top-row' : ''
+}
 </script>
 
 <template>
@@ -146,10 +167,11 @@ watch(searchKeyword, () => {
       </el-tabs>
 
       <div class="topics-container">
-        <el-table :data="forumStore.posts" style="width: 100%">
+        <el-table :data="forumStore.posts" style="width: 100%" :row-class-name="tableRowClassName">
           <el-table-column prop="title" label="主题" min-width="300">
             <template #default="scope">
               <div class="topic-title" @click="navigateToDetail(scope.row.id)">
+                <el-icon v-if="scope.row.isTop" class="top-icon"><Top /></el-icon>
                 {{ scope.row.title }}
               </div>
             </template>
@@ -250,11 +272,33 @@ h2 {
   font-weight: bold;
   cursor: pointer;
   transition: color 0.3s;
+  display: flex;
+  align-items: center;
 }
 
 .topic-title:hover {
   color: #409eff;
   text-decoration: underline;
+}
+
+.top-icon {
+  margin-right: 8px;
+  color: #f56c6c;
+  font-size: 16px;
+}
+
+.top-icon::before {
+  content: "\e7a7"; /* 使用Element Plus的向上图标 */
+  font-family: "element-icons";
+}
+
+.el-table .top-row {
+  background-color: #fdf6ec;
+  position: relative;
+}
+
+.el-table .top-row td {
+  font-weight: 500;
 }
 
 .topic-author {
