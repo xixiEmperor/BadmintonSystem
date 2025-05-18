@@ -77,7 +77,7 @@ const commentCount = computed(() => {
 
 // 控制回复框显示
 const replyingTo = ref({
-  commentId: null,     // 父回复ID (parentId)
+  commentId: null,     // 父评论ID (parentId)
   replyId: null,       // 实际回复的评论ID (replyToId)
   replyToUserId: null, // 添加这个字段，记录回复目标用户的ID
   content: '',
@@ -206,7 +206,7 @@ const deleteComment = (comment, parentComment = null) => {
             // 删除主评论，重新获取评论列表
             await getForumComments()
           }
-          
+
           // 重新获取帖子详情，更新评论数量
           await getPostDetailWithStore()
 
@@ -236,19 +236,25 @@ const showReplyBox = (comment, parentComment = null) => {
   // 根据回复文档要求修改
   let placeholder = `回复 ${comment.nickname}：`
   let parentId = null
-  let replyToId = comment.id
+  let replyToId = null
   let replyToUserId = comment.userId
 
   if (parentComment) {
-    // 回复二级或更深层级的评论
-    parentId = parentComment.id // 父回复ID
-    replyToId = comment.id      // 实际回复的评论ID
+    // 回复二级评论
+    parentId = parentComment.id   // 父评论ID
+    replyToId = comment.id        // 被回复评论ID
     replyToUserId = comment.userId
     placeholder = `回复 @${comment.nickname}：`
+
+    // 确保展开该评论的回复列表
+    expandedReplies.value = {
+      ...expandedReplies.value,
+      [parentComment.id]: true
+    }
   } else {
     // 回复一级评论
-    parentId = comment.id // 父回复即当前回复
-    replyToId = comment.id
+    parentId = comment.id
+    replyToId = null
     replyToUserId = comment.userId
   }
 
@@ -273,7 +279,7 @@ const cancelReply = () => {
 }
 
 // 提交回复
-const submitReply = async (comment) => {
+const submitReply = async () => {
   if (!replyingTo.value.content.trim()) {
     ElMessage.warning('回复内容不能为空')
     return
@@ -285,7 +291,7 @@ const submitReply = async (comment) => {
     // 按照接口文档要求构建参数
     const replyData = {
       content: replyingTo.value.content,
-      parentId: replyingTo.value.commentId // 父回复ID
+      parentId: replyingTo.value.commentId // 父评论ID
     }
 
     // 如果有回复目标ID和用户ID，添加到请求中
@@ -305,10 +311,13 @@ const submitReply = async (comment) => {
       await getForumComments()
       // 重新获取帖子详情，更新评论数量
       await getPostDetailWithStore()
-      // 展开该评论的回复列表
-      expandedReplies.value = {
-        ...expandedReplies.value,
-        [comment.id]: true
+
+      // 确保展开该评论的回复列表
+      if (replyingTo.value.commentId) {
+        expandedReplies.value = {
+          ...expandedReplies.value,
+          [replyingTo.value.commentId]: true
+        }
       }
 
       // 重置回复框
@@ -561,7 +570,7 @@ const deletePost = () => {
                 <span class="reply-word-count">{{ replyingTo.content.length }} / 500</span>
                 <div class="reply-buttons">
                   <el-button size="small" @click="cancelReply">取消</el-button>
-                  <el-button size="small" type="primary" @click="submitReply(comment)"
+                  <el-button size="small" type="primary" @click="submitReply"
                     >回复</el-button
                   >
                 </div>
@@ -610,35 +619,30 @@ const deletePost = () => {
                       </span>
                     </div>
                   </div>
-                </div>
-              </div>
 
-              <!-- 回复输入框 (回复中的回复) -->
-              <div
-                v-if="
-                  replyingTo.commentId &&
-                  replyingTo.replyId &&
-                  comment.children.some((r) => r.id === replyingTo.replyId)
-                "
-                class="reply-form nested-reply-form"
-              >
-                <div class="reply-input-container">
-                  <el-input
-                    v-model="replyingTo.content"
-                    type="textarea"
-                    rows="2"
-                    :placeholder="replyingTo.placeholder"
-                    maxlength="500"
-                    show-word-limit
-                  ></el-input>
-                </div>
-                <div class="reply-actions">
-                  <span class="reply-word-count">{{ replyingTo.content.length }} / 500</span>
-                  <div class="reply-buttons">
-                    <el-button size="small" @click="cancelReply">取消</el-button>
-                    <el-button size="small" type="primary" @click="submitReply(comment)"
-                      >回复</el-button
-                    >
+                  <!-- 回复的回复输入框 (直接放在每个回复下方) -->
+                  <div
+                    v-if="replyingTo.commentId === comment.id && replyingTo.replyId === reply.id"
+                    class="reply-form nested-reply-form"
+                  >
+                    <div class="reply-input-container">
+                      <el-input
+                        v-model="replyingTo.content"
+                        type="textarea"
+                        rows="2"
+                        :placeholder="replyingTo.placeholder"
+                        maxlength="500"
+                        show-word-limit
+                        autofocus
+                      ></el-input>
+                    </div>
+                    <div class="reply-actions">
+                      <span class="reply-word-count">{{ replyingTo.content.length }} / 500</span>
+                      <div class="reply-buttons">
+                        <el-button size="small" @click="cancelReply">取消</el-button>
+                        <el-button size="small" type="primary" @click="submitReply">回复</el-button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

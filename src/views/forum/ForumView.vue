@@ -6,7 +6,7 @@ import { navigate } from '@/utils/router'
 import { getForumList } from '@/api/forum'
 import { useForumStore } from '@/stores/modules/forum'
 import { formatDateTime } from '@/utils/format'
-import { Top } from '@element-plus/icons-vue'
+import { CaretTop } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -171,7 +171,7 @@ const tableRowClassName = ({ row }) => {
           <el-table-column prop="title" label="主题" min-width="300">
             <template #default="scope">
               <div class="topic-title" @click="navigateToDetail(scope.row.id)">
-                <el-icon v-if="scope.row.isTop" class="top-icon"><Top /></el-icon>
+                <el-icon v-if="scope.row.isTop" class="top-icon"><CaretTop /></el-icon>
                 {{ scope.row.title }}
               </div>
             </template>
@@ -287,9 +287,8 @@ h2 {
   font-size: 16px;
 }
 
-.top-icon::before {
-  content: "\e7a7"; /* 使用Element Plus的向上图标 */
-  font-family: "element-icons";
+.el-icon.top-icon {
+  transform: scale(1.2);
 }
 
 .el-table .top-row {

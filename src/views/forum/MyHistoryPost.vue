@@ -2,7 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores'
-import { View, Delete, Edit, Top } from '@element-plus/icons-vue'
+import { View, Delete, CaretTop } from '@element-plus/icons-vue'
 import { formatDateTime } from '@/utils/format'
 import { navigate } from '@/utils/router'
 import { getUserPosts, deletePostService } from '@/api/forum'
@@ -161,7 +161,7 @@ onMounted(() => {
         <el-table-column prop="title" label="帖子标题" min-width="300">
           <template #default="scope">
             <div class="post-title" @click="navigateToDetail(scope.row.id)">
-              <el-icon v-if="scope.row.isTop" class="top-icon"><Top /></el-icon>
+              <el-icon v-if="scope.row.isTop" class="top-icon"><CaretTop /></el-icon>
               {{ scope.row.title }}
             </div>
           </template>
@@ -169,8 +169,8 @@ onMounted(() => {
         <el-table-column prop="categoryCode" label="分类" width="120">
           <template #default="scope">
             <el-tag
-              :type="getCategoryTagType(scope.row.category)">
-              {{ getCategoryName(scope.row.category) }}
+              :type="getCategoryTagType(scope.row.categoryCode)">
+              {{ getCategoryName(scope.row.categoryCode) }}
             </el-tag>
           </template>
         </el-table-column>
@@ -287,6 +287,10 @@ h2 {
   margin-right: 8px;
   color: #f56c6c;
   font-size: 16px;
+}
+
+.el-icon.top-icon {
+  transform: scale(1.2);
 }
 
 .post-stats {
