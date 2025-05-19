@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, computed, onBeforeUnmount } from 'vue'
-import { Plus, ArrowDown, User, ShoppingCart, Calendar } from '@element-plus/icons-vue'
+import { Plus, User, ShoppingCart, Calendar } from '@element-plus/icons-vue'
 import AIChatDialog from '@/components/AiChatDialog.vue'
 import { useUserStore, useCartStore } from '@/stores'
 import { useRouter } from 'vue-router'
@@ -14,7 +14,7 @@ const router = useRouter()
 
 // 获取购物车商品数量
 const cartItemCount = computed(() => {
-  return cartStore.totalItems()
+  return cartStore.totalCount
 })
 
 // AI助手对话框控制

@@ -3,7 +3,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getProductDetail } from '@/api/shop'
 import SpecificationSelector from './SpecificationSelector.vue'
-import { useCartStore } from '@/stores/cart'
+import { useCartStore } from '@/stores'
 
 const route = useRoute()
 const router = useRouter()
@@ -92,7 +92,7 @@ const decreaseQuantity = () => {
 }
 
 // 添加到购物车
-const addToCart = () => {
+const addToCart = async () => {
   if (!canAddToCart.value) {
     ElMessage.warning('请先选择有效的商品规格')
     return
@@ -125,9 +125,8 @@ const addToCart = () => {
   }
 
   // 添加到购物车
-  if (cartStore.addToCart(cartItem)) {
-    ElMessage.success('已添加到购物车')
-  }
+  await cartStore.addToCart(cartItem)
+  ElMessage.success('已添加到购物车')
 }
 
 // 立即购买
@@ -136,9 +135,6 @@ const buyNow = () => {
     ElMessage.warning('请先选择有效的商品规格')
     return
   }
-
-  // 添加到购物车
-  addToCart()
 
   // 跳转到结算页面
   router.push('/checkout')
@@ -204,7 +200,7 @@ onMounted(() => {
 
             <div class="product-meta">
               <div class="price-row">
-                <span class="label">价格:</span>
+                <span class="label">原价:</span>
                 <span class="price">¥{{ productDetail.price.toFixed(2) }}</span>
               </div>
 
@@ -238,15 +234,14 @@ onMounted(() => {
               <span class="label">数量:</span>
               <div class="quantity-control">
                 <el-button type="primary" circle size="small" @click="decreaseQuantity" :disabled="quantity <= 1">-</el-button>
-                <el-input-number
+                <el-input
                   v-model="quantity"
                   :min="1"
                   :max="productDetail.hasSpecification === 1 && currentSpecification ? currentSpecification.stock : productDetail.stock"
-                  controls-position="right"
                   size="small"
                   style="width: 120px"
                   :disabled="!canAddToCart">
-                </el-input-number>
+                </el-input>
                 <el-button type="primary" circle size="small" @click="increaseQuantity" :disabled="!canAddToCart">+</el-button>
               </div>
             </div>

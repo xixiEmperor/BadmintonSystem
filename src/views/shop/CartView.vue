@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useCartStore } from '@/stores'
-import { Delete, Minus, Plus, Edit } from '@element-plus/icons-vue'
+import { Delete, Minus, Plus, Edit, ShoppingTrolley } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -17,17 +17,31 @@ const toggleEditMode = () => {
 
 // 增加商品数量
 const increaseQuantity = (productId) => {
-  const item = cartStore.cartItems.find((item) => item.id === productId)
-  if (item) {
-    cartStore.updateCartItemQuantity(productId, item.quantity + 1)
+  const index = cartStore.cartItems.findIndex((item) => item.specificationId === productId)
+  if (index !== -1) {
+    const item = cartStore.cartItems[index]
+    // 检查库存限制
+    if (item.quantity >= item.stock) {
+      ElMessage.warning(`商品"${item.name}"已达到最大库存数量(${item.stock})`)
+      return
+    }
+
+    // 调用store方法更新数量，store里也有库存检查
+    const result = cartStore.updateItemQuantity(index, item.quantity + 1)
+    if (!result) {
+      ElMessage.warning(`商品"${item.name}"库存不足，无法继续添加`)
+    }
   }
 }
 
 // 减少商品数量
 const decreaseQuantity = (productId) => {
-  const item = cartStore.cartItems.find((item) => item.id === productId)
-  if (item && item.quantity > 1) {
-    cartStore.updateCartItemQuantity(productId, item.quantity - 1)
+  const index = cartStore.cartItems.findIndex((item) => item.specificationId === productId)
+  if (index !== -1) {
+    const item = cartStore.cartItems[index]
+    if (item.quantity > 1) {
+      cartStore.updateItemQuantity(index, item.quantity - 1)
+    }
   }
 }
 
@@ -38,7 +52,10 @@ const removeItem = (productId, productName) => {
     cancelButtonText: '取消',
     type: 'warning',
   }).then(() => {
-    cartStore.removeFromCart(productId)
+    const index = cartStore.cartItems.findIndex((item) => item.id === productId)
+    if (index !== -1) {
+      cartStore.removeFromCart(index)
+    }
   })
 }
 
@@ -53,12 +70,28 @@ const clearCart = () => {
   })
 }
 
-// 计算属性：总价
+// 计算属性：总价，直接使用store中的computed属性
 const totalPrice = computed(() => {
-  return cartStore.totalPrice()
+  return cartStore.totalPrice
 })
 
-// 从购物车结算
+// 从购物车结算单个商品
+const checkoutSingleItem = (product) => {
+  // 创建结算订单对象（单商品）
+  const orderInfo = {
+    product: product,
+    quantity: product.quantity,
+    totalAmount: product.price * product.quantity,
+  }
+
+  // 存储到localStorage以便结算页面使用
+  localStorage.setItem('checkout_order', JSON.stringify(orderInfo))
+
+  // 跳转到结算页面
+  router.push('/checkout')
+}
+
+// 从购物车结算所有商品
 const checkoutFromCart = () => {
   if (cartStore.cartItems.length === 0) {
     ElMessageBox.alert('购物车是空的，请先添加商品！', '提示')
@@ -68,7 +101,7 @@ const checkoutFromCart = () => {
   // 创建结算订单对象（多商品）
   const orderInfo = {
     products: cartStore.cartItems,
-    totalAmount: cartStore.totalPrice(),
+    totalAmount: totalPrice.value,
   }
 
   // 存储到localStorage以便结算页面使用
@@ -106,7 +139,7 @@ const checkoutFromCart = () => {
             <div class="product-info">
               <el-image :src="scope.row.image" fit="cover" class="product-image"></el-image>
               <div class="product-details">
-                <div class="product-name">{{ scope.row.name }}</div>
+                <div class="product-name">{{ scope.row.name }} ({{ Object.entries(scope.row.specifications).map(([key, value]) => `${value}`).join('、') }})</div>
                 <div class="product-price">¥{{ scope.row.price }}</div>
               </div>
             </div>
@@ -126,7 +159,7 @@ const checkoutFromCart = () => {
                 :icon="Minus"
                 circle
                 size="small"
-                @click="decreaseQuantity(scope.row.id)"
+                @click="decreaseQuantity(scope.row.specificationId)"
                 :disabled="scope.row.quantity <= 1"
               ></el-button>
               <span class="quantity">{{ scope.row.quantity }}</span>
@@ -134,7 +167,8 @@ const checkoutFromCart = () => {
                 :icon="Plus"
                 circle
                 size="small"
-                @click="increaseQuantity(scope.row.id)"
+                @click="increaseQuantity(scope.row.specificationId)"
+                :disabled="scope.row.quantity >= scope.row.stock"
               ></el-button>
             </div>
           </template>
@@ -152,8 +186,15 @@ const checkoutFromCart = () => {
               type="danger"
               :icon="Delete"
               circle
-              @click="removeItem(scope.row.id, scope.row.name)"
+              @click="removeItem(scope.row.specificationId, scope.row.name)"
               v-if="isEditMode"
+            ></el-button>
+            <el-button
+              v-else
+              type="primary"
+              :icon="ShoppingTrolley"
+              circle
+              @click="checkoutSingleItem(scope.row)"
             ></el-button>
           </template>
         </el-table-column>
