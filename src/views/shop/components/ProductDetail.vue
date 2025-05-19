@@ -1,3 +1,165 @@
+<script setup>
+import { ref, onMounted, computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { getProductDetail } from '@/api/shop'
+import SpecificationSelector from './SpecificationSelector.vue'
+import { useCartStore } from '@/stores/cart'
+
+const route = useRoute()
+const router = useRouter()
+const cartStore = useCartStore()
+
+const loading = ref(true)
+const productDetail = ref(null)
+const subImageList = ref([])
+const activeTab = ref('detail')
+
+// 当前选中的规格
+const currentSpecification = ref(null)
+// 是否可以添加到购物车
+const canAddToCart = ref(false)
+// 购买数量
+const quantity = ref(1)
+
+// 计算总价
+const totalPrice = computed(() => {
+  if (!productDetail.value) return 0
+
+  let price = productDetail.value.price
+  if (productDetail.value.hasSpecification === 1 && currentSpecification.value) {
+    price = Number(price) + Number(currentSpecification.value.priceAdjustment)
+  }
+
+  return (price * quantity.value).toFixed(2)
+})
+
+// 获取商品详情
+const fetchProductDetail = async (productId) => {
+  loading.value = true
+  try {
+    const response = await getProductDetail(productId)
+    if (response.data.code === 0) {
+      productDetail.value = response.data.data
+    }
+  } catch (error) {
+    console.error('获取商品详情失败:', error)
+    ElMessage.error('获取商品详情失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 切换主图
+const switchMainImage = (imgUrl) => {
+  if (productDetail.value) {
+    productDetail.value.mainImage = imgUrl
+  }
+}
+
+// 处理规格选择完成
+const handleSpecificationSelected = (specification) => {
+  currentSpecification.value = specification
+  // 有规格且库存>0时才能加入购物车
+  canAddToCart.value = specification && specification.stock > 0
+  // 重置数量
+  quantity.value = 1
+}
+
+// 处理规格选择变化
+const handleSpecificationChange = () => {
+  // 规格变化但未完成选择，此时不能加入购物车
+  canAddToCart.value = false
+}
+
+// 增加数量
+const increaseQuantity = () => {
+  const maxStock = productDetail.value.hasSpecification === 1 && currentSpecification.value
+    ? currentSpecification.value.stock
+    : productDetail.value.stock
+
+  if (quantity.value < maxStock) {
+    quantity.value++
+  } else {
+    ElMessage.warning('已达到最大库存数量')
+  }
+}
+
+// 减少数量
+const decreaseQuantity = () => {
+  if (quantity.value > 1) {
+    quantity.value--
+  }
+}
+
+// 添加到购物车
+const addToCart = () => {
+  if (!canAddToCart.value) {
+    ElMessage.warning('请先选择有效的商品规格')
+    return
+  }
+
+  let cartItem = null
+
+  if (productDetail.value.hasSpecification === 1 && currentSpecification.value) {
+    // 有规格的商品
+    cartItem = {
+      productId: productDetail.value.id,
+      name: productDetail.value.name,
+      price: Number(productDetail.value.price) + Number(currentSpecification.value.priceAdjustment),
+      image: productDetail.value.mainImage,
+      specificationId: currentSpecification.value.id,
+      specifications: currentSpecification.value.specifications,
+      quantity: quantity.value,
+      stock: currentSpecification.value.stock
+    }
+  } else {
+    // 无规格的商品
+    cartItem = {
+      productId: productDetail.value.id,
+      name: productDetail.value.name,
+      price: productDetail.value.price,
+      image: productDetail.value.mainImage,
+      quantity: quantity.value,
+      stock: productDetail.value.stock
+    }
+  }
+
+  // 添加到购物车
+  if (cartStore.addToCart(cartItem)) {
+    ElMessage.success('已添加到购物车')
+  }
+}
+
+// 立即购买
+const buyNow = () => {
+  if (!canAddToCart.value) {
+    ElMessage.warning('请先选择有效的商品规格')
+    return
+  }
+
+  // 添加到购物车
+  addToCart()
+
+  // 跳转到结算页面
+  router.push('/checkout')
+}
+
+// 返回商城
+const goBack = () => {
+  router.push('/shop')
+}
+
+// 在组件挂载时获取商品详情
+onMounted(() => {
+  const productId = route.params.id
+  if (productId) {
+    fetchProductDetail(productId)
+  } else {
+    loading.value = false
+  }
+})
+</script>
+
 <template>
   <div class="product-detail" v-loading="loading">
     <div v-if="productDetail">
@@ -61,16 +223,56 @@
 
             <!-- 规格选择区域，如果有规格的话 -->
             <div class="spec-selection" v-if="productDetail.hasSpecification === 1">
-              <!-- 规格选择UI将在后续开发 -->
-              <p class="spec-notice">该商品有多种规格可选</p>
+              <SpecificationSelector
+                :productId="Number(route.params.id)"
+                :basePrice="productDetail.price"
+                :hasSpecification="productDetail.hasSpecification === 1"
+                :specifications="productDetail.specifications"
+                @specification-selected="handleSpecificationSelected"
+                @specification-change="handleSpecificationChange"
+              />
+            </div>
+
+            <!-- 数量选择 -->
+            <div class="quantity-selection">
+              <span class="label">数量:</span>
+              <div class="quantity-control">
+                <el-button type="primary" circle size="small" @click="decreaseQuantity" :disabled="quantity <= 1">-</el-button>
+                <el-input-number
+                  v-model="quantity"
+                  :min="1"
+                  :max="productDetail.hasSpecification === 1 && currentSpecification ? currentSpecification.stock : productDetail.stock"
+                  controls-position="right"
+                  size="small"
+                  style="width: 120px"
+                  :disabled="!canAddToCart">
+                </el-input-number>
+                <el-button type="primary" circle size="small" @click="increaseQuantity" :disabled="!canAddToCart">+</el-button>
+              </div>
+            </div>
+
+            <!-- 总价显示 -->
+            <div class="total-price-section">
+              <span class="label">总价:</span>
+              <span class="total-price">¥{{ totalPrice }}</span>
             </div>
 
             <!-- 购买按钮区域 -->
             <div class="action-buttons">
-              <el-button type="primary" size="large" :disabled="productDetail.stock <= 0">
+              <el-button
+                type="primary"
+                size="large"
+                :disabled="!canAddToCart"
+                @click="addToCart">
                 加入购物车
               </el-button>
-              <el-button size="large">收藏商品</el-button>
+              <el-button
+                type="danger"
+                size="large"
+                :disabled="!canAddToCart"
+                @click="buyNow">
+                立即购买
+              </el-button>
             </div>
           </div>
         </el-col>
@@ -104,70 +306,6 @@
     </el-result>
   </div>
 </template>
-
-<script setup>
-import { ref, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { getProductDetail } from '@/api/shop'
-import { ElMessage } from 'element-plus'
-
-const route = useRoute()
-const router = useRouter()
-
-const loading = ref(true)
-const productDetail = ref(null)
-const subImageList = ref([])
-const activeTab = ref('detail')
-
-// 获取商品详情
-const fetchProductDetail = (productId) => {
-  loading.value = true
-
-  getProductDetail(productId)
-    .then(response => {
-      if (response.data.status === 0) {
-        productDetail.value = response.data.data
-
-        // 解析子图列表
-        if (productDetail.value.subImages) {
-          subImageList.value = productDetail.value.subImages.split(',')
-        }
-
-        // 设置页面标题
-        document.title = productDetail.value.name
-      }
-    })
-    .catch(error => {
-      console.error('获取商品详情失败:', error)
-      ElMessage.error('获取商品详情失败')
-    })
-    .finally(() => {
-      loading.value = false
-    })
-}
-
-// 切换主图
-const switchMainImage = (imgUrl) => {
-  if (productDetail.value) {
-    productDetail.value.mainImage = imgUrl
-  }
-}
-
-// 返回商城
-const goBack = () => {
-  router.push('/shop')
-}
-
-// 在组件挂载时获取商品详情
-onMounted(() => {
-  const productId = route.params.id
-  if (productId) {
-    fetchProductDetail(productId)
-  } else {
-    loading.value = false
-  }
-})
-</script>
 
 <style scoped>
 .product-detail {
@@ -305,5 +443,29 @@ onMounted(() => {
 .detail-content :deep(table), .detail-content :deep(th), .detail-content :deep(td) {
   border: 1px solid #ddd;
   padding: 8px;
+}
+
+.quantity-selection {
+  margin: 20px 0;
+  display: flex;
+  align-items: center;
+}
+
+.quantity-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.total-price-section {
+  margin: 20px 0;
+  display: flex;
+  align-items: center;
+}
+
+.total-price {
+  font-size: 26px;
+  font-weight: bold;
+  color: #ff6700;
 }
 </style>

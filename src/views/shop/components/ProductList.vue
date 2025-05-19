@@ -1,69 +1,7 @@
-<template>
-  <div class="product-list">
-    <!-- 筛选面板 -->
-    <div class="filter-panel">
-      <el-form :inline="true" class="filter-form">
-        <el-form-item label="关键词">
-          <el-input v-model="searchParams.keyword" placeholder="请输入关键词" @keyup.enter="handleSearch"></el-input>
-        </el-form-item>
-        <el-form-item label="排序方式">
-          <el-select v-model="searchParams.orderBy" placeholder="请选择">
-            <el-option label="默认排序" value=""></el-option>
-            <el-option label="价格升序" value="price_asc"></el-option>
-            <el-option label="价格降序" value="price_desc"></el-option>
-            <el-option label="销量降序" value="sales_desc"></el-option>
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleSearch">搜索</el-button>
-          <el-button @click="resetSearch">重置</el-button>
-        </el-form-item>
-      </el-form>
-    </div>
-
-    <!-- 商品列表 -->
-    <div class="product-grid" v-loading="loading">
-      <el-row :gutter="20">
-        <el-col :xs="24" :sm="12" :md="8" :lg="6" v-for="product in products" :key="product.id">
-          <el-card class="product-card" @click="goToDetail(product.id)">
-            <img :src="product.mainImage" class="product-image">
-            <div class="product-info">
-              <h3 class="product-name">{{ product.name }}</h3>
-              <p class="product-subtitle">{{ product.subtitle }}</p>
-              <div class="product-price-row">
-                <span class="product-price">¥{{ product.price.toFixed(2) }}</span>
-                <span class="product-sales">销量: {{ product.sales }}</span>
-              </div>
-            </div>
-          </el-card>
-        </el-col>
-      </el-row>
-
-      <!-- 空状态 -->
-      <el-empty v-if="products.length === 0 && !loading" description="暂无商品"></el-empty>
-    </div>
-
-    <!-- 分页控件 -->
-    <div class="pagination-container" v-if="pagination.total > 0">
-      <el-pagination
-        background
-        @size-change="handleSizeChange"
-        @current-change="handleCurrentChange"
-        :current-page="pagination.pageNum"
-        :page-sizes="[10, 20, 30, 50]"
-        :page-size="pagination.pageSize"
-        layout="total, sizes, prev, pager, next, jumper"
-        :total="pagination.total">
-      </el-pagination>
-    </div>
-  </div>
-</template>
-
 <script setup>
 import { ref, reactive, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getProducts } from '@/api/shop'
-import { ElMessage } from 'element-plus'
 
 // 接收props
 const props = defineProps({
@@ -89,31 +27,29 @@ const searchParams = reactive({
 // 分页信息
 const pagination = reactive({
   pageNum: 1,
-  pageSize: 10,
+  pageSize: 4,
   total: 0
 })
 
 // 获取商品列表
-const fetchProducts = () => {
+const fetchProducts = async () => {
   loading.value = true
-
-  getProducts(searchParams)
-    .then(response => {
-      if (response.data.status === 0) {
-        const data = response.data.data
-        products.value = data.list
-        pagination.pageNum = data.pageNum
-        pagination.pageSize = data.pageSize
-        pagination.total = data.total
-      }
-    })
-    .catch(error => {
-      console.error('获取商品列表失败:', error)
+  try {
+    const response = await getProducts(searchParams)
+    if (response.data.code === 0) {
+      products.value = response.data.data.list
+      pagination.pageNum = response.data.data.pageNum
+      pagination.pageSize = response.data.data.pageSize
+      pagination.total = response.data.data.total
+    } else {
       ElMessage.error('获取商品列表失败')
-    })
-    .finally(() => {
-      loading.value = false
-    })
+    }
+  } catch (error) {
+    console.error('获取商品列表失败:', error)
+    ElMessage.error('获取商品列表失败')
+  } finally {
+    loading.value = false
+  }
 }
 
 // 监听分类变化
@@ -159,6 +95,67 @@ onMounted(() => {
   fetchProducts()
 })
 </script>
+
+<template>
+  <div class="product-list">
+    <!-- 筛选面板 -->
+    <div class="filter-panel">
+      <el-form :inline="true" class="filter-form">
+        <el-form-item label="排序方式" style="width: 240px">
+          <el-select v-model="searchParams.orderBy" placeholder="请选择">
+            <el-option label="默认排序" value=""></el-option>
+            <el-option label="价格升序" value="price_asc"></el-option>
+            <el-option label="价格降序" value="price_desc"></el-option>
+            <el-option label="销量降序" value="sales_desc"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="关键词">
+          <el-input v-model="searchParams.keyword" placeholder="请输入关键词" @keyup.enter="handleSearch"></el-input>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="handleSearch">搜索</el-button>
+          <el-button @click="resetSearch">重置</el-button>
+        </el-form-item>
+      </el-form>
+    </div>
+
+    <!-- 商品列表 -->
+    <div class="product-grid" v-loading="loading">
+      <el-row :gutter="20">
+        <el-col :xs="24" :sm="12" :md="8" :lg="6" v-for="product in products" :key="product.id">
+          <el-card class="product-card" @click="goToDetail(product.id)">
+            <img :src="product.mainImage" class="product-image">
+            <div class="product-info">
+              <h3 class="product-name">{{ product.name }}</h3>
+              <p class="product-subtitle">{{ product.subtitle }}</p>
+              <div class="product-price-row">
+                <span class="product-price">¥{{ product.price.toFixed(2) }}</span>
+                <span class="product-sales">销量: {{ product.sales }}</span>
+              </div>
+            </div>
+          </el-card>
+        </el-col>
+      </el-row>
+
+      <!-- 空状态 -->
+      <el-empty v-if="products.length === 0 && !loading" description="暂无商品"></el-empty>
+    </div>
+
+    <!-- 分页控件 -->
+    <div class="pagination-container" v-if="pagination.total > 0">
+      <el-pagination
+        background
+        @size-change="handleSizeChange"
+        @current-change="handleCurrentChange"
+        :current-page="pagination.pageNum"
+        :page-sizes="[4, 6, 8, 10]"
+        :page-size="pagination.pageSize"
+        layout="total, sizes, prev, pager, next, jumper"
+        :total="pagination.total">
+      </el-pagination>
+    </div>
+  </div>
+</template>
 
 <style scoped>
 .product-list {

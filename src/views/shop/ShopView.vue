@@ -19,11 +19,11 @@ const handleCategoryChange = (categoryId) => {
     <el-container>
       <el-aside width="220px">
         <!-- 商品分类导航 -->
-        <category-list @category-selected="handleCategoryChange" />
+        <CategoryList @category-selected="handleCategoryChange" />
       </el-aside>
       <el-main>
         <!-- 商品列表 -->
-        <product-list :categoryId="selectedCategory" />
+        <ProductList :categoryId="selectedCategory" />
       </el-main>
     </el-container>
   </div>

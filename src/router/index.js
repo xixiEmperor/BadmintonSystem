@@ -40,7 +40,7 @@ const router = createRouter({
         },
         {
           path: '/checkout',
-          component: () => import('@/views/shop/CheckoutView.vue'),
+          component: () => import('@/views/shop/PayView.vue'),
           meta: { requiresAuth: true, title: '结算 - 武汉理工大学南湖校区羽毛球场预定前台' },
         },
         {
