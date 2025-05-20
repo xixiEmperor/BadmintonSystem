@@ -30,7 +30,7 @@ const router = createRouter({
         },
         {
           path: '/product/:id',
-          component: () => import('@/views/shop/components/ProductDetail.vue'),
+          component: () => import('@/views/shop/ProductDetail.vue'),
           meta: { title: '商品详情 - 武汉理工大学南湖校区羽毛球场预定前台' },
         },
         {
@@ -107,6 +107,11 @@ const router = createRouter({
           path: 'forum/post/:id',
           component: () => import('@/views/admin/ForumPostDetail.vue'),
           meta: { title: '帖子详情 - 预订系统后台' },
+        },
+        {
+          path: 'products',
+          component: () => import('@/views/admin/shop/ProductManagement.vue'),
+          meta: { title: '商品管理 - 预订系统后台' },
         },
       ],
     },

@@ -1,3 +1,35 @@
+<script setup>
+import { computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { HomeFilled, Calendar, ArrowDown, Notification, ChatDotRound, GoodsFilled } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+
+const route = useRoute()
+const router = useRouter()
+
+// 计算当前激活的菜单项
+const activeMenu = computed(() => {
+  return route.path
+})
+
+// 计算当前页面标题
+const currentTitle = computed(() => {
+  return route.meta.title || '管理后台'
+})
+
+// 退出登录
+const logout = () => {
+  localStorage.removeItem('userInfo')
+  localStorage.removeItem('token')
+  ElMessage.success('退出登录成功')
+  // 使用新标签页打开登录页
+  const routeUrl = router.resolve('/login')
+  window.open(routeUrl.href, '_blank')
+  // 关闭当前页面
+  window.close()
+}
+</script>
+
 <template>
   <div class="admin-layout">
     <!-- 侧边菜单栏 -->
@@ -28,6 +60,10 @@
         <el-menu-item index="/admin/forum">
           <el-icon><ChatDotRound /></el-icon>
           <span>论坛管理</span>
+        </el-menu-item>
+        <el-menu-item index="/admin/products">
+          <el-icon><GoodsFilled /></el-icon>
+          <span>商品管理</span>
         </el-menu-item>
       </el-menu>
     </div>
@@ -63,38 +99,6 @@
     </div>
   </div>
 </template>
-
-<script setup>
-import { computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { HomeFilled, Calendar, ArrowDown, Notification, ChatDotRound } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
-
-const route = useRoute()
-const router = useRouter()
-
-// 计算当前激活的菜单项
-const activeMenu = computed(() => {
-  return route.path
-})
-
-// 计算当前页面标题
-const currentTitle = computed(() => {
-  return route.meta.title || '管理后台'
-})
-
-// 退出登录
-const logout = () => {
-  localStorage.removeItem('userInfo')
-  localStorage.removeItem('token')
-  ElMessage.success('退出登录成功')
-  // 使用新标签页打开登录页
-  const routeUrl = router.resolve('/login')
-  window.open(routeUrl.href, '_blank')
-  // 关闭当前页面
-  window.close()
-}
-</script>
 
 <style lang="less" scoped>
 .admin-layout {

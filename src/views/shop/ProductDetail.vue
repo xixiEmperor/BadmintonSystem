@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getProductDetail } from '@/api/shop'
-import SpecificationSelector from './SpecificationSelector.vue'
+import SpecificationSelector from './components/SpecificationSelector.vue'
 import { useCartStore } from '@/stores'
 
 const route = useRoute()
@@ -130,14 +130,43 @@ const addToCart = async () => {
 }
 
 // 立即购买
-const buyNow = () => {
+const buyNow = async () => {
   if (!canAddToCart.value) {
     ElMessage.warning('请先选择有效的商品规格')
     return
   }
 
-  // 跳转到结算页面
-  router.push('/checkout')
+  let cartItem = null
+
+  if (productDetail.value.hasSpecification === 1 && currentSpecification.value) {
+    // 有规格的商品
+    cartItem = {
+      productId: productDetail.value.id,
+      name: productDetail.value.name,
+      price: Number(productDetail.value.price) + Number(currentSpecification.value.priceAdjustment),
+      image: productDetail.value.mainImage,
+      specificationId: currentSpecification.value.id,
+      specifications: currentSpecification.value.specifications,
+      quantity: quantity.value,
+      stock: currentSpecification.value.stock
+    }
+  } else {
+    // 无规格的商品
+    cartItem = {
+      productId: productDetail.value.id,
+      name: productDetail.value.name,
+      price: productDetail.value.price,
+      image: productDetail.value.mainImage,
+      quantity: quantity.value,
+      stock: productDetail.value.stock
+    }
+  }
+
+  // 先添加到购物车
+  await cartStore.addToCart(cartItem)
+
+  // 跳转到购物车页面
+  router.push('/cart')
 }
 
 // 返回商城
@@ -266,7 +295,7 @@ onMounted(() => {
                 size="large"
                 :disabled="!canAddToCart"
                 @click="buyNow">
-                立即购买
+                加入购物车并结算
               </el-button>
             </div>
           </div>
@@ -278,12 +307,6 @@ onMounted(() => {
         <el-tabs v-model="activeTab">
           <el-tab-pane label="商品详情" name="detail">
             <div class="detail-content" v-html="productDetail.detail"></div>
-          </el-tab-pane>
-          <el-tab-pane label="规格参数" name="specs">
-            <div class="specs-content">
-              <!-- 规格参数内容 -->
-              <p v-if="!productDetail.hasSpecification">该商品暂无规格参数</p>
-            </div>
           </el-tab-pane>
         </el-tabs>
       </div>
