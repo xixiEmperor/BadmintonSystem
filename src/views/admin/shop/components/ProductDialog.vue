@@ -1,7 +1,7 @@
 <script setup>
 import { ref, reactive, watch } from 'vue'
 import { Plus } from '@element-plus/icons-vue'
-import { addProduct, updateProduct, uploadProductImages, updateSpecificationStock } from '@/api/shop'
+import { addProduct, updateProduct, uploadProductImages } from '@/api/shop'
 
 const props = defineProps({
   visible: {
@@ -40,6 +40,9 @@ const form = reactive({
 // 原始库存值，用于检测是否修改了库存
 const originalStock = ref(0)
 
+// 子图数组，用于前端展示和提交时转换为字符串
+const subImagesArray = ref([])
+
 // 如果product存在，则将product的值赋给form
 if (props.product) {
   Object.keys(form).forEach(key => {
@@ -50,9 +53,21 @@ if (props.product) {
 
   // 记录原始库存值
   originalStock.value = props.product.stock || 0
+
+  // 初始化子图数组
+  if (props.product.subImages) {
+    const subImagesStr = props.product.subImages
+    // 按逗号分割并去除每个URL周围的空格
+    subImagesArray.value = subImagesStr.split(',')
+      .map(url => url.trim())
+      .filter(url => url) // 过滤掉空字符串
+      .map(url => ({
+        url,
+        name: url.substring(url.lastIndexOf('/') + 1)
+      }))
+    console.log('初始化子图数组:', subImagesArray.value)
+  }
 }
-// 子图数组，用于前端展示和提交时转换为字符串
-const subImagesArray = ref([])
 
 // 主图文件和子图文件
 const mainImageFile = ref(null)
@@ -97,10 +112,18 @@ watch(
       // 处理子图
       if (newVal.subImages) {
         const subImagesStr = newVal.subImages
-        subImagesArray.value = subImagesStr.split(',').map(url => ({
-          url,
-          name: url.substring(url.lastIndexOf('/') + 1)
-        }))
+        // 按逗号分割并去除每个URL周围的空格
+        subImagesArray.value = subImagesStr.split(',')
+          .map(url => url.trim())
+          .filter(url => url) // 过滤掉空字符串
+          .map(url => ({
+            url,
+            name: url.substring(url.lastIndexOf('/') + 1)
+          }))
+
+        // 更新表单中的subImages字段，确保格式正确
+        form.subImages = subImagesArray.value.map(item => item.url).join(',')
+        console.log('子图数组:', subImagesArray.value)
       } else {
         subImagesArray.value = []
       }
@@ -210,18 +233,21 @@ const uploadAllImages = async () => {
     const res = await uploadProductImages(formData)
 
     if (res.data.code === 0) {
+      // 解析data字符串为JSON对象
+      const imageData = JSON.parse(res.data.data)
+
       // 处理主图
-      if (res.data.data.mainImage) {
-        form.mainImage = res.data.data.mainImage
+      if (imageData.mainImage) {
+        form.mainImage = imageData.mainImage
       }
 
       // 处理子图
-      if (res.data.data.subImages && res.data.data.subImages.length > 0) {
+      if (imageData.subImages && imageData.subImages.length > 0) {
         // 移除临时图片
         subImagesArray.value = subImagesArray.value.filter(img => !img.isTemp)
 
         // 添加新上传的图片
-        res.data.data.subImages.forEach(url => {
+        imageData.subImages.forEach(url => {
           subImagesArray.value.push({
             url,
             name: url.substring(url.lastIndexOf('/') + 1)
@@ -257,9 +283,10 @@ const handleSubImageRemove = (index) => {
 
 // 更新子图字符串
 const updateSubImagesString = () => {
-  // 过滤掉临时图片
-  const realImages = subImagesArray.value.filter(img => !img.isTemp)
-  form.subImages = realImages.map(item => item.url).join(',')
+  // 过滤掉临时图片和无效的URL
+  const realImages = subImagesArray.value.filter(img => !img.isTemp && img.url && img.url.trim())
+  form.subImages = realImages.map(item => item.url.trim()).join(',')
+  console.log('更新后的子图字符串:', form.subImages)
 }
 
 // 提交表单
@@ -273,8 +300,10 @@ const submitForm = async () => {
       await uploadAllImages()
 
       // 检查是否需要单独更新库存
-      const needUpdateStock = props.product && form.stock !== originalStock.value
       const productId = props.product?.id
+
+      // 确保subImages是逗号分隔的URL字符串
+      updateSubImagesString()
 
       let res
       if (props.product) {
@@ -283,18 +312,6 @@ const submitForm = async () => {
       } else {
         // 添加商品
         res = await addProduct(form)
-      }
-
-      // 如果商品有规格，并且修改了库存，则使用规格库存更新接口
-      if (res.data.code === 0 && needUpdateStock && productId) {
-        try {
-          // 更新规格库存
-          await updateSpecificationStock(productId, form.stock)
-          ElMessage.success('库存更新成功')
-        } catch (stockError) {
-          console.error('更新库存失败:', stockError)
-          ElMessage.warning(res.data.msg || '库存更新失败')
-        }
       }
 
       if (res.data.code === 0) {

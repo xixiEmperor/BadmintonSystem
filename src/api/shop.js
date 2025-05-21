@@ -25,6 +25,20 @@ export function getProducts(params) {
 }
 
 /**
+ * 获取商品列表
+ * @param {Object} params 查询参数
+ * @param {String} params.categoryId 分类ID，默认值为"all"，表示所有分类
+ * @param {String} params.keyword 搜索关键词，匹配商品名称或副标题
+ * @param {Number} params.pageNum 页码，默认为1
+ * @param {Number} params.pageSize 每页数量，默认为10
+ * @param {String} params.orderBy 排序方式：price_asc（价格升序）、price_desc（价格降序）、sales_desc（销量降序）
+ * @returns {Promise} 返回商品列表数据
+ */
+export function getProductsByAdmin(params) {
+  return request.get('/api/mall/admin/products', { params })
+}
+
+/**
  * 获取商品详情
  * @param {Number} productId 商品ID
  * @returns {Promise} 返回商品详细信息

@@ -1,12 +1,13 @@
 <script setup>
 import { ref,  onMounted } from 'vue'
+import { Delete, Plus } from '@element-plus/icons-vue'
 import {
   getProductSpecifications,
   getProductSpecOptions,
   addProductSpecification,
   updateSpecification,
   deleteSpecification,
-  updateProduct
+  // updateProduct
 } from '@/api/shop'
 
 const props = defineProps({
@@ -17,6 +18,10 @@ const props = defineProps({
   productId: {
     type: Number,
     required: true
+  },
+  productSpecOptions: {
+    type: Array,
+    default: () => []
   }
 })
 
@@ -27,7 +32,7 @@ const loading = ref(false)
 const submitting = ref(false)
 
 // 规格选项表单
-const specOptionsForm = ref([{ key: 'color', customKey: '', values: [] }])
+const specOptionsForm = ref([{ key: 'color', values: [] }])
 
 // 生成的规格组合
 const specCombinations = ref([])
@@ -80,38 +85,27 @@ const loadProductSpecOptions = async () => {
     const res = await getProductSpecOptions(props.productId)
     if (res.data.code === 0 && res.data.data) {
       const options = res.data.data
+      console.log('规格选项:', options)
 
       // 重置规格选项表单
       specOptionsForm.value = []
 
       // 将已有规格选项加入表单
-      Object.keys(options).forEach(key => {
+      options.forEach(item => {
         specOptionsForm.value.push({
-          key: Object.keys(specKeyMap).includes(key) ? key : 'custom',
-          customKey: Object.keys(specKeyMap).includes(key) ? '' : key,
-          values: options[key] || []
+          key: Object.keys(specKeyMap).includes(item.specKey) ? item.specKey : 'custom',
+          values: item.specValues || []
         })
       })
 
       // 确保至少有一行
       if (specOptionsForm.value.length === 0) {
-        specOptionsForm.value.push({ key: 'color', customKey: '', values: [] })
+        specOptionsForm.value.push({ key: 'color', values: [] })
       }
     }
   } catch (error) {
     console.error('获取规格选项出错', error)
   }
-}
-
-// 获取默认规格选项
-const getDefaultOptions = (key) => {
-  const optionsMap = {
-    'color': ['红色', '蓝色', '黑色', '白色', '灰色'],
-    'size': ['S', 'M', 'L', 'XL', 'XXL', '均码'],
-    'material': ['棉', '涤纶', '锦纶', '尼龙'],
-    'style': ['经典款', '修身款', '宽松款']
-  }
-  return optionsMap[key] || []
 }
 
 // 格式化规格键名
@@ -121,7 +115,7 @@ const formatSpecKey = (key) => {
 
 // 添加规格选项行
 const addSpecOptionRow = () => {
-  specOptionsForm.value.push({ key: '', customKey: '', values: [] })
+  specOptionsForm.value.push({ key: '', values: [] })
 }
 
 // 移除规格选项行
@@ -133,8 +127,7 @@ const removeSpecOptionRow = (index) => {
 const generateSpecCombinations = () => {
   // 过滤有效的规格选项
   const validOptions = specOptionsForm.value.filter(opt => {
-    const key = opt.key === 'custom' ? opt.customKey : opt.key
-    return key && opt.values && opt.values.length > 0
+    return opt.key && opt.values && opt.values.length > 0
   })
 
   if (validOptions.length === 0) {
@@ -145,15 +138,14 @@ const generateSpecCombinations = () => {
   // 生成规格选项数据结构
   const optionsData = {}
   validOptions.forEach(opt => {
-    const key = opt.key === 'custom' ? opt.customKey : opt.key
-    optionsData[key] = opt.values
+    optionsData[opt.key] = opt.values
   })
 
   // 生成所有可能的组合
   specCombinations.value = generateCombinations(optionsData)
 }
 
-// 生成所有可能的规格组合
+// 生成所有可能的规格组合(全排列)
 const generateCombinations = (optionsData) => {
   const keys = Object.keys(optionsData)
   if (keys.length === 0) return []
@@ -192,45 +184,99 @@ const saveAllSpecifications = async () => {
   }
 
   submitting.value = true
+
+  // 创建加载提示
+  const loadingInstance = ElLoading.service({
+    lock: true,
+    text: '正在保存所有规格...',
+    background: 'rgba(0, 0, 0, 0.7)'
+  })
+
   try {
     // 先保存规格选项
     const specOptions = {}
     specOptionsForm.value.forEach(opt => {
       if (opt.values && opt.values.length > 0) {
-        const key = opt.key === 'custom' ? opt.customKey : opt.key
-        if (key) {
-          specOptions[key] = opt.values
-        }
+        specOptions[opt.key] = opt.values
       }
     })
 
     // 更新商品以启用规格
-    const productUpdate = {
-      hasSpecification: 1,
-      specOptions: JSON.stringify(specOptions)
-    }
+      // const productUpdate = {
+      //   hasSpecification: 1,
+      //   specOptions: JSON.stringify(specOptions)
+      // }
 
     // 更新商品规格设置
-    await updateProduct(props.productId, productUpdate)
+    // await updateProduct(props.productId, productUpdate)
 
     // 保存所有规格组合
-    const savePromises = specCombinations.value.map(combo => {
-      return addProductSpecification(props.productId, {
-        specifications: combo.specs,
-        priceAdjustment: combo.priceAdjustment,
-        stock: combo.stock
-      })
+    // 使用定时器控制请求发送速率
+    const results = []
+    const failedSpecs = []
+    const totalSpecs = specCombinations.value.length
+
+    // 创建进度提示组件
+    const progressMessage = ElMessage({
+      type: 'info',
+      message: `正在保存规格...`,
+      duration: 0,
+      showClose: true
     })
 
-    await Promise.all(savePromises)
+    // 使用Promise完成所有保存任务
+    await new Promise((resolve) => {
+      let index = 0
 
-    ElMessage.success('所有规格保存成功')
+      const saveNext = async () => {
+        if (index >= specCombinations.value.length) {
+          resolve()
+          return
+        }
+
+        const combo = specCombinations.value[index]
+
+        // 更新进度消息
+        progressMessage.message = `正在保存规格... (${index + 1}/${totalSpecs})`
+
+        try {
+          const result = await addProductSpecification(props.productId, {
+            specifications: combo.specs,
+            priceAdjustment: combo.priceAdjustment,
+            stock: combo.stock
+          })
+          results.push(result)
+        } catch (error) {
+          console.error('保存规格失败:', error)
+          failedSpecs.push(combo)
+        }
+
+        index++
+        setTimeout(saveNext, 100) // 每隔100ms发送一次请求
+      }
+
+      saveNext()
+    })
+
+    // 关闭进度消息
+    progressMessage.close()
+
+    // 根据结果显示消息
+    if (failedSpecs.length === 0) {
+      ElMessage.success('所有规格保存成功')
+    } else {
+      ElMessage.warning(`保存完成，但有${failedSpecs.length}个规格保存失败`)
+      console.error('保存失败的规格:', failedSpecs)
+    }
+
     await loadProductSpecifications()
     specCombinations.value = []
   } catch (error) {
     console.error('保存规格失败:', error)
     ElMessage.error('保存规格失败，请稍后重试')
   } finally {
+    // 关闭加载提示
+    loadingInstance.close()
     submitting.value = false
   }
 }
@@ -321,15 +367,7 @@ const handleSuccess = () => {
             <el-option label="尺寸" value="size"></el-option>
             <el-option label="材质" value="material"></el-option>
             <el-option label="款式" value="style"></el-option>
-            <el-option label="自定义" value="custom"></el-option>
           </el-select>
-
-          <el-input
-            v-if="options.key === 'custom'"
-            v-model="options.customKey"
-            placeholder="自定义规格类型"
-            style="width: 150px; margin: 0 10px;">
-          </el-input>
 
           <el-select
             v-model="options.values"
@@ -338,9 +376,9 @@ const handleSuccess = () => {
             allow-create
             default-first-option
             placeholder="规格选项值"
-            style="width: 280px; margin: 0 10px;">
+            style="width: 500px; margin: 0 10px;">
             <el-option
-              v-for="item in getDefaultOptions(options.key)"
+              v-for="item in productSpecOptions.get(options.key)"
               :key="item"
               :label="item"
               :value="item">

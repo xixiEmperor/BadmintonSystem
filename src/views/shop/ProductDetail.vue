@@ -11,7 +11,7 @@ const cartStore = useCartStore()
 
 const loading = ref(true)
 const productDetail = ref(null)
-const subImageList = ref([])
+const imageList = ref([])
 const activeTab = ref('detail')
 
 // 当前选中的规格
@@ -40,6 +40,9 @@ const fetchProductDetail = async (productId) => {
     const response = await getProductDetail(productId)
     if (response.data.code === 0) {
       productDetail.value = response.data.data
+
+      // 处理图片列表
+      processImages()
     }
   } catch (error) {
     console.error('获取商品详情失败:', error)
@@ -49,10 +52,31 @@ const fetchProductDetail = async (productId) => {
   }
 }
 
-// 切换主图
-const switchMainImage = (imgUrl) => {
-  if (productDetail.value) {
-    productDetail.value.mainImage = imgUrl
+// 处理主图和副图，组合成图片列表
+const processImages = () => {
+  if (!productDetail.value) return
+
+  // 图片列表清空
+  imageList.value = []
+
+  // 添加主图
+  if (productDetail.value.mainImage) {
+    imageList.value.push(productDetail.value.mainImage)
+  }
+
+  // 处理副图，如果是字符串，尝试拆分
+  if (productDetail.value.subImages) {
+    let subImages = productDetail.value.subImages
+    if (typeof subImages === 'string') {
+      // 字符串形式，可能是逗号分隔的URL
+      subImages = subImages.split(',').map(url => url.trim())
+    } else if (Array.isArray(subImages)) {
+      // 已经是数组形式
+      subImages = [...subImages]
+    }
+
+    // 添加到图片列表
+    imageList.value.push(...subImages)
   }
 }
 
@@ -202,21 +226,22 @@ onMounted(() => {
         <!-- 商品图片区 -->
         <el-col :span="12">
           <div class="product-gallery">
-            <!-- 主图 -->
-            <div class="main-image">
-              <el-image :src="productDetail.mainImage" fit="contain"></el-image>
-            </div>
+            <!-- 图片轮播 -->
+            <el-carousel :interval="4000" type="card" height="400px" v-if="imageList.length > 0" ref="carousel">
+              <el-carousel-item v-for="(img, index) in imageList" :key="index">
+                <el-image :src="img" fit="contain" class="carousel-image"></el-image>
+              </el-carousel-item>
+            </el-carousel>
 
-            <!-- 子图列表 -->
-            <div class="sub-images" v-if="subImageList && subImageList.length > 0">
-              <el-image
-                v-for="(img, index) in subImageList"
+            <!-- 缩略图列表 -->
+            <div class="thumbnail-list" v-if="imageList.length > 1">
+              <div
+                v-for="(img, index) in imageList"
                 :key="index"
-                :src="img"
-                fit="cover"
-                class="sub-image-item"
-                @click="switchMainImage(img)">
-              </el-image>
+                class="thumbnail-item"
+                @click="$refs.carousel.setActiveItem(index)">
+                <el-image :src="img" fit="cover"></el-image>
+              </div>
             </div>
           </div>
         </el-col>
@@ -338,33 +363,49 @@ onMounted(() => {
   background-color: #fff;
   border-radius: 4px;
   overflow: hidden;
+  padding: 15px;
 }
 
-.main-image {
+.carousel-image {
   width: 100%;
-  height: 400px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 10px;
+  height: 100%;
+  object-fit: contain;
 }
 
-.sub-images {
+.thumbnail-list {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+  margin-top: 15px;
+  justify-content: center;
 }
 
-.sub-image-item {
+.thumbnail-item {
   width: 80px;
   height: 80px;
   border: 1px solid #ddd;
   cursor: pointer;
   transition: border-color 0.3s;
+  overflow: hidden;
 }
 
-.sub-image-item:hover {
+.thumbnail-item:hover {
   border-color: #409EFF;
+}
+
+.thumbnail-item .el-image {
+  width: 100%;
+  height: 100%;
+}
+
+/* Element Plus Carousel 样式覆盖 */
+:deep(.el-carousel__item) {
+  background-color: #fff;
+}
+
+:deep(.el-carousel__item--card) {
+  border-radius: 4px;
+  overflow: hidden;
 }
 
 .product-info {

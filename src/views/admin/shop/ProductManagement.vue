@@ -3,11 +3,13 @@ import { ref, reactive, onMounted } from 'vue'
 import ProductDialog from './components/ProductDialog.vue'
 import SpecificationManager from './components/SpecificationManager.vue'
 import {
-  getProducts,
+  getProductsByAdmin,
   getCategories,
   onSaleProduct,
   offSaleProduct,
-  deleteProduct
+  deleteProduct,
+  getProductSpecOptions,
+  getProductDetail
 } from '@/api/shop'
 
 // 数据定义
@@ -57,7 +59,7 @@ const loadProducts = async () => {
       categoryId: searchForm.categoryId,
       status: searchForm.status
     }
-    const res = await getProducts(params)
+    const res = await getProductsByAdmin(params)
     if (res.data.code === 0) {
       productList.value = res.data.data.list || []
       pagination.total = res.data.data.total || 0
@@ -119,10 +121,32 @@ const handleAddProduct = () => {
 }
 
 // 编辑商品
-const handleEditProduct = (product) => {
-  console.log(product)
-  currentProduct.value = { ...product }
-  dialogVisible.value = true
+const handleEditProduct = async (product) => {
+  try {
+    loading.value = true
+    // 获取商品详情
+    const res = await getProductDetail(product.id)
+    if (res.data.code === 0) {
+      // 将详情数据和列表数据合并
+      currentProduct.value = {
+        ...product,
+        ...res.data.data,
+        // 确保即使在详情接口中没有的字段也被保留
+        id: product.id,
+        categoryId: product.categoryId,
+        categoryName: product.categoryName
+      }
+      dialogVisible.value = true
+      console.log(currentProduct.value)
+    } else {
+      ElMessage.error(res.data.msg || '获取商品详情失败')
+    }
+  } catch (error) {
+    console.error('获取商品详情出错', error)
+    ElMessage.error('获取商品详情失败')
+  } finally {
+    loading.value = false
+  }
 }
 
 // 处理商品状态（上架/下架）
@@ -171,9 +195,21 @@ const handleDeleteProduct = (productId) => {
     .catch(() => {})
 }
 
+// 记录商品规格选项
+const productSpecOptions = new Map()
 // 管理商品规格
-const handleManageSpecifications = (productId) => {
+const handleManageSpecifications = async (productId) => {
   currentProductId.value = productId
+  const res = await getProductSpecOptions(productId)
+  if (res.data.code === 0) {
+    for (const item of res.data.data) {
+      productSpecOptions.set(item.specKey, item.specValues)
+    }
+    console.log(productSpecOptions)
+  } else {
+    ElMessage.error(res.data.msg || '获取商品规格失败')
+  }
+
   specDialogVisible.value = true
 }
 
@@ -277,12 +313,6 @@ const handleSpecSuccess = () => {
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="规格" width="100">
-          <template #default="scope">
-            <el-tag v-if="scope.row.hasSpecification === 1" type="warning">多规格</el-tag>
-            <el-tag v-else type="info">单规格</el-tag>
-          </template>
-        </el-table-column>
         <el-table-column label="操作" width="320" fixed="right">
           <template #default="scope">
             <el-button
@@ -356,6 +386,7 @@ const handleSpecSuccess = () => {
       v-if="specDialogVisible"
       :visible="specDialogVisible"
       :product-id="currentProductId"
+      :product-spec-options="productSpecOptions"
       @close="closeSpecDialog"
       @success="handleSpecSuccess"
     />
