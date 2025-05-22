@@ -2,12 +2,11 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getProductDetail } from '@/api/shop'
+import { addToCart } from '@/api/cart'
 import SpecificationSelector from './components/SpecificationSelector.vue'
-import { useCartStore } from '@/stores'
 
 const route = useRoute()
 const router = useRouter()
-const cartStore = useCartStore()
 
 const loading = ref(true)
 const productDetail = ref(null)
@@ -40,7 +39,10 @@ const fetchProductDetail = async (productId) => {
     const response = await getProductDetail(productId)
     if (response.data.code === 0) {
       productDetail.value = response.data.data
-
+      // 如果无规格，则可以加入购物车和购买
+      if(productDetail.value.hasSpecification === 0){
+        canAddToCart.value = true
+      }
       // 处理图片列表
       processImages()
     }
@@ -116,41 +118,31 @@ const decreaseQuantity = () => {
 }
 
 // 添加到购物车
-const addToCart = async () => {
+const addToCartHandler = async () => {
   if (!canAddToCart.value) {
     ElMessage.warning('请先选择有效的商品规格')
     return
   }
 
-  let cartItem = null
+  try {
+    let requestData = {
+      productId: productDetail.value.id,
+      quantity: quantity.value,
+      specs: {}
+    }
 
-  if (productDetail.value.hasSpecification === 1 && currentSpecification.value) {
-    // 有规格的商品
-    cartItem = {
-      productId: productDetail.value.id,
-      name: productDetail.value.name,
-      price: Number(productDetail.value.price) + Number(currentSpecification.value.priceAdjustment),
-      image: productDetail.value.mainImage,
-      specificationId: currentSpecification.value.id,
-      specifications: currentSpecification.value.specifications,
-      quantity: quantity.value,
-      stock: currentSpecification.value.stock
+    if (productDetail.value.hasSpecification === 1 && currentSpecification.value) {
+      // 有规格的商品
+      requestData.specs = currentSpecification.value.specifications
+      console.log(requestData)
     }
-  } else {
-    // 无规格的商品
-    cartItem = {
-      productId: productDetail.value.id,
-      name: productDetail.value.name,
-      price: productDetail.value.price,
-      image: productDetail.value.mainImage,
-      quantity: quantity.value,
-      stock: productDetail.value.stock
-    }
+
+    await addToCart(requestData)
+    ElMessage.success('已添加到购物车')
+  } catch (error) {
+    console.error('添加到购物车失败:', error)
+    ElMessage.error('添加到购物车失败')
   }
-
-  // 添加到购物车
-  await cartStore.addToCart(cartItem)
-  ElMessage.success('已添加到购物车')
 }
 
 // 立即购买
@@ -160,37 +152,25 @@ const buyNow = async () => {
     return
   }
 
-  let cartItem = null
+  try {
+    let requestData = {
+      productId: productDetail.value.id,
+      quantity: quantity.value,
+      specs: {}
+    }
 
-  if (productDetail.value.hasSpecification === 1 && currentSpecification.value) {
-    // 有规格的商品
-    cartItem = {
-      productId: productDetail.value.id,
-      name: productDetail.value.name,
-      price: Number(productDetail.value.price) + Number(currentSpecification.value.priceAdjustment),
-      image: productDetail.value.mainImage,
-      specificationId: currentSpecification.value.id,
-      specifications: currentSpecification.value.specifications,
-      quantity: quantity.value,
-      stock: currentSpecification.value.stock
+    if (productDetail.value.hasSpecification === 1 && currentSpecification.value) {
+      // 有规格的商品
+      requestData.specs = currentSpecification.value.specifications
     }
-  } else {
-    // 无规格的商品
-    cartItem = {
-      productId: productDetail.value.id,
-      name: productDetail.value.name,
-      price: productDetail.value.price,
-      image: productDetail.value.mainImage,
-      quantity: quantity.value,
-      stock: productDetail.value.stock
-    }
+
+    await addToCart(requestData)
+    // 跳转到购物车页面
+    router.push('/cart')
+  } catch (error) {
+    console.error('添加到购物车失败:', error)
+    ElMessage.error('添加到购物车失败')
   }
-
-  // 先添加到购物车
-  await cartStore.addToCart(cartItem)
-
-  // 跳转到购物车页面
-  router.push('/cart')
 }
 
 // 返回商城
@@ -312,7 +292,7 @@ onMounted(() => {
                 type="primary"
                 size="large"
                 :disabled="!canAddToCart"
-                @click="addToCart">
+                @click="addToCartHandler">
                 加入购物车
               </el-button>
               <el-button

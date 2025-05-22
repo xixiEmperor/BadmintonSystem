@@ -1,11 +1,22 @@
 <script setup>
-import { ref, computed } from 'vue'
-import { useCartStore } from '@/stores'
-import { Delete, Minus, Plus, Edit, ShoppingTrolley } from '@element-plus/icons-vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { Delete, Minus, Plus, Edit, ShoppingTrolley } from '@element-plus/icons-vue'
+import {
+  getCartList,
+  updateCartItem,
+  removeCartItem,
+  selectCartItem,
+  selectAllCartItems,
+  clearCart as apiClearCart
+} from '@/api/cart'
 
 const router = useRouter()
-const cartStore = useCartStore()
+
+// 购物车数据
+const cartItems = ref([])
+const loading = ref(false)
+const isAllSelected = ref(false)
 
 // 编辑模式
 const isEditMode = ref(false)
@@ -15,64 +26,156 @@ const toggleEditMode = () => {
   isEditMode.value = !isEditMode.value
 }
 
+// 获取购物车列表
+const fetchCartList = async () => {
+  loading.value = true
+  try {
+    const response = await getCartList()
+    if (response.data.code === 0) {
+      cartItems.value = response.data.data.cartItems
+      isAllSelected.value = response.data.data.allSelected
+    }
+  } catch (error) {
+    console.error('获取购物车失败:', error)
+    ElMessage.error('获取购物车失败')
+  } finally {
+    loading.value = false
+  }
+}
+
 // 增加商品数量
-const increaseQuantity = (productId) => {
-  const index = cartStore.cartItems.findIndex((item) => item.specificationId === productId)
-  if (index !== -1) {
-    const item = cartStore.cartItems[index]
-    // 检查库存限制
-    if (item.quantity >= item.stock) {
-      ElMessage.warning(`商品"${item.name}"已达到最大库存数量(${item.stock})`)
-      return
+const increaseQuantity = async (item) => {
+  if (item.quantity >= item.stock) {
+    ElMessage.warning(`商品"${item.productName}"已达到最大库存数量(${item.stock})`)
+    return
+  }
+
+  try {
+    const data = {
+      quantity: item.quantity + 1
     }
 
-    // 调用store方法更新数量，store里也有库存检查
-    const result = cartStore.updateItemQuantity(index, item.quantity + 1)
-    if (!result) {
-      ElMessage.warning(`商品"${item.name}"库存不足，无法继续添加`)
+    // 如果有规格，需要传递规格信息
+    if (item.specificationId) {
+      data.specs = item.specs
     }
+
+    await updateCartItem(item.productId, data)
+    // 更新成功后重新获取购物车列表
+    fetchCartList()
+  } catch (error) {
+    console.error('更新数量失败:', error)
+    ElMessage.error('更新数量失败')
   }
 }
 
 // 减少商品数量
-const decreaseQuantity = (productId) => {
-  const index = cartStore.cartItems.findIndex((item) => item.specificationId === productId)
-  if (index !== -1) {
-    const item = cartStore.cartItems[index]
-    if (item.quantity > 1) {
-      cartStore.updateItemQuantity(index, item.quantity - 1)
+const decreaseQuantity = async (item) => {
+  if (item.quantity <= 1) {
+    return
+  }
+
+  try {
+    const data = {
+      quantity: item.quantity - 1
     }
+
+    // 如果有规格，需要传递规格信息
+    if (item.specificationId) {
+      data.specs = item.specs
+    }
+
+    await updateCartItem(item.productId, data)
+    // 更新成功后重新获取购物车列表
+    fetchCartList()
+  } catch (error) {
+    console.error('更新数量失败:', error)
+    ElMessage.error('更新数量失败')
   }
 }
 
 // 删除购物车商品
-const removeItem = (productId, productName) => {
-  ElMessageBox.confirm(`确定要从购物车中移除 ${productName} 吗？`, '提示', {
+const removeItem = (item) => {
+  ElMessageBox.confirm(`确定要从购物车中移除 ${item.productName} 吗？`, '提示', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning',
-  }).then(() => {
-    const index = cartStore.cartItems.findIndex((item) => item.id === productId)
-    if (index !== -1) {
-      cartStore.removeFromCart(index)
+  }).then(async () => {
+    try {
+      const data = {}
+      // 如果有规格，需要传递规格信息
+      if (item.specificationId) {
+        data.specs = item.specs
+      }
+
+      await removeCartItem(item.productId, data)
+      ElMessage.success('商品已从购物车中移除')
+      // 删除成功后重新获取购物车列表
+      fetchCartList()
+    } catch (error) {
+      console.error('删除商品失败:', error)
+      ElMessage.error('删除商品失败')
     }
-  })
+  }).catch(() => {})
+}
+
+// 选择/取消选择单个商品
+const toggleSelectItem = async (item) => {
+  try {
+    const data = {
+      selected: !item.selected
+    }
+
+    // 如果有规格，需要传递规格信息
+    if (item.specificationId) {
+      data.specs = item.specs
+    }
+
+    await selectCartItem(item.productId, data)
+    // 更新成功后重新获取购物车列表
+    fetchCartList()
+  } catch (error) {
+    console.error('更新选择状态失败:', error)
+    ElMessage.error('更新选择状态失败')
+  }
+}
+
+// 全选/取消全选
+const toggleSelectAll = async () => {
+  try {
+    await selectAllCartItems(!isAllSelected.value)
+    // 更新成功后重新获取购物车列表
+    fetchCartList()
+  } catch (error) {
+    console.error('更新全选状态失败:', error)
+    ElMessage.error('更新全选状态失败')
+  }
 }
 
 // 清空购物车
-const clearCart = () => {
+const clearCartItems = () => {
   ElMessageBox.confirm('确定要清空购物车吗？', '提示', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning',
-  }).then(() => {
-    cartStore.clearCart()
-  })
+  }).then(async () => {
+    try {
+      await apiClearCart()
+      ElMessage.success('购物车已清空')
+      // 清空成功后重新获取购物车列表
+      fetchCartList()
+    } catch (error) {
+      console.error('清空购物车失败:', error)
+      ElMessage.error('清空购物车失败')
+    }
+  }).catch(() => {})
 }
 
-// 计算属性：总价，直接使用store中的computed属性
+// 计算属性：总价
 const totalPrice = computed(() => {
-  return cartStore.totalPrice
+  return cartItems.value
+    .filter(item => item.selected)
+    .reduce((sum, item) => sum + item.quantity * item.productPrice, 0)
 })
 
 // 从购物车结算单个商品
@@ -81,7 +184,7 @@ const checkoutSingleItem = (product) => {
   const orderInfo = {
     product: product,
     quantity: product.quantity,
-    totalAmount: product.price * product.quantity,
+    totalAmount: product.productPrice * product.quantity,
   }
 
   // 存储到localStorage以便结算页面使用
@@ -93,14 +196,16 @@ const checkoutSingleItem = (product) => {
 
 // 从购物车结算所有商品
 const checkoutFromCart = () => {
-  if (cartStore.cartItems.length === 0) {
-    ElMessageBox.alert('购物车是空的，请先添加商品！', '提示')
+  const selectedItems = cartItems.value.filter(item => item.selected)
+
+  if (selectedItems.length === 0) {
+    ElMessageBox.alert('请至少选择一件商品进行结算！', '提示')
     return
   }
 
   // 创建结算订单对象（多商品）
   const orderInfo = {
-    products: cartStore.cartItems,
+    products: selectedItems,
     totalAmount: totalPrice.value,
   }
 
@@ -110,6 +215,11 @@ const checkoutFromCart = () => {
   // 跳转到结算页面
   router.push('/checkout')
 }
+
+// 页面加载时获取购物车数据
+onMounted(() => {
+  fetchCartList()
+})
 </script>
 
 <template>
@@ -120,27 +230,43 @@ const checkoutFromCart = () => {
         <el-button type="primary" :icon="Edit" @click="toggleEditMode">
           {{ isEditMode ? '完成' : '编辑' }}
         </el-button>
-        <el-button type="danger" @click="clearCart" v-if="cartStore.cartItems.length > 0">
+        <el-button type="danger" @click="clearCartItems" v-if="cartItems.length > 0">
           清空购物车
         </el-button>
       </div>
     </div>
 
-    <div v-if="cartStore.cartItems.length === 0" class="empty-cart">
+    <div v-if="loading">
+      <el-skeleton :rows="5" animated />
+    </div>
+
+    <div v-else-if="cartItems.length === 0" class="empty-cart">
       <el-empty description="购物车是空的，快去添加喜欢的商品吧！">
         <el-button type="primary" @click="$router.push('/shop')">去购物</el-button>
       </el-empty>
     </div>
 
     <div v-else class="cart-content">
-      <el-table :data="cartStore.cartItems" style="width: 100%">
+      <el-table :data="cartItems" style="width: 100%">
+        <el-table-column width="55" align="center">
+          <template #header>
+            <el-checkbox v-model="isAllSelected" @change="toggleSelectAll" />
+          </template>
+          <template #default="scope">
+            <el-checkbox v-model="scope.row.selected" @change="() => toggleSelectItem(scope.row)" />
+          </template>
+        </el-table-column>
+
         <el-table-column label="商品" min-width="300">
           <template #default="scope">
             <div class="product-info">
-              <el-image :src="scope.row.image" fit="cover" class="product-image"></el-image>
+              <el-image :src="scope.row.productImage" fit="cover" class="product-image"></el-image>
               <div class="product-details">
-                <div class="product-name">{{ scope.row.name }} ({{ Object.entries(scope.row.specifications).map(([key, value]) => `${value}`).join('、') }})</div>
-                <div class="product-price">¥{{ scope.row.price }}</div>
+                <div v-if="Object.keys(scope.row.specs || {}).length > 0" class="product-name">
+                  {{ scope.row.productName }} ({{ Object.entries(scope.row.specs).map(([key, value]) => `${value}`).join('、') }})
+                </div>
+                <div v-else class="product-name">{{ scope.row.productName }}</div>
+                <div class="product-price">¥{{ scope.row.productPrice }}</div>
               </div>
             </div>
           </template>
@@ -148,7 +274,7 @@ const checkoutFromCart = () => {
 
         <el-table-column label="单价" width="120" align="center">
           <template #default="scope">
-            <span class="price">¥{{ scope.row.price }}</span>
+            <span class="price">¥{{ scope.row.productPrice }}</span>
           </template>
         </el-table-column>
 
@@ -159,7 +285,7 @@ const checkoutFromCart = () => {
                 :icon="Minus"
                 circle
                 size="small"
-                @click="decreaseQuantity(scope.row.specificationId)"
+                @click="decreaseQuantity(scope.row)"
                 :disabled="scope.row.quantity <= 1"
               ></el-button>
               <span class="quantity">{{ scope.row.quantity }}</span>
@@ -167,7 +293,7 @@ const checkoutFromCart = () => {
                 :icon="Plus"
                 circle
                 size="small"
-                @click="increaseQuantity(scope.row.specificationId)"
+                @click="increaseQuantity(scope.row)"
                 :disabled="scope.row.quantity >= scope.row.stock"
               ></el-button>
             </div>
@@ -176,7 +302,7 @@ const checkoutFromCart = () => {
 
         <el-table-column label="小计" width="150" align="center">
           <template #default="scope">
-            <span class="subtotal">¥{{ (scope.row.price * scope.row.quantity).toFixed(2) }}</span>
+            <span class="subtotal">¥{{ (scope.row.productPrice * scope.row.quantity).toFixed(2) }}</span>
           </template>
         </el-table-column>
 
@@ -186,7 +312,7 @@ const checkoutFromCart = () => {
               type="danger"
               :icon="Delete"
               circle
-              @click="removeItem(scope.row.specificationId, scope.row.name)"
+              @click="removeItem(scope.row)"
               v-if="isEditMode"
             ></el-button>
             <el-button

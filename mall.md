@@ -1833,3 +1833,369 @@ function getCurrentSpecCombination() {
    - 规格选择不完整时禁用"加入购物车"按钮
 
 这些指南和示例代码将帮助开发者实现一个功能完善的商品规格系统，提升用户购物体验和商家管理效率。
+
+
+
+## 购物车模块接口文档
+
+### 购物车API接口列表
+
+| 接口URL                        | 方法   | 说明                  | 需要登录 |
+| ------------------------------ | ------ | --------------------- | -------- |
+| `/api/cart`                    | GET    | 获取购物车列表        | 是       |
+| `/api/cart`                    | POST   | 添加商品到购物车      | 是       |
+| `/api/cart/{productId}`        | PUT    | 更新购物车商品数量    | 是       |
+| `/api/cart/{productId}`        | DELETE | 删除购物车商品        | 是       |
+| `/api/cart/select/{productId}` | PUT    | 选择/取消选择单个商品 | 是       |
+| `/api/cart/select-all`         | PUT    | 全选/取消全选         | 是       |
+| `/api/cart`                    | DELETE | 清空购物车            | 是       |
+
+### 接口详细说明
+
+#### 1. 获取购物车列表
+
+**请求方法**：GET
+
+**URL**：`/api/cart`
+
+**请求头**：
+
+```
+Authorization: Bearer {token}
+
+```
+
+**响应示例**：
+
+```json
+{
+    "code": 0,
+    "data": {
+        "cartItems": [
+            {
+                "productId": 2,
+                "productName": "LINING N9II",
+                "productImage": "http://example.com/images/2.jpg",
+                "productPrice": 750.00,
+                "specs": {},
+                "quantity": 2,
+                "selected": true,
+                "stock": 85,
+                "totalPrice": 1500.00,
+                "specificationId": null
+            },
+            {
+                "productId": 100006,
+                "productName": "YONEX羽毛球鞋SHB-65Z2",
+                "productImage": "images/shoes1.jpg",
+                "productPrice": 799.00,
+                "specs": {
+                    "color": "蓝色",
+                    "size": "40"
+                },
+                "quantity": 1,
+                "selected": true,
+                "stock": 8,
+                "totalPrice": 829.00,
+                "specificationId": 14
+            }
+        ],
+        "totalQuantity": 3,
+        "totalPrice": 2329.00,
+        "allSelected": true
+    }
+}
+```
+
+#### 2. 添加商品到购物车
+
+**请求方法**：POST
+
+**URL**：`/api/cart`
+
+**请求头**：
+
+```
+Authorization: Bearer {token}
+Content-Type: application/json
+
+```
+
+**请求体**：
+
+```json
+{
+    "productId": 100006,
+    "quantity": 1,
+    "specs": {
+        "color": "蓝色",
+        "size": "40"
+    }
+}
+```
+
+```json
+{
+    "productId": 1,
+    "quantity": 2,
+    "specs": {}  
+}
+```
+
+// 空对象表示无规格
+
+**响应示例**：
+
+```json
+{
+    "code": 0,
+    "msg": "添加成功",
+    "data": null
+}
+```
+
+#### 3. 更新购物车商品数量
+
+**请求方法**：PUT
+
+**URL**：`/api/cart/{productId}`
+
+**请求头**：
+
+```
+Authorization: Bearer {token}
+Content-Type: application/json
+
+```
+
+**请求体**：
+
+```json
+{
+    "quantity": 3,
+    "specs": {
+        "color": "蓝色",
+        "weight": "轻量级"
+    }
+}
+```
+
+```json
+{
+    "quantity": 3
+}
+```
+
+**响应示例**：
+
+```json
+{
+    "code": 0,
+    "msg": "更新成功",
+    "data": null
+}
+```
+
+#### 4. 删除购物车商品
+
+**接口描述**：从购物车中删除指定商品
+
+**请求方法**：DELETE
+
+**URL**：`/api/cart/{productId}`
+
+**支持两种传递规格信息的方式：**
+
+**方式一：使用请求体（推荐）**
+
+**请求头**：
+
+```
+Authorization: Bearer {token}
+Content-Type: application/json
+
+```
+
+**请求体**：
+
+```json
+{
+    "specs": {
+        "color": "蓝色",
+        "size": "40"
+    }
+}
+```
+
+**方式二：使用URL查询参数**（可选）
+
+**URL**：`/api/cart/{productId}?specs={"color":"蓝色","size":"40"}`
+
+**请求头**：
+
+```
+Authorization: Bearer {token}
+
+```
+
+> 注意：URL查询参数方式中，JSON字符串需要进行URL编码。在Postman中，可以在Params选项卡中添加key为"specs"，value为`{"color":"蓝色","size":"40"}`的参数，Postman会自动进行编码。
+
+**响应示例**：
+
+```json
+{
+    "code": 0,
+    "msg": "删除成功",
+    "data": null
+}
+```
+
+**错误响应**：
+
+```json
+{
+    "code": 4002,
+    "msg": "删除失败，商品可能已不在购物车中",
+    "data": null
+}
+```
+
+或
+
+```json
+{
+    "code": 401,
+    "msg": "请先登录",
+    "data": null
+}
+```
+
+#### 5. 选择/取消选择购物车商品
+
+**请求方法**：PUT
+
+**URL**：`/api/cart/select/{productId}`
+
+**请求头**：
+
+```
+Authorization: Bearer {token}
+Content-Type: application/json
+
+```
+
+**请求体**：
+
+```json
+{
+    "selected": true,
+    "specs": {
+        "color": "蓝色",
+        "size": "40"
+    }
+}
+```
+
+**响应示例**：
+
+```json
+{
+    "code": 0,
+    "msg": "操作成功",
+    "data": {
+        "cartItems": ["..."],
+        "totalQuantity": 2,
+        "totalPrice": 598.00,
+        "allSelected": true
+    }
+}
+```
+
+#### 6. 全选/取消全选购物车
+
+**请求方法**：PUT
+
+**URL**：`/api/cart/select-all`
+
+**请求头**：
+
+```
+Authorization: Bearer {token}
+Content-Type: application/json
+
+```
+
+**请求体**：
+
+```json
+{
+    "selected": true
+}
+```
+
+```json
+{
+    "selected": false
+}
+```
+
+**响应示例**：
+
+```json
+{
+    "code": 0,
+    "msg": "操作成功",
+    "data": {
+        "cartItems": ["..."],
+        "totalQuantity": 5,
+        "totalPrice": 1299.00,
+        "allSelected": true
+    }
+}
+```
+
+#### 7. 清空购物车
+
+**请求方法**：DELETE
+
+**URL**：`/api/cart`
+
+**请求头**：
+
+```
+Authorization: Bearer {token}
+
+```
+
+**响应示例**：
+
+```json
+{
+    "code": 0,
+    "msg": "清空成功",
+    "data": null
+}
+```
+
+1. **常见问题排查**
+
+   a. **401 未授权错误**
+
+   - 检查token是否正确设置
+   - 检查token是否过期
+
+   b. **404 接口不存在**
+
+   - 检查请求URL是否正确
+   - 检查后端服务是否正常启动
+
+   c. **400 参数错误**
+
+   - 检查请求体格式是否正确
+   - 检查请求参数是否符合要求
+
+   d. **500 服务器错误**
+
+   - 检查服务器日志查找原因
+   - 确认Redis服务是否正常运行
+

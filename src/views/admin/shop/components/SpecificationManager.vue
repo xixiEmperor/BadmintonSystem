@@ -32,7 +32,7 @@ const loading = ref(false)
 const submitting = ref(false)
 
 // 规格选项表单
-const specOptionsForm = ref([{ key: 'color', values: [] }])
+const specOptionsForm = ref([{ key: 'color', customKey: '', values: [] }])
 
 // 生成的规格组合
 const specCombinations = ref([])
@@ -48,7 +48,8 @@ const specKeyMap = {
   'color': '颜色',
   'size': '尺寸',
   'material': '材质',
-  'style': '款式'
+  'style': '款式',
+  'custom': '自定义'
 }
 
 // 初始化
@@ -92,15 +93,18 @@ const loadProductSpecOptions = async () => {
 
       // 将已有规格选项加入表单
       options.forEach(item => {
+        // 检查是否是预定义的规格类型
+        const isPreDefinedKey = Object.keys(specKeyMap).includes(item.specKey)
         specOptionsForm.value.push({
-          key: Object.keys(specKeyMap).includes(item.specKey) ? item.specKey : 'custom',
+          key: isPreDefinedKey ? item.specKey : 'custom',
+          customKey: isPreDefinedKey ? '' : item.specKey,  // 如果不是预定义类型，保存为自定义类型
           values: item.specValues || []
         })
       })
 
       // 确保至少有一行
       if (specOptionsForm.value.length === 0) {
-        specOptionsForm.value.push({ key: 'color', values: [] })
+        specOptionsForm.value.push({ key: 'color', customKey: '', values: [] })
       }
     }
   } catch (error) {
@@ -115,7 +119,7 @@ const formatSpecKey = (key) => {
 
 // 添加规格选项行
 const addSpecOptionRow = () => {
-  specOptionsForm.value.push({ key: '', values: [] })
+  specOptionsForm.value.push({ key: '', customKey: '', values: [] })
 }
 
 // 移除规格选项行
@@ -127,7 +131,8 @@ const removeSpecOptionRow = (index) => {
 const generateSpecCombinations = () => {
   // 过滤有效的规格选项
   const validOptions = specOptionsForm.value.filter(opt => {
-    return opt.key && opt.values && opt.values.length > 0
+    return opt.key && opt.values && opt.values.length > 0 &&
+           (opt.key !== 'custom' || (opt.key === 'custom' && opt.customKey))
   })
 
   if (validOptions.length === 0) {
@@ -138,7 +143,8 @@ const generateSpecCombinations = () => {
   // 生成规格选项数据结构
   const optionsData = {}
   validOptions.forEach(opt => {
-    optionsData[opt.key] = opt.values
+    const key = opt.key === 'custom' ? opt.customKey : opt.key
+    optionsData[key] = opt.values
   })
 
   // 生成所有可能的组合
@@ -197,7 +203,10 @@ const saveAllSpecifications = async () => {
     const specOptions = {}
     specOptionsForm.value.forEach(opt => {
       if (opt.values && opt.values.length > 0) {
-        specOptions[opt.key] = opt.values
+        const key = opt.key === 'custom' ? opt.customKey : opt.key
+        if (key) {
+          specOptions[key] = opt.values
+        }
       }
     })
 
@@ -252,7 +261,7 @@ const saveAllSpecifications = async () => {
         }
 
         index++
-        setTimeout(saveNext, 100) // 每隔100ms发送一次请求
+        setTimeout(saveNext, 30) // 每隔30ms发送一次请求
       }
 
       saveNext()
@@ -367,7 +376,16 @@ const handleSuccess = () => {
             <el-option label="尺寸" value="size"></el-option>
             <el-option label="材质" value="material"></el-option>
             <el-option label="款式" value="style"></el-option>
+            <el-option label="自定义" value="custom"></el-option>
           </el-select>
+
+          <!-- 自定义规格类型输入框 -->
+          <el-input
+            v-if="options.key === 'custom'"
+            v-model="options.customKey"
+            placeholder="请输入规格类型名称"
+            style="width: 150px; margin: 0 10px;">
+          </el-input>
 
           <el-select
             v-model="options.values"
@@ -376,9 +394,9 @@ const handleSuccess = () => {
             allow-create
             default-first-option
             placeholder="规格选项值"
-            style="width: 500px; margin: 0 10px;">
+            style="width: 450px; margin: 0 10px;">
             <el-option
-              v-for="item in productSpecOptions.get(options.key)"
+              v-for="item in (productSpecOptions.get && options.key ? productSpecOptions.get(options.key) : [])"
               :key="item"
               :label="item"
               :value="item">

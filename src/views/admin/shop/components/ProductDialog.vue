@@ -40,6 +40,14 @@ const form = reactive({
 // 原始库存值，用于检测是否修改了库存
 const originalStock = ref(0)
 
+// 监听规格启用状态变化
+watch(() => form.hasSpecification, (newVal) => {
+  if (newVal === 1) {
+    // 启用多规格时，保存当前库存作为默认值
+    originalStock.value = form.stock
+  }
+})
+
 // 子图数组，用于前端展示和提交时转换为字符串
 const subImagesArray = ref([])
 
@@ -385,7 +393,11 @@ const handleClose = () => {
           :precision="0"
           :step="1"
           style="width: 100%"
+          :disabled="form.hasSpecification === 1"
         />
+        <div class="tip-text" v-if="form.hasSpecification === 1">
+          <small>多规格商品的库存将自动计算，无需手动设置</small>
+        </div>
       </el-form-item>
 
       <el-form-item label="商品状态" prop="status">
@@ -409,7 +421,7 @@ const handleClose = () => {
             :closable="false"
           >
             <p>启用多规格功能后，请保存商品信息，然后在商品列表中点击"规格"按钮进行规格管理。</p>
-            <p>多规格商品的库存将由规格库存管理，这里设置的库存将作为默认值。</p>
+            <p>多规格商品的总库存将自动计算，无需在此设置。</p>
           </el-alert>
         </div>
       </el-form-item>
@@ -607,5 +619,11 @@ const handleClose = () => {
 
 .spec-tip {
   margin-top: 10px;
+}
+
+.tip-text {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 5px;
 }
 </style>

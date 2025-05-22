@@ -313,6 +313,12 @@ const handleSpecSuccess = () => {
             </el-tag>
           </template>
         </el-table-column>
+        <el-table-column label="规格" width="100">
+          <template #default="scope">
+            <el-tag v-if="scope.row.hasSpecification === 1" type="warning">多规格</el-tag>
+            <el-tag v-else type="info">单规格</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="320" fixed="right">
           <template #default="scope">
             <el-button
