@@ -2,11 +2,13 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getProductDetail } from '@/api/shop'
-import { addToCart } from '@/api/cart'
+import { useCartStore } from '@/stores/modules/cart'
 import SpecificationSelector from './components/SpecificationSelector.vue'
+import { ElMessage } from 'element-plus'
 
 const route = useRoute()
 const router = useRouter()
+const cartStore = useCartStore()
 
 const loading = ref(true)
 const productDetail = ref(null)
@@ -124,24 +126,32 @@ const addToCartHandler = async () => {
     return
   }
 
-  try {
-    let requestData = {
-      productId: productDetail.value.id,
-      quantity: quantity.value,
-      specs: {}
-    }
+  // 构建商品数据
+  const cartItem = {
+    productId: productDetail.value.id,
+    productName: productDetail.value.name,
+    productImage: productDetail.value.mainImage,
+    productPrice: productDetail.value.price,
+    quantity: quantity.value,
+    stock: productDetail.value.hasSpecification === 1 && currentSpecification.value
+      ? currentSpecification.value.stock
+      : productDetail.value.stock,
+    selected: true
+  }
 
-    if (productDetail.value.hasSpecification === 1 && currentSpecification.value) {
-      // 有规格的商品
-      requestData.specs = currentSpecification.value.specifications
-      console.log(requestData)
-    }
+  // 如果有规格，添加规格信息
+  if (productDetail.value.hasSpecification === 1 && currentSpecification.value) {
+    cartItem.specificationId = currentSpecification.value.id
+    cartItem.specs = currentSpecification.value.specifications
+    cartItem.priceAdjustment = currentSpecification.value.priceAdjustment
+  } else {
+    cartItem.priceAdjustment = 0
+  }
 
-    await addToCart(requestData)
+  // 使用 store 添加到购物车
+  const success = await cartStore.addToCart(cartItem)
+  if (success) {
     ElMessage.success('已添加到购物车')
-  } catch (error) {
-    console.error('添加到购物车失败:', error)
-    ElMessage.error('添加到购物车失败')
   }
 }
 
@@ -152,25 +162,10 @@ const buyNow = async () => {
     return
   }
 
-  try {
-    let requestData = {
-      productId: productDetail.value.id,
-      quantity: quantity.value,
-      specs: {}
-    }
-
-    if (productDetail.value.hasSpecification === 1 && currentSpecification.value) {
-      // 有规格的商品
-      requestData.specs = currentSpecification.value.specifications
-    }
-
-    await addToCart(requestData)
-    // 跳转到购物车页面
-    router.push('/cart')
-  } catch (error) {
-    console.error('添加到购物车失败:', error)
-    ElMessage.error('添加到购物车失败')
-  }
+  // 先添加到购物车
+  await addToCartHandler()
+  // 跳转到购物车页面
+  router.push('/cart')
 }
 
 // 返回商城

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, watch, onMounted } from 'vue'
+import { ref, reactive, watch, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { getProducts } from '@/api/shop'
 
@@ -29,6 +29,14 @@ const pagination = reactive({
   pageNum: 1,
   pageSize: 4,
   total: 0
+})
+
+// 计算分页布局（移动端简化显示）
+const paginationLayout = computed(() => {
+  if (window.innerWidth <= 768) {
+    return 'prev, pager, next'
+  }
+  return 'total, sizes, prev, pager, next, jumper'
 })
 
 // 获取商品列表
@@ -101,28 +109,32 @@ onMounted(() => {
     <!-- 筛选面板 -->
     <div class="filter-panel">
       <el-form :inline="true" class="filter-form">
-        <el-form-item label="排序方式" style="width: 240px">
-          <el-select v-model="searchParams.orderBy" placeholder="请选择">
-            <el-option label="默认排序" value=""></el-option>
-            <el-option label="价格升序" value="price_asc"></el-option>
-            <el-option label="价格降序" value="price_desc"></el-option>
-            <el-option label="销量降序" value="sales_desc"></el-option>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="关键词">
-          <el-input v-model="searchParams.keyword" placeholder="请输入关键词" @keyup.enter="handleSearch"></el-input>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleSearch">搜索</el-button>
-          <el-button @click="resetSearch">重置</el-button>
-        </el-form-item>
+        <div class="filter-row">
+          <el-form-item label="排序方式" class="sort-item">
+            <el-select v-model="searchParams.orderBy" placeholder="请选择">
+              <el-option label="默认排序" value=""></el-option>
+              <el-option label="价格升序" value="price_asc"></el-option>
+              <el-option label="价格降序" value="price_desc"></el-option>
+              <el-option label="销量降序" value="sales_desc"></el-option>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="关键词" class="search-item">
+            <el-input v-model="searchParams.keyword" placeholder="请输入关键词" @keyup.enter="handleSearch"></el-input>
+          </el-form-item>
+        </div>
+        <div class="button-row">
+          <el-form-item>
+            <el-button type="primary" @click="handleSearch">搜索</el-button>
+            <el-button @click="resetSearch">重置</el-button>
+          </el-form-item>
+        </div>
       </el-form>
     </div>
 
     <!-- 商品列表 -->
     <div class="product-grid" v-loading="loading">
       <el-row :gutter="20">
-        <el-col :xs="24" :sm="12" :md="8" :lg="6" v-for="product in products" :key="product.id">
+        <el-col :xs="12" :sm="12" :md="8" :lg="6" v-for="product in products" :key="product.id">
           <el-card class="product-card" @click="goToDetail(product.id)">
             <img :src="product.mainImage" class="product-image">
             <div class="product-info">
@@ -150,7 +162,7 @@ onMounted(() => {
         :current-page="pagination.pageNum"
         :page-sizes="[4, 6, 8, 10]"
         :page-size="pagination.pageSize"
-        layout="total, sizes, prev, pager, next, jumper"
+        :layout="paginationLayout"
         :total="pagination.total">
       </el-pagination>
     </div>
@@ -167,6 +179,32 @@ onMounted(() => {
   padding: 15px;
   background-color: #f5f7fa;
   border-radius: 4px;
+}
+
+.filter-form {
+  width: 100%;
+}
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.sort-item {
+  flex: 1;
+  min-width: 200px;
+}
+
+.search-item {
+  flex: 2;
+  min-width: 200px;
+}
+
+.button-row {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .product-grid {
@@ -231,5 +269,96 @@ onMounted(() => {
 .pagination-container {
   margin-top: 20px;
   text-align: right;
+}
+
+/* 移动端响应式样式 */
+@media (max-width: 768px) {
+  .filter-panel {
+    padding: 10px;
+  }
+
+  .filter-row {
+    flex-direction: column;
+    gap: 5px;
+    margin-bottom: 15px;
+  }
+
+  .sort-item,
+  .search-item {
+    flex: none;
+    min-width: auto;
+    width: 100%;
+  }
+
+  .button-row {
+    justify-content: center;
+  }
+
+  .product-image {
+    height: 150px;
+  }
+
+  .product-info {
+    padding: 8px;
+  }
+
+  .product-name {
+    font-size: 14px;
+    margin: 8px 0 4px;
+  }
+
+  .product-subtitle {
+    font-size: 11px;
+    margin: 0 0 8px;
+  }
+
+  .product-price {
+    font-size: 16px;
+  }
+
+  .product-sales {
+    font-size: 11px;
+  }
+
+  .pagination-container {
+    text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .filter-panel {
+    padding: 8px;
+    margin-bottom: 15px;
+  }
+
+  .product-card {
+    margin-bottom: 15px;
+  }
+
+  .product-image {
+    height: 120px;
+  }
+
+  .product-info {
+    padding: 6px;
+  }
+
+  .product-name {
+    font-size: 13px;
+    margin: 6px 0 3px;
+  }
+
+  .product-subtitle {
+    font-size: 10px;
+    margin: 0 0 6px;
+  }
+
+  .product-price {
+    font-size: 14px;
+  }
+
+  .product-sales {
+    font-size: 10px;
+  }
 }
 </style>
