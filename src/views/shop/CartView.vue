@@ -117,7 +117,7 @@ const checkoutFromCart = () => {
 
 // 页面加载时初始化购物车数据
 onMounted(async () => {
-  await cartStore.initCart()
+  await cartStore.fetchCartList()
 })
 </script>
 

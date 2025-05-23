@@ -18,8 +18,6 @@ export const useCartStore = defineStore('cart', () => {
   const isAllSelected = ref(false)
   // 加载状态
   const loading = ref(false)
-  // 是否已初始化（从后端获取过数据）
-  const initialized = ref(false)
 
   // 总数量
   const totalCount = computed(() => {
@@ -48,7 +46,6 @@ export const useCartStore = defineStore('cart', () => {
       if (response.data.code === 0) {
         cartItems.value = response.data.data.cartItems || []
         isAllSelected.value = response.data.data.allSelected || false
-        initialized.value = true
         return true
       } else {
         throw new Error(response.data.message || '获取购物车失败')
@@ -59,13 +56,6 @@ export const useCartStore = defineStore('cart', () => {
       return false
     } finally {
       loading.value = false
-    }
-  }
-
-  // 初始化购物车数据
-  async function initCart() {
-    if (!initialized.value) {
-      await fetchCartList()
     }
   }
 
@@ -350,7 +340,6 @@ export const useCartStore = defineStore('cart', () => {
     cartItems,
     isAllSelected,
     loading,
-    initialized,
 
     // 计算属性
     totalCount,
@@ -359,7 +348,6 @@ export const useCartStore = defineStore('cart', () => {
 
     // 方法
     fetchCartList,
-    initCart,
     addToCart,
     updateItemQuantity,
     increaseQuantity,
@@ -374,6 +362,6 @@ export const useCartStore = defineStore('cart', () => {
 }, {
   persist: {
     // 只持久化基本数据，不持久化加载状态
-    paths: ['cartItems', 'isAllSelected', 'initialized']
+    paths: ['cartItems', 'isAllSelected']
   }
 })
