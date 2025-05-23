@@ -20,18 +20,28 @@ const submitOrder = () => {
     cancelButtonText: '取消',
     type: 'info',
   }).then(() => {
+    // 生成订单号
+    const orderNo = 'ORD' + Date.now()
+
+    // 准备支付页面需要的订单数据
+    const paymentOrder = {
+      orderNo: orderNo,
+      products: orderInfo.value.products || [orderInfo.value.product],
+      totalAmount: orderInfo.value.totalAmount,
+      paymentMethod: paymentMethod.value,
+      remarks: remarks.value,
+      createTime: new Date().toISOString()
+    }
+
+    // 存储订单信息到localStorage供支付页面使用
+    localStorage.setItem('payment_order', JSON.stringify(paymentOrder))
+
     ElMessage.success('订单提交成功，即将跳转到支付页面')
 
-    // 模拟跳转到支付页面，实际项目中可能需要调用后端API创建订单
+    // 跳转到支付页面
     setTimeout(() => {
-      ElMessageBox.alert('支付成功！', '提示', {
-        confirmButtonText: '确定',
-        callback: () => {
-          // 支付成功后跳转到首页
-          router.push('/')
-        },
-      })
-    }, 1500)
+      router.push('/payment')
+    }, 1000)
   })
 }
 
@@ -76,7 +86,7 @@ onMounted(() => {
         <el-image :src="orderInfo.product.image" class="product-image" fit="cover"></el-image>
         <div class="product-details">
           <div class="product-name">{{ orderInfo.product.name }} ({{ Object.entries(orderInfo.product.specifications).map(([key, value]) => `${value}`).join(', ') }})</div>
-          <div class="product-price">¥{{ orderInfo.product.price }}</div>
+          <div class="product-price">¥{{ (orderInfo.product.actualPrice || orderInfo.product.productPrice).toFixed(2) }}</div>
           <div class="product-quantity">x {{ orderInfo.quantity }}</div>
         </div>
         <div class="product-subtotal">
@@ -91,12 +101,12 @@ onMounted(() => {
           <el-image :src="product.image" class="product-image" fit="cover"></el-image>
           <div class="product-details">
             <div class="product-name">{{ product.name }}</div>
-            <div class="product-price">¥{{ product.price }}</div>
+            <div class="product-price">¥{{ (product.actualPrice || product.productPrice).toFixed(2) }}</div>
             <div class="product-quantity">x {{ product.quantity }}</div>
           </div>
           <div class="product-subtotal">
             <span>小计：</span>
-            <span class="price">¥{{ (product.price * product.quantity).toFixed(2) }}</span>
+            <span class="price">¥{{ ((product.actualPrice || product.productPrice) * product.quantity).toFixed(2) }}</span>
           </div>
         </div>
       </div>

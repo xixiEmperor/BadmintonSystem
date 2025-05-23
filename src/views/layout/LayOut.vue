@@ -82,6 +82,11 @@ const goToBookingHistory = () => {
   router.push('/booking-history')
 }
 
+// 跳转到我的订单页面
+const goToOrders = () => {
+  router.push('/orders')
+}
+
 // 退出登录
 const logout = () => {
   ElMessageBox.confirm('确定要退出登录吗？', '提示', {
@@ -137,15 +142,15 @@ onBeforeUnmount(() => {
               <span>购物车</span>
             </el-button>
 
-            <!-- 预订记录入口 -->
+            <!-- 商品订单入口 -->
             <el-button
               v-if="isLogin"
               type="text"
               class="booking-history-btn"
-              @click="goToBookingHistory"
+              @click="goToOrders"
             >
               <el-icon><Calendar /></el-icon>
-              <span>预订记录</span>
+              <span>商品订单</span>
             </el-button>
 
             <!-- 个人中心入口 -->
@@ -173,6 +178,7 @@ onBeforeUnmount(() => {
                     <el-dropdown-item @click="goToUserCenter">个人中心</el-dropdown-item>
                     <el-dropdown-item @click="goToMyPost">我的发帖</el-dropdown-item>
                     <el-dropdown-item @click="goToBookingHistory">预订记录</el-dropdown-item>
+                    <el-dropdown-item @click="goToOrders">商品订单</el-dropdown-item>
                     <el-dropdown-item @click="logout">退出登录</el-dropdown-item>
                   </el-dropdown-menu>
                 </template>

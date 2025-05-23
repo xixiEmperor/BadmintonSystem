@@ -30,7 +30,7 @@ export const useCartStore = defineStore('cart', () => {
   const totalPrice = computed(() => {
     return cartItems.value
       .filter(item => item.selected)
-      .reduce((sum, item) => sum + item.totalPrice, 0)
+      .reduce((sum, item) => sum + (item.productPrice + (item.priceAdjustment || 0)) * item.quantity, 0)
   })
 
   // 已选商品数量
@@ -85,11 +85,8 @@ export const useCartStore = defineStore('cart', () => {
       }
     })
 
-    // 备份当前状态
-    const backupItems = JSON.parse(JSON.stringify(cartItems.value))
-
     try {
-      // 先更新 Pinia 状态
+      // 更新 Pinia 状态
       if (existingItemIndex >= 0) {
         const existingItem = cartItems.value[existingItemIndex]
         if (existingItem.quantity + item.quantity > existingItem.stock) {
@@ -107,7 +104,7 @@ export const useCartStore = defineStore('cart', () => {
         })
       }
 
-      // 异步调用 API
+      // 调用 API
       const data = {
         productId: item.productId,
         quantity: item.quantity
@@ -119,8 +116,6 @@ export const useCartStore = defineStore('cart', () => {
       await apiAddToCart(data)
       return true
     } catch (error) {
-      // API 失败，回滚状态
-      cartItems.value = backupItems
       console.error('添加到购物车失败:', error)
       ElMessage.error('添加到购物车失败')
       return false
@@ -138,16 +133,12 @@ export const useCartStore = defineStore('cart', () => {
       return false
     }
 
-    // 备份当前状态
-    const backupQuantity = item.quantity
-    const backupTotalPrice = item.totalPrice
-
     try {
-      // 先更新 Pinia 状态
+      // 更新 Pinia 状态
       item.quantity = newQuantity
       item.totalPrice = item.productPrice * newQuantity
 
-      // 异步调用 API
+      // 调用 API
       const data = { quantity: newQuantity }
       if (item.specificationId) {
         data.specs = item.specs
@@ -156,9 +147,6 @@ export const useCartStore = defineStore('cart', () => {
       await updateCartItem(item.productId, data)
       return true
     } catch (error) {
-      // API 失败，回滚状态
-      item.quantity = backupQuantity
-      item.totalPrice = backupTotalPrice
       console.error('更新数量失败:', error)
       ElMessage.error('更新数量失败')
       return false
@@ -177,8 +165,6 @@ export const useCartStore = defineStore('cart', () => {
 
   // 从购物车中移除商品
   async function removeFromCart(item) {
-    // 备份当前状态
-    const backupItems = JSON.parse(JSON.stringify(cartItems.value))
     const itemIndex = cartItems.value.findIndex(cartItem => {
       if (item.specificationId) {
         return cartItem.productId === item.productId && cartItem.specificationId === item.specificationId
@@ -190,10 +176,10 @@ export const useCartStore = defineStore('cart', () => {
     if (itemIndex === -1) return false
 
     try {
-      // 先更新 Pinia 状态
+      // 更新 Pinia 状态
       cartItems.value.splice(itemIndex, 1)
 
-      // 异步调用 API
+      // 调用 API
       const data = {}
       if (item.specificationId) {
         data.specs = item.specs
@@ -203,8 +189,6 @@ export const useCartStore = defineStore('cart', () => {
       ElMessage.success('商品已从购物车中移除')
       return true
     } catch (error) {
-      // API 失败，回滚状态
-      cartItems.value = backupItems
       console.error('删除商品失败:', error)
       ElMessage.error('删除商品失败')
       return false
@@ -213,14 +197,14 @@ export const useCartStore = defineStore('cart', () => {
 
   // 选择/取消选择单个商品
   async function toggleSelectItem(item) {
-    // 备份当前状态
-    const backupSelected = item.selected
-
     try {
+      // 更新选择状态
+      item.selected = !item.selected
+
       // 检查是否需要更新全选状态
       updateAllSelectedState()
 
-      // 异步调用 API
+      // 调用 API
       const data = { selected: item.selected }
       if (item.specificationId) {
         data.specs = item.specs
@@ -229,9 +213,6 @@ export const useCartStore = defineStore('cart', () => {
       await selectCartItem(item.productId, data)
       return true
     } catch (error) {
-      // API 失败，回滚状态
-      item.selected = backupSelected
-      updateAllSelectedState()
       console.error('更新选择状态失败:', error)
       ElMessage.error('更新选择状态失败')
       return false
@@ -240,22 +221,17 @@ export const useCartStore = defineStore('cart', () => {
 
   // 全选/取消全选
   async function toggleSelectAll() {
-    // 备份当前状态
-    const backupItems = cartItems.value.map(item => ({ ...item }))
-    const backupAllSelected = isAllSelected.value
-
     try {
+      isAllSelected.value = !isAllSelected.value
+
       cartItems.value.forEach(item => {
         item.selected = isAllSelected.value
       })
 
-      // 异步调用 API
+      // 调用 API
       await selectAllCartItems(isAllSelected.value)
       return true
     } catch (error) {
-      // API 失败，回滚状态
-      cartItems.value = backupItems
-      isAllSelected.value = backupAllSelected
       console.error('更新全选状态失败:', error)
       ElMessage.error('更新全选状态失败')
       return false
@@ -273,23 +249,16 @@ export const useCartStore = defineStore('cart', () => {
 
   // 清空购物车
   async function clearCart() {
-    // 备份当前状态
-    const backupItems = JSON.parse(JSON.stringify(cartItems.value))
-    const backupAllSelected = isAllSelected.value
-
     try {
-      // 先更新 Pinia 状态
+      // 更新 Pinia 状态
       cartItems.value = []
       isAllSelected.value = false
 
-      // 异步调用 API
+      // 调用 API
       await apiClearCart()
       ElMessage.success('购物车已清空')
       return true
     } catch (error) {
-      // API 失败，回滚状态
-      cartItems.value = backupItems
-      isAllSelected.value = backupAllSelected
       console.error('清空购物车失败:', error)
       ElMessage.error('清空购物车失败')
       return false
@@ -299,6 +268,81 @@ export const useCartStore = defineStore('cart', () => {
   // 获取已选商品
   function getSelectedItems() {
     return cartItems.value.filter(item => item.selected)
+  }
+
+  // 删除已结算的商品
+  async function removeOrderedItems(orderedItems) {
+    try {
+      // 根据订单信息确定要删除的商品
+      let itemsToRemove = []
+
+      if (orderedItems.product) {
+        // 单商品结算
+        itemsToRemove = [orderedItems.product]
+      } else if (orderedItems.products) {
+        // 多商品结算
+        itemsToRemove = orderedItems.products
+      }
+
+      if (itemsToRemove.length === 0) {
+        console.log('没有需要删除的商品')
+        return true
+      }
+
+      let successCount = 0
+      let failCount = 0
+
+      // 逐个删除商品
+      for (const item of itemsToRemove) {
+        try {
+          const itemIndex = cartItems.value.findIndex(cartItem => {
+            if (item.specificationId) {
+              return cartItem.productId === item.productId && cartItem.specificationId === item.specificationId
+            } else {
+              return cartItem.productId === item.productId && !cartItem.specificationId
+            }
+          })
+
+          if (itemIndex !== -1) {
+            // 从本地状态中移除
+            cartItems.value.splice(itemIndex, 1)
+
+            // 调用API删除
+            const data = {}
+            if (item.specificationId) {
+              data.specs = item.specs
+            }
+            await removeCartItem(item.productId, data)
+            successCount++
+            console.log(`成功删除商品: ${item.productName}`)
+          } else {
+            console.log(`商品不在购物车中: ${item.productName}`)
+            successCount++ // 商品不在购物车中也算成功
+          }
+        } catch (error) {
+          console.error(`删除商品失败: ${item.productName}`, error)
+          failCount++
+        }
+      }
+
+      // 更新全选状态
+      updateAllSelectedState()
+
+      if (failCount === 0) {
+        console.log(`所有已结算商品已从购物车中移除 (${successCount}/${itemsToRemove.length})`)
+        return true
+      } else {
+        console.warn(`部分商品删除失败 (成功: ${successCount}, 失败: ${failCount})`)
+        // 即使部分失败，也重新获取购物车数据以保持同步
+        await fetchCartList()
+        return false
+      }
+    } catch (error) {
+      console.error('删除已结算商品失败:', error)
+      // 如果删除失败，重新获取购物车数据以保持同步
+      await fetchCartList()
+      return false
+    }
   }
 
   return {
@@ -324,7 +368,8 @@ export const useCartStore = defineStore('cart', () => {
     toggleSelectItem,
     toggleSelectAll,
     clearCart,
-    getSelectedItems
+    getSelectedItems,
+    removeOrderedItems
   }
 }, {
   persist: {

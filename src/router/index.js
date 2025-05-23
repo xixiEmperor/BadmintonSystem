@@ -40,8 +40,28 @@ const router = createRouter({
         },
         {
           path: '/checkout',
-          component: () => import('@/views/shop/PayView.vue'),
+          component: () => import('@/views/shop/CheckoutView.vue'),
           meta: { requiresAuth: true, title: '结算 - 武汉理工大学南湖校区羽毛球场预定前台' },
+        },
+        {
+          path: '/payment',
+          component: () => import('@/views/shop/PaymentView.vue'),
+          meta: { requiresAuth: true, title: '支付 - 武汉理工大学南湖校区羽毛球场预定前台' },
+        },
+        {
+          path: '/payment-result',
+          component: () => import('@/views/shop/PaymentResultView.vue'),
+          meta: { requiresAuth: true, title: '支付结果 - 武汉理工大学南湖校区羽毛球场预定前台' },
+        },
+        {
+          path: '/orders',
+          component: () => import('@/views/shop/OrderListView.vue'),
+          meta: { requiresAuth: true, title: '我的订单 - 武汉理工大学南湖校区羽毛球场预定前台' },
+        },
+        {
+          path: '/order-detail/:orderNo',
+          component: () => import('@/views/shop/OrderDetailView.vue'),
+          meta: { requiresAuth: true, title: '订单详情 - 武汉理工大学南湖校区羽毛球场预定前台' },
         },
         {
           path: '/forum',
@@ -51,7 +71,7 @@ const router = createRouter({
         {
           path: '/user-center',
           component: () => import('@/views/userCenter/UserCenter.vue'),
-          meta: { requiresAuth: true, title: '武汉理工大学南湖校区羽毛球场预定前台' }, // 需要登录才能访问
+          meta: { requiresAuth: true, title: '武汉理工大学南湖校区羽毛球场预定前台' },
         },
         {
           path: '/booking-history',
@@ -72,6 +92,16 @@ const router = createRouter({
           path: '/my-history-post',
           component: () => import('@/views/forum/MyHistoryPost.vue'),
           meta: { requiresAuth: true, title: '我的发帖 - 武汉理工大学南湖校区羽毛球场预定前台' },
+        },
+        {
+          path: '/qr-test',
+          component: () => import('@/components/QRCodeTest.vue'),
+          meta: { title: '二维码测试 - 武汉理工大学南湖校区羽毛球场预定前台' },
+        },
+        {
+          path: '/payment-status-test',
+          component: () => import('@/components/PaymentStatusTest.vue'),
+          meta: { title: '支付状态测试 - 武汉理工大学南湖校区羽毛球场预定前台' },
         },
       ],
     },

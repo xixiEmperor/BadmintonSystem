@@ -59,11 +59,18 @@ const clearCartItems = () => {
 
 // 从购物车结算单个商品
 const checkoutSingleItem = (product) => {
+  // 计算实际单价（包含价格调整）
+  const actualPrice = product.productPrice + (product.priceAdjustment || 0)
+  const totalAmount = actualPrice * product.quantity
+
   // 创建结算订单对象（单商品）
   const orderInfo = {
-    product: product,
+    product: {
+      ...product,
+      actualPrice: actualPrice // 添加实际价格字段
+    },
     quantity: product.quantity,
-    totalAmount: product.productPrice * product.quantity,
+    totalAmount: totalAmount,
   }
 
   // 存储到localStorage以便结算页面使用
@@ -82,10 +89,23 @@ const checkoutFromCart = () => {
     return
   }
 
+  // 计算总金额，确保包含价格调整
+  let totalAmount = 0
+  const processedProducts = selectedItems.map(product => {
+    const actualPrice = product.productPrice + (product.priceAdjustment || 0)
+    const subtotal = actualPrice * product.quantity
+    totalAmount += subtotal
+
+    return {
+      ...product,
+      actualPrice: actualPrice // 添加实际价格字段
+    }
+  })
+
   // 创建结算订单对象（多商品）
   const orderInfo = {
-    products: selectedItems,
-    totalAmount: cartStore.totalPrice,
+    products: processedProducts,
+    totalAmount: totalAmount,
   }
 
   // 存储到localStorage以便结算页面使用
