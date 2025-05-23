@@ -188,9 +188,6 @@ export const useCartStore = defineStore('cart', () => {
   // 选择/取消选择单个商品
   async function toggleSelectItem(item) {
     try {
-      // 更新选择状态
-      item.selected = !item.selected
-
       // 检查是否需要更新全选状态
       updateAllSelectedState()
 
@@ -212,8 +209,6 @@ export const useCartStore = defineStore('cart', () => {
   // 全选/取消全选
   async function toggleSelectAll() {
     try {
-      isAllSelected.value = !isAllSelected.value
-
       cartItems.value.forEach(item => {
         item.selected = isAllSelected.value
       })
