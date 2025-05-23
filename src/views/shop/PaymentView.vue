@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { createPayment, queryPaymentStatus, cancelOrder } from '@/api/pay'
+import { createPayment, queryPaymentStatus, cancelOrder, getPaymentReturnUrl } from '@/api/pay'
 import { PAY_PLATFORM, PAYMENT_STATUS } from '@/api/pay'
 import QRCode from 'qrcode'
 
@@ -180,14 +180,34 @@ const checkPaymentStatus = async () => {
         clearTimers()
         clearPaymentState()
 
-        // 跳转到支付结果页面
-        router.push({
-          path: '/payment-result',
-          query: {
-            orderNo: paymentInfo.value.orderNo,
-            status: 'success'
+        try {
+          // 获取支付成功后的跳转URL
+          const returnUrlResponse = await getPaymentReturnUrl(paymentInfo.value.orderNo)
+
+          if (returnUrlResponse.data && returnUrlResponse.data.code === 0 && returnUrlResponse.data.data) {
+            // 如果获取到跳转URL，直接跳转
+            window.location.href = returnUrlResponse.data.data
+          } else {
+            // 如果没有获取到跳转URL，跳转到默认的支付结果页面
+            router.push({
+              path: '/payment-result',
+              query: {
+                orderNo: paymentInfo.value.orderNo,
+                status: 'success'
+              }
+            })
           }
-        })
+        } catch (error) {
+          console.error('获取支付跳转URL失败:', error)
+          // 如果获取跳转URL失败，跳转到默认的支付结果页面
+          router.push({
+            path: '/payment-result',
+            query: {
+              orderNo: paymentInfo.value.orderNo,
+              status: 'success'
+            }
+          })
+        }
       } else {
         console.log('支付状态不是已支付状态，当前状态:', paymentStatus)
         ElMessage.info(`支付尚未完成，当前状态: ${paymentStatus}，请继续支付`)
@@ -312,13 +332,9 @@ const handlePaymentExpired = async () => {
 const startStatusCheck = () => {
   statusCheckTimer = setInterval(async () => {
     try {
-      console.log('自动检查支付状态，订单号:', paymentInfo.value.orderNo)
       const response = await queryPaymentStatus(paymentInfo.value.orderNo)
 
-      console.log('自动检查 - 支付状态查询响应:', response)
-      console.log('自动检查 - 支付状态值:', response.data?.data?.status)
-
-      if (response.data && response.data.code === 0 && (response.data.data.status === PAYMENT_STATUS.PAID || response.data.data.status === 1)) {
+      if (response.data && response.data.code === 0 && (response.data.data.status === PAYMENT_STATUS.SUCCESS || response.data.data.status === 1)) {
         // 支付成功
         console.log('自动检查发现支付成功！')
         clearTimers()

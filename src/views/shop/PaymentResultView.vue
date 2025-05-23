@@ -1,3 +1,118 @@
+<script setup>
+import { ref, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { SuccessFilled, CircleCloseFilled, WarningFilled, InfoFilled } from '@element-plus/icons-vue'
+import { getOrderDetail, queryPaymentStatus } from '@/api/pay'
+
+const router = useRouter()
+const route = useRoute()
+
+// 支付状态
+const status = ref('')
+// 订单号
+const orderNo = ref('')
+// 订单详情
+const orderDetail = ref(null)
+// 失败原因
+const failureReason = ref('')
+
+// 查看订单详情
+const viewOrderDetail = () => {
+  router.push(`/order-detail/${orderNo.value}`)
+}
+
+// 继续购物
+const continueShopping = () => {
+  router.push('/shop')
+}
+
+// 重新支付
+const retryPayment = () => {
+  // 重新创建支付信息
+  const paymentInfo = {
+    orderNo: orderNo.value,
+    amount: orderDetail.value?.totalAmount || 0,
+    businessType: 'MALL'
+  }
+
+  localStorage.setItem('payment_info', JSON.stringify(paymentInfo))
+  router.push('/payment')
+}
+
+// 格式化时间
+const formatTime = (timeStr) => {
+  if (!timeStr) return ''
+  const date = new Date(timeStr)
+  return date.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  })
+}
+
+// 获取订单详情
+const fetchOrderDetail = async () => {
+  try {
+    const response = await getOrderDetail(orderNo.value)
+    if (response.data.code === 0) {
+      orderDetail.value = response.data.data
+    }
+  } catch (error) {
+    console.error('获取订单详情失败:', error)
+  }
+}
+
+// 检查支付状态
+const checkPaymentStatus = async () => {
+  try {
+    const response = await queryPaymentStatus(orderNo.value)
+    if (response.data.code === 0) {
+      const paymentStatus = response.data.data.status
+      if (paymentStatus === 1) { // 已支付
+        status.value = 'success'
+      } else {
+        // 根据具体情况设置失败状态
+        status.value = route.query.status || 'failed'
+      }
+    } else {
+      status.value = 'failed'
+      failureReason.value = response.message
+    }
+  } catch (error) {
+    console.error('检查支付状态失败:', error)
+    status.value = 'failed'
+    failureReason.value = '网络异常，请稍后重试'
+  }
+}
+
+// 组件挂载时初始化
+onMounted(async () => {
+  // 从路由参数获取订单号和状态
+  orderNo.value = route.query.orderNo
+  status.value = route.query.status || ''
+
+  if (!orderNo.value) {
+    ElMessage.error('订单号不存在')
+    router.push('/orders')
+    return
+  }
+
+  // 获取订单详情
+  await fetchOrderDetail()
+
+  // 如果状态不明确，检查支付状态
+  if (!status.value || status.value === 'unknown') {
+    await checkPaymentStatus()
+  }
+
+  // 清除支付信息
+  localStorage.removeItem('payment_info')
+})
+</script>
+
 <template>
   <div class="payment-result-container">
     <!-- 支付成功 -->
@@ -76,7 +191,7 @@
         </div>
         <div class="info-item">
           <span class="label">超时时间：</span>
-          <span class="value">15分钟</span>
+          <span class="value">10分钟</span>
         </div>
       </div>
 
@@ -117,121 +232,6 @@
     </div>
   </div>
 </template>
-
-<script setup>
-import { ref, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { SuccessFilled, CircleCloseFilled, WarningFilled, InfoFilled } from '@element-plus/icons-vue'
-import { getOrderDetail, queryPaymentStatus } from '@/api/pay'
-
-const router = useRouter()
-const route = useRoute()
-
-// 支付状态
-const status = ref('')
-// 订单号
-const orderNo = ref('')
-// 订单详情
-const orderDetail = ref(null)
-// 失败原因
-const failureReason = ref('')
-
-// 查看订单详情
-const viewOrderDetail = () => {
-  router.push(`/order-detail/${orderNo.value}`)
-}
-
-// 继续购物
-const continueShopping = () => {
-  router.push('/shop')
-}
-
-// 重新支付
-const retryPayment = () => {
-  // 重新创建支付信息
-  const paymentInfo = {
-    orderNo: orderNo.value,
-    amount: orderDetail.value?.totalAmount || 0,
-    businessType: 'MALL'
-  }
-
-  localStorage.setItem('payment_info', JSON.stringify(paymentInfo))
-  router.push('/payment')
-}
-
-// 格式化时间
-const formatTime = (timeStr) => {
-  if (!timeStr) return ''
-  const date = new Date(timeStr)
-  return date.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  })
-}
-
-// 获取订单详情
-const fetchOrderDetail = async () => {
-  try {
-    const response = await getOrderDetail(orderNo.value)
-    if (response.code === 200) {
-      orderDetail.value = response.data
-    }
-  } catch (error) {
-    console.error('获取订单详情失败:', error)
-  }
-}
-
-// 检查支付状态
-const checkPaymentStatus = async () => {
-  try {
-    const response = await queryPaymentStatus(orderNo.value)
-    if (response.code === 200) {
-      const paymentStatus = response.data.status
-      if (paymentStatus === 1) { // 已支付
-        status.value = 'success'
-      } else {
-        // 根据具体情况设置失败状态
-        status.value = route.query.status || 'failed'
-      }
-    } else {
-      status.value = 'failed'
-      failureReason.value = response.message
-    }
-  } catch (error) {
-    console.error('检查支付状态失败:', error)
-    status.value = 'failed'
-    failureReason.value = '网络异常，请稍后重试'
-  }
-}
-
-// 组件挂载时初始化
-onMounted(async () => {
-  // 从路由参数获取订单号和状态
-  orderNo.value = route.query.orderNo
-  status.value = route.query.status || ''
-
-  if (!orderNo.value) {
-    ElMessage.error('订单号不存在')
-    router.push('/orders')
-    return
-  }
-
-  // 获取订单详情
-  await fetchOrderDetail()
-
-  // 如果状态不明确，检查支付状态
-  if (!status.value || status.value === 'unknown') {
-    await checkPaymentStatus()
-  }
-
-  // 清除支付信息
-  localStorage.removeItem('payment_info')
-})
-</script>
 
 <style scoped>
 .payment-result-container {

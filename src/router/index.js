@@ -109,9 +109,9 @@ const router = createRouter({
     {
       path: '/admin',
       component: () => import('@/views/admin/layout/AdminLayout.vue'),
-      // meta: { requiresAdmin: true }, // 需要管理员权限
+      // meta: {  }, // 需要管理员权限
       redirect: '/admin/dashboard',
-      meta: { title: '预订系统后台' },
+      meta: { requiresAdmin: true, title: '预订系统后台' },
       children: [
         {
           path: 'dashboard',
