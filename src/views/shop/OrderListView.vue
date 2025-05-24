@@ -163,7 +163,7 @@ onMounted(() => {
           <el-tab-pane label="全部订单" name="all"></el-tab-pane>
           <el-tab-pane label="待支付" name="unpaid"></el-tab-pane>
           <el-tab-pane label="已支付" name="paid"></el-tab-pane>
-          <el-tab-pane label="已过期" name="expired"></el-tab-pane>
+          <el-tab-pane label="已取消" name="cancelled"></el-tab-pane>
         </el-tabs>
       </div>
     </div>

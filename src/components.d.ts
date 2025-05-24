@@ -61,6 +61,8 @@ declare module 'vue' {
     ElTooltip: typeof import('element-plus/es')['ElTooltip']
     ElUpload: typeof import('element-plus/es')['ElUpload']
     PaymentStatusTest: typeof import('./components/PaymentStatusTest.vue')['default']
+    PickupCodeDemo: typeof import('./components/PickupCodeDemo.vue')['default']
+    PickupCodeStyleDemo: typeof import('./components/PickupCodeStyleDemo.vue')['default']
     QRCodeTest: typeof import('./components/QRCodeTest.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']

@@ -185,28 +185,16 @@ const checkPaymentStatus = async () => {
           const returnUrlResponse = await getPaymentReturnUrl(paymentInfo.value.orderNo)
 
           if (returnUrlResponse.data && returnUrlResponse.data.code === 0 && returnUrlResponse.data.data) {
-            // 如果获取到跳转URL，直接跳转
+            // 直接跳转到后端返回的URL
+            console.log('跳转到返回的URL:', returnUrlResponse.data.data)
             window.location.href = returnUrlResponse.data.data
           } else {
-            // 如果没有获取到跳转URL，跳转到默认的支付结果页面
-            router.push({
-              path: '/payment-result',
-              query: {
-                orderNo: paymentInfo.value.orderNo,
-                status: 'success'
-              }
-            })
+            console.error('未获取到有效的跳转URL:', returnUrlResponse.data)
+            ElMessage.error('获取跳转地址失败，请联系客服')
           }
         } catch (error) {
           console.error('获取支付跳转URL失败:', error)
-          // 如果获取跳转URL失败，跳转到默认的支付结果页面
-          router.push({
-            path: '/payment-result',
-            query: {
-              orderNo: paymentInfo.value.orderNo,
-              status: 'success'
-            }
-          })
+          ElMessage.error('获取跳转地址失败，请联系客服')
         }
       } else {
         console.log('支付状态不是已支付状态，当前状态:', paymentStatus)
@@ -342,14 +330,22 @@ const startStatusCheck = () => {
 
         ElMessage.success('支付成功！')
 
-        // 跳转到支付结果页面
-        router.push({
-          path: '/payment-result',
-          query: {
-            orderNo: paymentInfo.value.orderNo,
-            status: 'success'
+        try {
+          // 获取支付成功后的跳转URL
+          const returnUrlResponse = await getPaymentReturnUrl(paymentInfo.value.orderNo)
+
+          if (returnUrlResponse.data && returnUrlResponse.data.code === 0 && returnUrlResponse.data.data) {
+            // 直接跳转到后端返回的URL
+            console.log('自动检查 - 跳转到返回的URL:', returnUrlResponse.data.data)
+            window.location.href = returnUrlResponse.data.data
+          } else {
+            console.error('自动检查 - 未获取到有效的跳转URL:', returnUrlResponse.data)
+            ElMessage.error('获取跳转地址失败，请联系客服')
           }
-        })
+        } catch (error) {
+          console.error('自动检查 - 获取支付跳转URL失败:', error)
+          ElMessage.error('获取跳转地址失败，请联系客服')
+        }
       } else {
         console.log('自动检查 - 支付仍未完成，状态:', response.data?.data?.status)
       }
@@ -390,31 +386,6 @@ const formatExpireTime = () => {
   const minutes = expireTime.getMinutes().toString().padStart(2, '0')
 
   return `${year}-${month}-${day} ${hours}:${minutes}`
-}
-
-// 测试倒计时功能
-const startTestCountdown = async () => {
-  // 生成测试二维码
-  const testPaymentUrl = `测试支付订单：${paymentInfo.value.orderNo}，金额：¥${paymentInfo.value.amount}`
-  const qrCodeImage = await generateQRCode(testPaymentUrl)
-  paymentQrCode.value = qrCodeImage || 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
-
-  // 设置支付创建时间和过期时间
-  paymentCreateTime.value = new Date()
-  paymentExpireTime.value = new Date(paymentCreateTime.value.getTime() + 10 * 60 * 1000) // 10分钟后过期
-
-  console.log('测试倒计时开始')
-  console.log('支付创建时间:', paymentCreateTime.value)
-  console.log('支付过期时间:', paymentExpireTime.value)
-  console.log('初始倒计时:', countdown.value)
-
-  // 保存支付状态
-  savePaymentState()
-
-  ElMessage.success('测试倒计时已开始，10分钟后过期')
-
-  // 开始倒计时
-  startCountdown()
 }
 
 // 组件挂载时获取支付信息
@@ -484,6 +455,11 @@ onUnmounted(() => {
         <span>订单号：{{ paymentInfo.orderNo }}</span>
         <span class="amount">应付金额：<span class="price">¥{{ paymentInfo.amount.toFixed(2) }}</span></span>
       </div>
+      <!-- 取件码提示 -->
+      <div class="pickup-code-notice">
+        <i class="el-icon-info"></i>
+        <span>支付成功后将显示取件码，请妥善保管</span>
+      </div>
     </div>
 
     <!-- 支付方式选择 -->
@@ -533,14 +509,6 @@ onUnmounted(() => {
           <p>请使用{{ selectedPayMethod === PAY_PLATFORM.ALIPAY ? '支付宝' : '微信' }}扫描二维码完成支付</p>
           <p class="amount-tip">支付金额：<span class="price">¥{{ paymentInfo.amount.toFixed(2) }}</span></p>
         </div>
-
-        <!-- 二维码调试信息 -->
-        <div class="qr-debug-info" style="margin-top: 15px; padding: 10px; background-color: #f5f5f5; border-radius: 4px; font-size: 12px; color: #666;">
-          <p><strong>二维码调试信息：</strong></p>
-          <p>二维码类型：{{ paymentQrCode.startsWith('data:image') ? 'Base64图片' : '普通URL' }}</p>
-          <p>二维码长度：{{ paymentQrCode.length }} 字符</p>
-          <p>二维码前缀：{{ paymentQrCode.substring(0, 50) }}...</p>
-        </div>
       </div>
 
       <!-- 支付状态检查 -->
@@ -567,13 +535,6 @@ onUnmounted(() => {
           :disabled="!selectedPayMethod">
           {{ loading ? '正在创建支付...' : '立即支付' }}
         </el-button>
-        <!-- 临时测试按钮 -->
-        <el-button
-          type="warning"
-          size="large"
-          @click="startTestCountdown">
-          测试倒计时
-        </el-button>
       </div>
     </div>
 
@@ -582,14 +543,6 @@ onUnmounted(() => {
       <div class="countdown-info">
         <p>支付剩余时间：<span class="countdown-time">{{ formatTime(countdown) }}</span></p>
         <p class="expire-time">支付将于 {{ formatExpireTime() }} 过期</p>
-        <!-- 调试信息 -->
-        <div class="debug-info" style="font-size: 12px; color: #999; margin-top: 10px;">
-          <p>调试信息：</p>
-          <p>paymentQrCode: {{ !!paymentQrCode }}</p>
-          <p>countdown: {{ countdown }}</p>
-          <p>paymentCreateTime: {{ paymentCreateTime }}</p>
-          <p>paymentExpireTime: {{ paymentExpireTime }}</p>
-        </div>
       </div>
       <el-progress :percentage="(countdown / 600) * 100" :show-text="false" :stroke-width="8"></el-progress>
     </div>
@@ -643,6 +596,46 @@ onUnmounted(() => {
   font-weight: bold;
 }
 
+.pickup-code-notice {
+  margin-top: 15px;
+  padding: 15px 20px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.15) 100%);
+  border-radius: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 16px;
+  font-weight: 500;
+  color: #fff;
+  backdrop-filter: blur(10px);
+  position: relative;
+  overflow: hidden;
+}
+
+.pickup-code-notice::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #ffd700, #fff, #ffd700);
+  animation: glow 2s infinite;
+}
+
+@keyframes glow {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.pickup-code-notice i {
+  font-size: 20px;
+  color: #ffd700;
+  text-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
+}
+
 .payment-section {
   background-color: #fff;
   border-radius: 8px;
@@ -669,8 +662,12 @@ onUnmounted(() => {
 .payment-method-item {
   border: 2px solid #f0f0f0;
   border-radius: 8px;
-  padding: 15px;
+  padding: 0;
   transition: all 0.3s ease;
+  min-height: 80px;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
 }
 
 .payment-method-item:hover {
@@ -683,9 +680,29 @@ onUnmounted(() => {
   background-color: #f0f7ff;
 }
 
+.payment-method-item .el-radio__input {
+  position: absolute;
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  margin: 0;
+}
+
+.payment-method-item .el-radio__label {
+  width: 100%;
+  padding: 20px 20px 20px 60px;
+  margin: 0;
+  display: block;
+  min-height: 80px;
+  box-sizing: border-box;
+}
+
 .payment-method {
   display: flex;
   align-items: center;
+  width: 100%;
+  height: 100%;
+  min-height: 40px;
 }
 
 .payment-icon {
@@ -698,6 +715,7 @@ onUnmounted(() => {
   margin-right: 15px;
   font-size: 24px;
   color: white;
+  flex-shrink: 0;
 }
 
 .alipay-icon {
@@ -710,6 +728,10 @@ onUnmounted(() => {
 
 .payment-details {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
 }
 
 .payment-name {
@@ -717,11 +739,13 @@ onUnmounted(() => {
   font-weight: 600;
   margin-bottom: 5px;
   color: #333;
+  line-height: 1.2;
 }
 
 .payment-desc {
   font-size: 14px;
   color: #666;
+  line-height: 1.2;
 }
 
 .qr-code-container {

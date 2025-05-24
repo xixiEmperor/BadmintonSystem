@@ -21,8 +21,8 @@ export const useOrderStore = defineStore('order', () => {
           return orderList.value.filter(order => order.status === ORDER_STATUS.UNPAID)
         case 'paid':
           return orderList.value.filter(order => order.status === ORDER_STATUS.PAID)
-        case 'expired':
-          return orderList.value.filter(order => order.status === ORDER_STATUS.EXPIRED)
+        case 'cancelled':
+          return orderList.value.filter(order => order.status === ORDER_STATUS.CANCELLED)
         default:
           return orderList.value
       }
@@ -41,11 +41,8 @@ export const useOrderStore = defineStore('order', () => {
       })
 
       if (response.data.code === 0) {
-        // 过滤掉已取消的订单，但保留已过期的订单
-        const filteredList = (response.data.data.list || []).filter(order =>
-          order.status !== ORDER_STATUS.CANCELLED
-        )
-        orderList.value = filteredList
+        // 显示所有订单，包括已取消的订单
+        orderList.value = response.data.data.list || []
         return true
       } else {
         throw new Error(response.data.message || '获取订单列表失败')
@@ -65,10 +62,10 @@ export const useOrderStore = defineStore('order', () => {
       const response = await cancelOrderApi(orderNumber)
 
       if (response.data.code === 0) {
-        // 从当前列表中移除已取消的订单
+        // 更新订单状态为已取消，而不是从列表中移除
         const orderIndex = orderList.value.findIndex(order => order.orderNo === orderNumber)
         if (orderIndex !== -1) {
-          orderList.value.splice(orderIndex, 1)
+          orderList.value[orderIndex].status = ORDER_STATUS.CANCELLED
         }
         ElMessage.success(response.data.msg || '订单取消成功')
         return true

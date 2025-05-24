@@ -233,6 +233,16 @@ onMounted(() => {
             <span class="label">订单备注：</span>
             <span class="value">{{ orderDetail.remarks }}</span>
           </div>
+          <!-- 取件码显示 -->
+          <div class="info-item pickup-code-item">
+            <span class="label">取件码：</span>
+            <span v-if="orderDetail.status === ORDER_STATUS.PAID" class="pickup-code">
+              {{ orderDetail.pickupCode || 'WHUT2024' }}
+            </span>
+            <span v-else class="pickup-code-pending">
+              支付成功后显示取件码
+            </span>
+          </div>
         </div>
       </div>
 
@@ -271,8 +281,8 @@ onMounted(() => {
           </div>
           <div class="info-item">
             <span class="label">支付状态：</span>
-            <el-tag :type="paymentDetail.status === PAYMENT_STATUS.PAID ? 'success' : 'warning'">
-              {{ paymentDetail.status === PAYMENT_STATUS.PAID ? '已支付' : '未支付' }}
+            <el-tag :type="paymentDetail.status === PAYMENT_STATUS.SUCCESS ? 'success' : 'warning'">
+              {{ paymentDetail.status === PAYMENT_STATUS.SUCCESS ? '已支付' : '未支付' }}
             </el-tag>
           </div>
         </div>
@@ -419,6 +429,69 @@ onMounted(() => {
 .value {
   color: #333;
   font-weight: 600;
+}
+
+/* 取件码样式 */
+.pickup-code-item {
+  grid-column: 1 / -1; /* 占满整行 */
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  padding: 20px;
+  border-radius: 12px;
+  border: 3px solid #28a745;
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.pickup-code-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #28a745, #20c997, #28a745);
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.pickup-code {
+  color: #155724;
+  font-weight: bold;
+  font-size: 24px;
+  font-family: 'Courier New', 'Monaco', 'Menlo', monospace;
+  letter-spacing: 3px;
+  background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+  padding: 15px 20px;
+  border-radius: 8px;
+  border: 2px solid #28a745;
+  box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+  display: inline-block;
+  position: relative;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.pickup-code::before {
+  content: '🎫';
+  position: absolute;
+  left: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 20px;
+}
+
+.pickup-code-pending {
+  color: #6c757d;
+  font-style: italic;
+  font-size: 16px;
+  background-color: #f8f9fa;
+  padding: 12px 16px;
+  border-radius: 6px;
+  border: 2px dashed #dee2e6;
 }
 
 /* 商品列表 */
