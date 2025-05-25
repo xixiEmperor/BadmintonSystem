@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { createOrder } from '@/api/pay'
+import { createOrder, createOrderForProduct } from '@/api/pay'
 import { BUSINESS_TYPE } from '@/api/pay'
 import { useCartStore } from '@/stores/modules/cart'
 
@@ -25,8 +25,21 @@ const submitOrder = async () => {
   try {
     loading.value = true
 
-    // 调用创建订单API
-    const response = await createOrder()
+    let response
+
+    // 根据订单类型调用不同的API
+    if (orderInfo.value.isBuyNow) {
+      // 单个商品结算 - 调用立即购买API
+      const orderData = {
+        productId: orderInfo.value.products[0].productId,
+        quantity: orderInfo.value.products[0].quantity,
+        specs: orderInfo.value.products[0].specs || {}
+      }
+      response = await createOrderForProduct(orderData)
+    } else {
+      // 多个商品结算(购物车) - 调用购物车结算API
+      response = await createOrder()
+    }
 
     if (response.data.code === 0) {
       const orderNo = response.data.data
@@ -42,15 +55,17 @@ const submitOrder = async () => {
       // 存储支付信息
       localStorage.setItem('payment_info', JSON.stringify(paymentInfo))
 
-      // 删除购物车中的已结算商品
-      try {
-        const removeSuccess = await cartStore.removeOrderedItems(orderInfo.value)
-        if (!removeSuccess) {
-          console.warn('部分购物车商品删除失败，但订单已创建成功')
+      // 只有购物车结算才需要删除购物车中的商品
+      if (orderInfo.value.products) {
+        try {
+          const removeSuccess = await cartStore.removeOrderedItems(orderInfo.value)
+          if (!removeSuccess) {
+            console.warn('部分购物车商品删除失败，但订单已创建成功')
+          }
+        } catch (error) {
+          console.error('删除购物车商品时出错:', error)
+          // 即使删除购物车商品失败，订单已经创建成功，继续后续流程
         }
-      } catch (error) {
-        console.error('删除购物车商品时出错:', error)
-        // 即使删除购物车商品失败，订单已经创建成功，继续后续流程
       }
 
       // 清除订单信息

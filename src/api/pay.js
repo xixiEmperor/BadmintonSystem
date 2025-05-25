@@ -12,8 +12,24 @@ import request from '@/utils/request'
  */
 export function createOrder() {
   return request({
-    url: '/orders',
+    url: '/api/mall/orders',
     method: 'post'
+  })
+}
+
+/**
+ * 立即购买 -- 基于特定单个商品创建订单
+ * @param {Object} data - 订单数据
+ * @param {number} data.productId - 商品ID
+ * @param {number} data.quantity - 商品数量
+ * @param {Object} data.specs - 商品规格
+ * @returns {Promise} 订单号
+ */
+export function createOrderForProduct(data) {
+  return request({
+    url: '/api/mall/orders/buy-now',
+    method: 'post',
+    data
   })
 }
 
@@ -26,7 +42,7 @@ export function createOrder() {
  */
 export function getOrderList(params = {}) {
   return request({
-    url: '/orders',
+    url: '/api/mall/orders',
     method: 'get',
     params
   })
@@ -39,7 +55,7 @@ export function getOrderList(params = {}) {
  */
 export function getOrderDetail(orderNo) {
   return request({
-    url: `/orders/${orderNo}`,
+    url: `/api/mall/orders/${orderNo}`,
     method: 'get'
   })
 }
@@ -51,7 +67,7 @@ export function getOrderDetail(orderNo) {
  */
 export function cancelOrder(orderNo) {
   return request({
-    url: `/orders/${orderNo}/cancel`,
+    url: `/api/mall/orders/${orderNo}/cancel`,
     method: 'post'
   })
 }
@@ -63,7 +79,7 @@ export function cancelOrder(orderNo) {
  */
 export function getOrderStatus(orderNo) {
   return request({
-    url: `/orders/${orderNo}/status`,
+    url: `/api/mall/orders/${orderNo}/status`,
     method: 'get'
   })
 }
@@ -76,7 +92,7 @@ export function getOrderStatus(orderNo) {
  */
 export function updateOrderStatus(orderNo, status) {
   return request({
-    url: `/orders/${orderNo}/status`,
+    url: `/api/mall/orders/${orderNo}/status`,
     method: 'put',
     data: {
       status
@@ -148,7 +164,9 @@ export const BUSINESS_TYPE = {
 export const ORDER_STATUS = {
   UNPAID: 10,     // 未支付
   PAID: 20,       // 已支付
-  CANCELLED: 0    // 已取消
+  CANCELLED: 30,    // 已取消
+  COMPLETED: 40,    // 已完成
+  CLOSED: 50       // 已关闭
 }
 
 /**

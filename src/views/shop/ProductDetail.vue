@@ -4,7 +4,6 @@ import { useRoute, useRouter } from 'vue-router'
 import { getProductDetail } from '@/api/shop'
 import { useCartStore } from '@/stores/modules/cart'
 import SpecificationSelector from './components/SpecificationSelector.vue'
-import { ElMessage } from 'element-plus'
 
 const route = useRoute()
 const router = useRouter()
@@ -42,7 +41,7 @@ const fetchProductDetail = async (productId) => {
     if (response.data.code === 0) {
       productDetail.value = response.data.data
       // 如果无规格，则可以加入购物车和购买
-      if(productDetail.value.hasSpecification === 0){
+      if(productDetail.value.hasSpecification === 0 && productDetail.value.stock){
         canAddToCart.value = true
       }
       // 处理图片列表
@@ -162,10 +161,47 @@ const buyNow = async () => {
     return
   }
 
-  // 先添加到购物车
-  await addToCartHandler()
-  // 跳转到购物车页面
-  router.push('/cart')
+  // 构建完整的商品信息，仿照购物车结算逻辑
+  const productInfo = {
+    productId: productDetail.value.id,
+    productName: productDetail.value.name,
+    productImage: productDetail.value.mainImage,
+    productPrice: productDetail.value.price,
+    quantity: quantity.value,
+    stock: productDetail.value.hasSpecification === 1 && currentSpecification.value
+      ? currentSpecification.value.stock
+      : productDetail.value.stock,
+    selected: true
+  }
+
+  // 如果有规格，添加规格信息
+  if (productDetail.value.hasSpecification === 1 && currentSpecification.value) {
+    productInfo.specificationId = currentSpecification.value.id
+    productInfo.specs = currentSpecification.value.specifications
+    productInfo.priceAdjustment = currentSpecification.value.priceAdjustment
+  } else {
+    productInfo.priceAdjustment = 0
+  }
+
+  // 计算实际价格和总金额
+  const actualPrice = productInfo.productPrice + (productInfo.priceAdjustment || 0)
+  const totalAmount = actualPrice * productInfo.quantity
+
+  // 添加实际价格字段
+  productInfo.actualPrice = actualPrice
+
+  // 创建结算订单对象（单商品立即购买）
+  const orderInfo = {
+    products: [productInfo], // 包装成数组，与购物车结算保持一致
+    totalAmount: totalAmount,
+    isBuyNow: true // 标识这是立即购买订单
+  }
+
+  // 存储到localStorage以便结算页面使用
+  localStorage.setItem('checkout_order', JSON.stringify(orderInfo))
+
+  // 跳转到结算页面
+  router.push('/checkout')
 }
 
 // 返回商城
@@ -295,7 +331,7 @@ onMounted(() => {
                 size="large"
                 :disabled="!canAddToCart"
                 @click="buyNow">
-                加入购物车并结算
+                立即购买
               </el-button>
             </div>
           </div>

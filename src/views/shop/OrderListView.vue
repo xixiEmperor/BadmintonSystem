@@ -148,6 +148,16 @@ const formatTime = (timeStr) => {
   })
 }
 
+// 检查规格是否有效
+const hasValidSpecs = (specs) => {
+  if (!specs || specs === null) return false
+  if (typeof specs === 'object') {
+    const entries = Object.entries(specs)
+    return entries.length > 0 && entries.some(([, value]) => value !== null && value !== undefined && value !== '')
+  }
+  return false
+}
+
 // 组件挂载时初始化数据
 onMounted(() => {
   orderStore.fetchOrderList()
@@ -210,8 +220,8 @@ onMounted(() => {
               </el-image>
               <div class="product-details">
                 <div class="product-name">{{ product.productName }}</div>
-                <div v-if="product.specs" class="product-specs">
-                  规格：{{ Object.entries(product.specs).map(([key, value]) => `${value}`).join('、') }}
+                <div v-if="hasValidSpecs(product.specs)" class="product-specs">
+                  规格：{{ Object.entries(product.specs).map(([, value]) => `${value}`).join('、') }}
                 </div>
                 <div class="product-price">¥{{ (product.currentUnitPrice + product.priceAdjustment).toFixed(2) }}</div>
               </div>

@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Delete, Minus, Plus, Edit, ShoppingTrolley } from '@element-plus/icons-vue'
+import { Delete, Minus, Plus, Edit } from '@element-plus/icons-vue'
 import { useCartStore } from '@/stores/modules/cart'
 
 const router = useRouter()
@@ -55,29 +55,6 @@ const clearCartItems = () => {
   }).then(async () => {
     await cartStore.clearCart()
   }).catch(() => {})
-}
-
-// 从购物车结算单个商品
-const checkoutSingleItem = (product) => {
-  // 计算实际单价（包含价格调整）
-  const actualPrice = product.productPrice + (product.priceAdjustment || 0)
-  const totalAmount = actualPrice * product.quantity
-
-  // 创建结算订单对象（单商品）
-  const orderInfo = {
-    product: {
-      ...product,
-      actualPrice: actualPrice // 添加实际价格字段
-    },
-    quantity: product.quantity,
-    totalAmount: totalAmount,
-  }
-
-  // 存储到localStorage以便结算页面使用
-  localStorage.setItem('checkout_order', JSON.stringify(orderInfo))
-
-  // 跳转到结算页面
-  router.push('/checkout')
 }
 
 // 从购物车结算所有商品
@@ -213,13 +190,6 @@ onMounted(async () => {
               circle
               @click="removeItem(scope.row)"
               v-if="isEditMode"
-            ></el-button>
-            <el-button
-              v-else
-              type="primary"
-              :icon="ShoppingTrolley"
-              circle
-              @click="checkoutSingleItem(scope.row)"
             ></el-button>
           </template>
         </el-table-column>

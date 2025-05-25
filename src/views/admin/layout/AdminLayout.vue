@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { HomeFilled, Calendar, ArrowDown, Notification, ChatDotRound, GoodsFilled } from '@element-plus/icons-vue'
+import { HomeFilled, Calendar, ArrowDown, Notification, ChatDotRound, GoodsFilled, ShoppingBag } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
 const route = useRoute()
@@ -64,6 +64,10 @@ const logout = () => {
         <el-menu-item index="/admin/products">
           <el-icon><GoodsFilled /></el-icon>
           <span>商品管理</span>
+        </el-menu-item>
+        <el-menu-item index="/admin/orders">
+          <el-icon><ShoppingBag /></el-icon>
+          <span>商品订单</span>
         </el-menu-item>
       </el-menu>
     </div>

@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { createPayment, queryPaymentStatus, cancelOrder, getPaymentReturnUrl } from '@/api/pay'
+import { createPayment, queryPaymentStatus, cancelOrder } from '@/api/pay'
 import { PAY_PLATFORM, PAYMENT_STATUS } from '@/api/pay'
 import QRCode from 'qrcode'
 
@@ -180,22 +180,8 @@ const checkPaymentStatus = async () => {
         clearTimers()
         clearPaymentState()
 
-        try {
-          // 获取支付成功后的跳转URL
-          const returnUrlResponse = await getPaymentReturnUrl(paymentInfo.value.orderNo)
-
-          if (returnUrlResponse.data && returnUrlResponse.data.code === 0 && returnUrlResponse.data.data) {
-            // 直接跳转到后端返回的URL
-            console.log('跳转到返回的URL:', returnUrlResponse.data.data)
-            window.location.href = returnUrlResponse.data.data
-          } else {
-            console.error('未获取到有效的跳转URL:', returnUrlResponse.data)
-            ElMessage.error('获取跳转地址失败，请联系客服')
-          }
-        } catch (error) {
-          console.error('获取支付跳转URL失败:', error)
-          ElMessage.error('获取跳转地址失败，请联系客服')
-        }
+        // 直接跳转到订单详情页面
+        router.push(`/order-detail/${paymentInfo.value.orderNo}`)
       } else {
         console.log('支付状态不是已支付状态，当前状态:', paymentStatus)
         ElMessage.info(`支付尚未完成，当前状态: ${paymentStatus}，请继续支付`)
@@ -234,7 +220,7 @@ const cancelPayment = () => {
 
         ElMessage.success('订单已取消')
 
-        // 跳转到订单列表
+        // 跳转到历史商品订单界面
         router.push('/orders')
       } else {
         ElMessage.error('取消订单失败')
@@ -330,22 +316,8 @@ const startStatusCheck = () => {
 
         ElMessage.success('支付成功！')
 
-        try {
-          // 获取支付成功后的跳转URL
-          const returnUrlResponse = await getPaymentReturnUrl(paymentInfo.value.orderNo)
-
-          if (returnUrlResponse.data && returnUrlResponse.data.code === 0 && returnUrlResponse.data.data) {
-            // 直接跳转到后端返回的URL
-            console.log('自动检查 - 跳转到返回的URL:', returnUrlResponse.data.data)
-            window.location.href = returnUrlResponse.data.data
-          } else {
-            console.error('自动检查 - 未获取到有效的跳转URL:', returnUrlResponse.data)
-            ElMessage.error('获取跳转地址失败，请联系客服')
-          }
-        } catch (error) {
-          console.error('自动检查 - 获取支付跳转URL失败:', error)
-          ElMessage.error('获取跳转地址失败，请联系客服')
-        }
+        // 直接跳转到订单详情页面
+        router.push(`/order-detail/${paymentInfo.value.orderNo}`)
       } else {
         console.log('自动检查 - 支付仍未完成，状态:', response.data?.data?.status)
       }

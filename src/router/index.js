@@ -109,7 +109,6 @@ const router = createRouter({
     {
       path: '/admin',
       component: () => import('@/views/admin/layout/AdminLayout.vue'),
-      // meta: {  }, // 需要管理员权限
       redirect: '/admin/dashboard',
       meta: { requiresAdmin: true, title: '预订系统后台' },
       children: [
@@ -142,6 +141,11 @@ const router = createRouter({
           path: 'products',
           component: () => import('@/views/admin/shop/ProductManagement.vue'),
           meta: { title: '商品管理 - 预订系统后台' },
+        },
+        {
+          path: 'orders',
+          component: () => import('@/views/admin/shop/OrderManagement.vue'),
+          meta: { title: '商品订单 - 预订系统后台' },
         },
       ],
     },
