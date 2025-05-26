@@ -147,6 +147,16 @@ const router = createRouter({
           component: () => import('@/views/admin/shop/OrderManagement.vue'),
           meta: { title: '商品订单 - 预订系统后台' },
         },
+        {
+          path: 'venue-management',
+          component: () => import('@/views/admin/VenueManagement.vue'),
+          meta: { title: '场地管理 - 预订系统后台' },
+        },
+        {
+          path: 'venue-schedule/:venueId',
+          component: () => import('@/views/admin/VenueScheduleManagement.vue'),
+          meta: { title: '时段管理 - 预订系统后台' },
+        },
       ],
     },
     {

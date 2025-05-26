@@ -4,6 +4,255 @@ export default {
 }
 </script>
 
+<script setup>
+import { ref, reactive, onMounted } from 'vue'
+import {
+  getAdminNoticeList,
+  createNotice,
+  updateNotice,
+  publishNotice,
+  deleteNotice,
+} from '@/api/booking'
+import { formatDateTime } from '@/utils/format'
+
+// 表单相关
+const noticeFormRef = ref(null)
+const noticeForm = reactive({
+  title: '',
+  content: '',
+  type: 1, // 默认普通通知
+})
+
+// 表单验证规则
+const rules = reactive({
+  title: [{ required: true, message: '请输入通知标题', trigger: 'blur' }],
+  content: [{ required: true, message: '请输入通知内容', trigger: 'blur' }],
+})
+
+// 加载状态
+const loading = ref(false)
+
+// 分页相关
+const currentPage = ref(1)
+const pageSize = ref(5)
+const total = ref(0)
+
+// 通知列表数据
+const noticeList = ref([])
+
+// 编辑对话框相关
+const editDialogVisible = ref(false)
+const editFormRef = ref(null)
+const editForm = reactive({
+  id: '',
+  title: '',
+  content: '',
+  type: 1,
+})
+
+// 获取通知类型标签
+const getTypeTag = (type) => {
+  const typeMap = {
+    1: '', // 普通通知
+    2: 'warning', // 重要通知
+  }
+  return typeMap[type] || ''
+}
+
+// 获取通知类型文本
+const getTypeText = (type) => {
+  const typeMap = {
+    1: '普通通知',
+    2: '重要通知',
+  }
+  return typeMap[type] || '未知'
+}
+
+// 获取状态标签
+const getStatusTag = (status) => {
+  const statusMap = {
+    0: 'info', // 草稿
+    1: 'success', // 已发布
+  }
+  return statusMap[status] || ''
+}
+
+// 获取状态文本
+const getStatusText = (status) => {
+  const statusMap = {
+    0: '草稿',
+    1: '已发布',
+  }
+  return statusMap[status] || '未知'
+}
+
+// 获取通知列表
+const fetchNoticeList = async () => {
+  try {
+    loading.value = true
+    const response = await getAdminNoticeList({
+      pageNum: currentPage.value,
+      pageSize: pageSize.value,
+    })
+
+    if (response.data.code === 0) {
+      noticeList.value = response.data.data.list
+      total.value = response.data.data.total
+    } else {
+      ElMessage.error(response.data.msg || '获取通知列表失败')
+    }
+  } catch (error) {
+    console.error('获取通知列表失败:', error)
+    ElMessage.error('获取通知列表失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 提交表单
+const submitForm = async (status) => {
+  const valid = await noticeFormRef.value.validate().catch(() => false)
+  if (!valid) return
+
+  try {
+    const response = await createNotice({
+      title: noticeForm.title,
+      content: noticeForm.content,
+      type: noticeForm.type,
+    })
+
+    if (response.data.code === 0) {
+      // 如果是发布状态，需要再调用发布接口
+      if (status === 1) {
+        const noticeId = response.data.data
+        await publishNotice(noticeId)
+        ElMessage.success('通知发布成功')
+      } else {
+        ElMessage.success('通知保存成功')
+      }
+
+      resetForm()
+      fetchNoticeList() // 重新获取列表
+    } else {
+      ElMessage.error(response.data.msg || '操作失败')
+    }
+  } catch (error) {
+    console.error('提交通知失败:', error)
+    ElMessage.error('操作失败')
+  }
+}
+
+// 重置表单
+const resetForm = () => {
+  noticeFormRef.value.resetFields()
+}
+
+// 编辑通知
+const handleEdit = (row) => {
+  editForm.id = row.id
+  editForm.title = row.title
+  editForm.content = row.content
+  editForm.type = row.type
+  editDialogVisible.value = true
+}
+
+// 发布草稿
+const handlePublish = async (row) => {
+  try {
+    await ElMessageBox.confirm('确认发布该通知吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+
+    const response = await publishNotice(row.id)
+
+    if (response.data.code === 0) {
+      ElMessage.success('通知发布成功')
+      fetchNoticeList() // 重新获取列表
+    } else {
+      ElMessage.error(response.data.msg || '发布失败')
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('发布通知失败:', error)
+      ElMessage.error('发布失败')
+    } else {
+      ElMessage.info('已取消发布操作')
+    }
+  }
+}
+
+// 更新通知
+const updateNoticeHandler = async () => {
+  const valid = await editFormRef.value.validate().catch(() => false)
+  if (!valid) return
+
+  try {
+    const response = await updateNotice(editForm.id, {
+      title: editForm.title,
+      content: editForm.content,
+      type: editForm.type,
+    })
+
+    if (response.data.code === 0) {
+      ElMessage.success('通知更新成功')
+      editDialogVisible.value = false
+      fetchNoticeList() // 重新获取列表
+    } else {
+      ElMessage.error(response.data.msg || '更新失败')
+    }
+  } catch (error) {
+    console.error('更新通知失败:', error)
+    ElMessage.error('更新失败')
+  }
+}
+
+// 删除通知
+const handleDelete = async (row) => {
+  try {
+    await ElMessageBox.confirm('确认删除该通知吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+
+    const response = await deleteNotice(row.id)
+
+    if (response.data.code === 0) {
+      ElMessage.success('通知已删除')
+      fetchNoticeList() // 重新获取列表
+    } else {
+      ElMessage.error(response.data.msg || '删除失败')
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除通知失败:', error)
+      ElMessage.error('删除失败')
+    } else {
+      ElMessage.info('已取消删除操作')
+    }
+  }
+}
+
+// 分页处理
+const handleSizeChange = (size) => {
+  pageSize.value = size
+  currentPage.value = 1
+  fetchNoticeList()
+}
+
+const handleCurrentChange = (page) => {
+  currentPage.value = page
+  fetchNoticeList()
+}
+
+// 初始化
+onMounted(() => {
+  fetchNoticeList()
+})
+</script>
+
 <template>
   <div class="notice-publish">
     <h2 class="page-title">发布通知</h2>
@@ -24,13 +273,13 @@ export default {
         </el-form-item>
         <el-form-item label="类型">
           <el-select v-model="noticeForm.type" placeholder="请选择通知类型">
-            <el-option label="普通通知" value="normal"></el-option>
-            <el-option label="重要通知" value="important"></el-option>
-            <el-option label="紧急通知" value="urgent"></el-option>
+            <el-option label="普通通知" :value="1"></el-option>
+            <el-option label="重要通知" :value="2"></el-option>
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="submitForm">发布通知</el-button>
+          <el-button type="primary" @click="submitForm(1)">发布通知</el-button>
+          <el-button type="info" @click="submitForm(0)">保存草稿</el-button>
           <el-button @click="resetForm">重置</el-button>
         </el-form-item>
       </el-form>
@@ -50,10 +299,29 @@ export default {
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createTime" label="发布时间" width="180"></el-table-column>
-        <el-table-column label="操作" width="150">
+        <el-table-column prop="status" label="状态" width="100">
+          <template #default="scope">
+            <el-tag :type="getStatusTag(scope.row.status)">
+              {{ getStatusText(scope.row.status) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="createTime" label="发布时间" width="180">
+          <template #default="scope">
+            {{ formatDateTime(scope.row.publishTime || scope.row.createTime) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="200">
           <template #default="scope">
             <el-button size="small" type="primary" @click="handleEdit(scope.row)">编辑</el-button>
+            <el-button
+              v-if="scope.row.status === 0"
+              size="small"
+              type="success"
+              @click="handlePublish(scope.row)"
+            >
+              发布
+            </el-button>
             <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
           </template>
         </el-table-column>
@@ -90,224 +358,20 @@ export default {
         </el-form-item>
         <el-form-item label="类型">
           <el-select v-model="editForm.type" placeholder="请选择通知类型">
-            <el-option label="普通通知" value="normal"></el-option>
-            <el-option label="重要通知" value="important"></el-option>
-            <el-option label="紧急通知" value="urgent"></el-option>
+            <el-option label="普通通知" :value="1"></el-option>
+            <el-option label="重要通知" :value="2"></el-option>
           </el-select>
         </el-form-item>
       </el-form>
       <template #footer>
         <span class="dialog-footer">
           <el-button @click="editDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="updateNotice">确认</el-button>
+          <el-button type="primary" @click="updateNoticeHandler">确认</el-button>
         </span>
       </template>
     </el-dialog>
   </div>
 </template>
-
-<script setup>
-import { ref, reactive, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-
-// 表单相关
-const noticeFormRef = ref(null)
-const noticeForm = reactive({
-  title: '',
-  content: '',
-  type: 'normal',
-})
-
-// 表单验证规则
-const rules = reactive({
-  title: [{ required: true, message: '请输入通知标题', trigger: 'blur' }],
-  content: [{ required: true, message: '请输入通知内容', trigger: 'blur' }],
-})
-
-// 加载状态
-const loading = ref(false)
-
-// 分页相关
-const currentPage = ref(1)
-const pageSize = ref(5)
-const total = ref(0)
-
-// 通知列表数据 (模拟数据)
-const noticeList = ref([
-  {
-    id: 1,
-    title: '场馆维修通知',
-    content: '2号场地将于2023年11月15日进行维修，当天不可预约，敬请谅解。',
-    type: 'normal',
-    createTime: '2023-11-10 10:30:45',
-  },
-  {
-    id: 2,
-    title: '春节期间场地预约通知',
-    content:
-      '春节期间（2024年2月10日至2月17日）场馆开放时间调整为上午9:00至下午5:00，请各位用户知悉。',
-    type: 'important',
-    createTime: '2023-11-12 14:20:30',
-  },
-  {
-    id: 3,
-    title: '系统升级维护通知',
-    content:
-      '系统将于2023年11月20日凌晨2:00-4:00进行升级维护，期间预约功能暂停使用，给您带来不便敬请谅解。',
-    type: 'urgent',
-    createTime: '2023-11-13 09:15:20',
-  },
-])
-
-// 编辑对话框相关
-const editDialogVisible = ref(false)
-const editFormRef = ref(null)
-const editForm = reactive({
-  id: '',
-  title: '',
-  content: '',
-  type: '',
-})
-
-// 获取通知类型标签
-const getTypeTag = (type) => {
-  const typeMap = {
-    normal: '',
-    important: 'warning',
-    urgent: 'danger',
-  }
-  return typeMap[type] || ''
-}
-
-// 获取通知类型文本
-const getTypeText = (type) => {
-  const typeMap = {
-    normal: '普通通知',
-    important: '重要通知',
-    urgent: '紧急通知',
-  }
-  return typeMap[type] || '未知'
-}
-
-// 提交表单
-const submitForm = () => {
-  noticeFormRef.value.validate((valid) => {
-    if (valid) {
-      // TODO: 调用API发布通知
-      // 模拟发布成功
-      const newNotice = {
-        id: noticeList.value.length + 1,
-        title: noticeForm.title,
-        content: noticeForm.content,
-        type: noticeForm.type,
-        createTime: new Date().toLocaleString(),
-      }
-      noticeList.value.unshift(newNotice)
-      ElMessage({
-        type: 'success',
-        message: '通知发布成功',
-        duration: 2000,
-      })
-      resetForm()
-
-      // 更新总数
-      total.value = noticeList.value.length
-    } else {
-      return false
-    }
-  })
-}
-
-// 重置表单
-const resetForm = () => {
-  noticeFormRef.value.resetFields()
-}
-
-// 编辑通知
-const handleEdit = (row) => {
-  editForm.id = row.id
-  editForm.title = row.title
-  editForm.content = row.content
-  editForm.type = row.type
-  editDialogVisible.value = true
-}
-
-// 更新通知
-const updateNotice = () => {
-  editFormRef.value.validate((valid) => {
-    if (valid) {
-      // TODO: 调用API更新通知
-      // 模拟更新成功
-      const index = noticeList.value.findIndex((item) => item.id === editForm.id)
-      if (index !== -1) {
-        noticeList.value[index] = {
-          ...noticeList.value[index],
-          title: editForm.title,
-          content: editForm.content,
-          type: editForm.type,
-        }
-      }
-      ElMessage({
-        type: 'success',
-        message: '通知更新成功',
-        duration: 2000,
-      })
-      editDialogVisible.value = false
-    } else {
-      return false
-    }
-  })
-}
-
-// 删除通知
-const handleDelete = (row) => {
-  ElMessageBox.confirm('确认删除该通知吗？', '提示', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning',
-  })
-    .then(() => {
-      // TODO: 调用API删除通知
-      // 模拟删除成功
-      const index = noticeList.value.findIndex((item) => item.id === row.id)
-      if (index !== -1) {
-        noticeList.value.splice(index, 1)
-        // 更新总数
-        total.value = noticeList.value.length
-        ElMessage({
-          type: 'success',
-          message: '通知已删除',
-          duration: 2000,
-        })
-      }
-    })
-    .catch(() => {
-      // 取消操作
-      ElMessage({
-        type: 'info',
-        message: '已取消删除操作',
-        duration: 2000,
-      })
-    })
-}
-
-// 分页处理
-const handleSizeChange = (size) => {
-  pageSize.value = size
-  currentPage.value = 1
-}
-
-const handleCurrentChange = (page) => {
-  currentPage.value = page
-}
-
-// 初始化
-onMounted(() => {
-  // TODO: 调用API获取通知列表
-  // 初始化通知总数
-  total.value = noticeList.value.length
-})
-</script>
 
 <style lang="less" scoped>
 .notice-publish {

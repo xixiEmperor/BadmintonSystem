@@ -2,10 +2,15 @@
 import { ref, reactive, onMounted } from 'vue'
 import { Search, Refresh, View } from '@element-plus/icons-vue'
 import { getOrdersByAdmin, closeOrderByAdmin, completeOrderByAdmin } from '@/api/order'
+import OrderDetailDialog from '@/components/OrderDetailDialog.vue'
 
 // 数据定义
 const loading = ref(false)
 const orderList = ref([])
+
+// 订单详情对话框
+const showOrderDetail = ref(false)
+const currentOrder = ref({})
 
 // 搜索表单
 const searchForm = reactive({
@@ -36,8 +41,8 @@ const statistics = ref({
 const statusTagType = {
   '10': 'warning',
   '20': 'success',
-  '30': 'primary',
-  '40': '',
+  '30': 'info',
+  '40': 'primary',
   '50': 'danger'
 }
 
@@ -45,7 +50,7 @@ const statusTagType = {
 const statusText = {
   '10': '待支付',
   '20': '已支付',
-  '30': '已发货',
+  '30': '已取消',
   '40': '已完成',
   '50': '已关闭'
 }
@@ -79,46 +84,6 @@ const loadOrders = async () => {
   } catch (error) {
     console.error('获取订单列表出错', error)
     ElMessage.error('获取订单列表失败')
-
-    // 如果API调用失败，使用模拟数据作为后备
-    const mockOrders = [
-      {
-        id: 1,
-        orderNo: 'ORD202501001',
-        userId: 1001,
-        userName: '张三',
-        userPhone: '13800138001',
-        totalAmount: 299.00,
-        status: '20',
-        createTime: '2025-01-15 10:30:00',
-        payTime: '2025-01-15 10:35:00',
-        pickupCode: 'ABC123',
-        items: [
-          { productName: '羽毛球拍 专业版', quantity: 1, price: 299.00 }
-        ]
-      },
-      {
-        id: 2,
-        orderNo: 'ORD202501002',
-        userId: 1002,
-        userName: '李四',
-        userPhone: '13800138002',
-        totalAmount: 158.00,
-        status: '10',
-        createTime: '2025-01-15 14:20:00',
-        pickupCode: 'DEF456',
-        items: [
-          { productName: '羽毛球 12只装', quantity: 2, price: 79.00 }
-        ]
-      }
-    ]
-
-    // 模拟分页
-    const start = (pagination.pageNum - 1) * pagination.pageSize
-    const end = start + pagination.pageSize
-    orderList.value = mockOrders.slice(start, end)
-    pagination.total = mockOrders.length
-    calculateStatistics()
   } finally {
     loading.value = false
   }
@@ -127,7 +92,7 @@ const loadOrders = async () => {
 // 计算统计数据
 const calculateStatistics = () => {
   const stats = {
-    total: orderList.value.length,
+    total: pagination.total, // 使用服务器返回的总数
     unpaid: 0,
     paid: 0,
     shipped: 0,
@@ -137,22 +102,25 @@ const calculateStatistics = () => {
   }
 
   orderList.value.forEach(order => {
-    stats.totalAmount += order.totalAmount
+    // 使用正确的字段名
+    if (order.status === 20 || order.status === 40) {
+      stats.totalAmount += order.totalPrice
+    }
     switch (order.status) {
-      case '10':
+      case 10:
         stats.unpaid++
         break
-      case '20':
+      case 20:
         stats.paid++
         break
-      case '30':
-        stats.shipped++
+      case 30:
+        stats.cancelled++
         break
-      case '40':
+      case 40:
         stats.completed++
         break
-      case '50':
-        stats.cancelled++
+      case 50:
+        stats.closed++
         break
     }
   })
@@ -187,29 +155,9 @@ const handleCurrentChange = (val) => {
 
 // 查看订单详情
 const handleViewOrder = (order) => {
-  ElMessageBox.alert(
-    `<div style="text-align: left;">
-      <p><strong>订单号：</strong>${order.orderNo}</p>
-      <p><strong>用户：</strong>${order.userName} (${order.userPhone})</p>
-      <p><strong>总金额：</strong>¥${order.totalAmount.toFixed(2)}</p>
-      <p><strong>状态：</strong>${statusText[order.status]}</p>
-      <p><strong>创建时间：</strong>${order.createTime}</p>
-      ${order.payTime ? `<p><strong>支付时间：</strong>${order.payTime}</p>` : ''}
-      ${order.shipTime ? `<p><strong>发货时间：</strong>${order.shipTime}</p>` : ''}
-      ${order.completeTime ? `<p><strong>完成时间：</strong>${order.completeTime}</p>` : ''}
-      ${order.closeTime ? `<p><strong>关闭时间：</strong>${order.closeTime}</p>` : ''}
-      ${order.pickupCode ? `<p><strong>提货码：</strong>${order.pickupCode}</p>` : ''}
-      <p><strong>商品清单：</strong></p>
-      <ul>
-        ${order.items.map(item => `<li>${item.productName} × ${item.quantity} = ¥${(item.price * item.quantity).toFixed(2)}</li>`).join('')}
-      </ul>
-    </div>`,
-    '订单详情',
-    {
-      dangerouslyUseHTMLString: true,
-      confirmButtonText: '关闭'
-    }
-  )
+  console.log(order)
+  currentOrder.value = order
+  showOrderDetail.value = true
 }
 
 // 关闭订单
@@ -268,6 +216,65 @@ const handleCompleteOrder = async (order) => {
     }
   }
 }
+
+// 处理订单详情对话框的完成事件
+const handleCompleteOrderFromDialog = async (order) => {
+  try {
+    const { value: pickupCode } = await ElMessageBox.prompt(
+      '请输入提货码以完成订单',
+      '验证提货码',
+      {
+        confirmButtonText: '确认',
+        cancelButtonText: '取消',
+        inputPattern: /^.+$/,
+        inputErrorMessage: '提货码不能为空'
+      }
+    )
+
+    const response = await completeOrderByAdmin(order.orderNo, pickupCode)
+    if (response.data.code === 0) {
+      ElMessage.success('订单完成成功')
+      showOrderDetail.value = false
+      await loadOrders()
+    } else {
+      ElMessage.error(response.data.msg || '完成订单失败')
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('完成订单出错', error)
+      ElMessage.error('完成订单失败')
+    }
+  }
+}
+
+// 处理订单详情对话框的关闭事件
+const handleCloseOrderFromDialog = async (order) => {
+  try {
+    await ElMessageBox.confirm(
+      '确认关闭该订单吗？关闭后订单状态将变为已关闭',
+      '确认关闭订单',
+      {
+        confirmButtonText: '确认',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    const response = await closeOrderByAdmin(order.orderNo)
+    if (response.data.code === 0) {
+      ElMessage.success('订单关闭成功')
+      showOrderDetail.value = false
+      await loadOrders()
+    } else {
+      ElMessage.error(response.data.msg || '关闭订单失败')
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('关闭订单出错', error)
+      ElMessage.error('关闭订单失败')
+    }
+  }
+}
 </script>
 
 <template>
@@ -306,23 +313,23 @@ const handleCompleteOrder = async (order) => {
       <el-col :span="4">
         <el-card class="stat-card shipped">
           <div class="stat-content">
-            <div class="stat-number">{{ statistics.shipped }}</div>
-            <div class="stat-label">已发货</div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="4">
-        <el-card class="stat-card completed">
-          <div class="stat-content">
             <div class="stat-number">{{ statistics.completed }}</div>
             <div class="stat-label">已完成</div>
           </div>
         </el-card>
       </el-col>
       <el-col :span="4">
+        <el-card class="stat-card completed">
+          <div class="stat-content">
+            <div class="stat-number">{{ statistics.cancelled }}</div>
+            <div class="stat-label">已取消</div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="4">
         <el-card class="stat-card total-amount">
           <div class="stat-content">
-            <div class="stat-number">¥{{ statistics.totalAmount.toFixed(0) }}</div>
+            <div class="stat-number">¥{{ statistics.totalAmount.toFixed(2) }}</div>
             <div class="stat-label">总交易额</div>
           </div>
         </el-card>
@@ -367,13 +374,12 @@ const handleCompleteOrder = async (order) => {
         stripe
         style="width: 100%"
       >
-        <el-table-column prop="orderNo" label="订单号" width="140" />
-        <el-table-column prop="userName" label="用户" width="100" />
-        <el-table-column prop="userPhone" label="手机号" width="120" />
+        <el-table-column prop="orderNo" label="订单号" width="200" />
+        <el-table-column prop="username" label="用户" width="200" />
         <el-table-column label="商品信息" min-width="200">
           <template #default="scope">
             <div class="order-items">
-              <div v-for="item in scope.row.items" :key="item.productName" class="item">
+              <div v-for="item in scope.row.orderItemList" :key="item.productName" class="item">
                 {{ item.productName }} × {{ item.quantity }}
               </div>
             </div>
@@ -381,7 +387,7 @@ const handleCompleteOrder = async (order) => {
         </el-table-column>
         <el-table-column prop="totalAmount" label="总金额" width="100">
           <template #default="scope">
-            <span class="amount">¥{{ scope.row.totalAmount.toFixed(2) }}</span>
+            <span class="amount">¥{{ scope.row.totalPrice.toFixed(2) }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="status" label="状态" width="100">
@@ -392,7 +398,7 @@ const handleCompleteOrder = async (order) => {
           </template>
         </el-table-column>
         <el-table-column prop="createTime" label="创建时间" width="160" />
-        <el-table-column label="操作" width="250" fixed="right">
+        <el-table-column label="操作" width="300" fixed="right">
           <template #default="scope">
             <el-button
               type="primary"
@@ -403,20 +409,20 @@ const handleCompleteOrder = async (order) => {
               查看
             </el-button>
 
-            <!-- 只有已支付的订单可以完成 -->
+            <!-- 只有已支付的订单可以提货 -->
             <el-button
-              v-if="scope.row.status === '20'"
+              v-if="scope.row.status === 20"
               type="success"
               size="small"
               @click="handleCompleteOrder(scope.row)"
             >
-              完成订单
+              完成提货
             </el-button>
 
             <!-- 未关闭和未完成的订单可以关闭 -->
             <el-button
-              v-if="scope.row.status !== '50' && scope.row.status !== '40'"
-              type="warning"
+              v-if="scope.row.status !== 50"
+              type="danger"
               size="small"
               @click="handleCloseOrder(scope.row)"
             >
@@ -439,6 +445,15 @@ const handleCompleteOrder = async (order) => {
         />
       </div>
     </el-card>
+
+    <!-- 订单详情对话框 -->
+    <OrderDetailDialog
+      v-model="showOrderDetail"
+      :order-data="currentOrder"
+      :show-actions="true"
+      @complete="handleCompleteOrderFromDialog"
+      @close-order="handleCloseOrderFromDialog"
+    />
   </div>
 </template>
 

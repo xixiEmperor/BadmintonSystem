@@ -1,8 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { HomeFilled, Calendar, ArrowDown, Notification, ChatDotRound, GoodsFilled, ShoppingBag } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { HomeFilled, Calendar, ArrowDown, Notification, ChatDotRound, GoodsFilled, ShoppingBag, ShoppingCart } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -49,26 +48,46 @@ const logout = () => {
           <el-icon><HomeFilled /></el-icon>
           <span>首页</span>
         </el-menu-item>
-        <el-menu-item index="/admin/booking-review">
-          <el-icon><Calendar /></el-icon>
-          <span>预定信息</span>
-        </el-menu-item>
-        <el-menu-item index="/admin/notice">
-          <el-icon><Notification /></el-icon>
-          <span>发布通知</span>
-        </el-menu-item>
+        <el-sub-menu index="venue-management">
+          <template #title>
+            <el-icon><Calendar /></el-icon>
+            <span>场地相关</span>
+          </template>
+          <el-menu-item-group>
+            <el-menu-item index="/admin/venue-management">
+              <el-icon><Calendar /></el-icon>
+              <span>场地管理</span>
+            </el-menu-item>
+            <el-menu-item index="/admin/booking-review">
+              <el-icon><Calendar /></el-icon>
+              <span>预定管理</span>
+            </el-menu-item>
+            <el-menu-item index="/admin/notice">
+              <el-icon><Notification /></el-icon>
+              <span>发布通知</span>
+            </el-menu-item>
+          </el-menu-item-group>
+        </el-sub-menu>
         <el-menu-item index="/admin/forum">
           <el-icon><ChatDotRound /></el-icon>
           <span>论坛管理</span>
         </el-menu-item>
-        <el-menu-item index="/admin/products">
-          <el-icon><GoodsFilled /></el-icon>
-          <span>商品管理</span>
-        </el-menu-item>
-        <el-menu-item index="/admin/orders">
-          <el-icon><ShoppingBag /></el-icon>
-          <span>商品订单</span>
-        </el-menu-item>
+        <el-sub-menu index="mall-management">
+          <template #title>
+            <el-icon><ShoppingCart /></el-icon>
+            <span>商城相关</span>
+          </template>
+          <el-menu-item-group>
+            <el-menu-item index="/admin/products">
+              <el-icon><GoodsFilled /></el-icon>
+              <span>商品管理</span>
+            </el-menu-item>
+            <el-menu-item index="/admin/orders">
+              <el-icon><ShoppingBag /></el-icon>
+              <span>商品订单</span>
+            </el-menu-item>
+          </el-menu-item-group>
+        </el-sub-menu>
       </el-menu>
     </div>
 

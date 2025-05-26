@@ -1,77 +1,200 @@
 <script setup>
-import { ref, computed, reactive, onMounted } from 'vue'
+import { ref, computed, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
+import NoticeList from './components/NoticeList.vue'
 
-// 通知公告相关
-const notices = ref([])
-const showNotices = ref(true) // 控制通知区域显示/隐藏
-
-// 切换通知区域显示/隐藏
-const toggleNotices = () => {
-  showNotices.value = !showNotices.value
+// 检查是否为工作日（周一到周五）
+const isWeekday = (date) => {
+  const day = date.getDay()
+  return day >= 1 && day <= 5
 }
 
-// 获取通知公告
-const fetchNotices = async () => {
-  try {
-    // TODO: 调用API获取通知列表
-    // 这里使用模拟数据
-    notices.value = [
-      {
-        id: 1,
-        title: '场馆维修通知',
-        content: '2号场地将于2023年11月15日进行维修，当天不可预约，敬请谅解。',
-        type: 'normal',
-        createTime: '2023-11-10 10:30:45',
-      },
-      {
-        id: 2,
-        title: '春节期间场地预约通知',
-        content:
-          '春节期间（2024年2月10日至2月17日）场馆开放时间调整为上午9:00至下午5:00，请各位用户知悉。',
-        type: 'important',
-        createTime: '2023-11-12 14:20:30',
-      },
-      {
-        id: 3,
-        title: '系统升级维护通知',
-        content:
-          '系统将于2023年11月20日凌晨2:00-4:00进行升级维护，期间预约功能暂停使用，给您带来不便敬请谅解。',
-        type: 'urgent',
-        createTime: '2023-11-13 09:15:20',
-      },
-    ]
-  } catch (error) {
-    console.error('获取通知失败', error)
-    ElMessage.error('获取通知失败')
+// 检查是否为周末（周六、周日）
+const isWeekend = (date) => {
+  const day = date.getDay()
+  return day === 0 || day === 6
+}
+
+// 获取指定日期的开放时间段
+const getAvailableTimeSlots = (date) => {
+  // 工作日：只有晚上18:00-21:00开放
+  if (isWeekday(date)) {
+    return ['18:00-21:00']
+  }
+
+  // 周末：全天开放8:00-21:00
+  if (isWeekend(date)) {
+    return ['8:00-21:00']
+  }
+
+  return []
+}
+
+// 根据开放时间段生成可选时间选项
+const getTimeOptionsForDate = (date) => {
+  const timeSlots = getAvailableTimeSlots(date)
+  if (timeSlots.length === 0) return { startOptions: [], endOptions: [] }
+
+  const startOptions = []
+  const endOptions = []
+
+  timeSlots.forEach(slot => {
+    const [startTime, endTime] = slot.split('-')
+    const [startHour, startMinute] = startTime.split(':').map(Number)
+    const [endHour, endMinute] = endTime.split(':').map(Number)
+
+    // 生成起始时间选项（最后一个选项是结束时间前1小时）
+    let currentHour = startHour
+    let currentMinute = startMinute
+
+    // 计算最晚的起始时间（结束时间前1小时）
+    let maxStartHour = endHour - 1
+    let maxStartMinute = endMinute
+
+    // 如果结束时间的分钟数小于起始分钟数，需要调整
+    if (maxStartMinute < currentMinute) {
+      maxStartHour -= 1
+      maxStartMinute += 60
+    }
+
+    while (currentHour < maxStartHour || (currentHour === maxStartHour && currentMinute <= maxStartMinute)) {
+      const timeStr = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`
+      startOptions.push(timeStr)
+
+      // 改为1小时步长
+      currentHour += 1
+    }
+
+    // 生成结束时间选项（从起始时间+1小时开始，到结束时间，最多3小时）
+    let endCurrentHour = startHour
+    let endCurrentMinute = startMinute + 60 // 最少1小时
+
+    if (endCurrentMinute >= 60) {
+      endCurrentMinute -= 60
+      endCurrentHour++
+    }
+
+    while (endCurrentHour < endHour || (endCurrentHour === endHour && endCurrentMinute <= endMinute)) {
+      const timeStr = `${endCurrentHour.toString().padStart(2, '0')}:${endCurrentMinute.toString().padStart(2, '0')}`
+      endOptions.push(timeStr)
+
+      // 改为1小时步长
+      endCurrentHour += 1
+    }
+  })
+
+  // 去重并排序
+  const uniqueStartOptions = [...new Set(startOptions)].sort()
+  const uniqueEndOptions = [...new Set(endOptions)].sort()
+
+  return {
+    startOptions: uniqueStartOptions,
+    endOptions: uniqueEndOptions
   }
 }
 
-// 获取通知类型对应的标签类型
-const getNoticeTagType = (type) => {
-  const typeMap = {
-    normal: '',
-    important: 'warning',
-    urgent: 'danger',
-  }
-  return typeMap[type] || ''
-}
-
-// 组件挂载时获取通知
-onMounted(() => {
-  fetchNotices()
+// 可选时间段（根据选择的日期动态计算）
+const timeOptions = computed(() => {
+  const options = getTimeOptionsForDate(currentDate.value)
+  return options.startOptions || []
 })
 
-const currentDate = ref(new Date(new Date().getTime() + 24 * 60 * 60 * 1000)) // 默认选择第二天
+// 结束时间选项
+const endTimeOptions = computed(() => {
+  const options = getTimeOptionsForDate(currentDate.value)
+  if (!startTime.value || options.endOptions.length === 0) {
+    return options.endOptions || []
+  }
+
+  // 根据开始时间过滤结束时间选项，最多3小时
+  const [startHour, startMinute] = startTime.value.split(':').map(Number)
+  const maxEndHour = startHour + 3
+  const maxEndTime = `${maxEndHour.toString().padStart(2, '0')}:${startMinute.toString().padStart(2, '0')}`
+
+  return options.endOptions.filter(time => time <= maxEndTime)
+})
+
+const currentDate = ref(new Date()) // 默认选择今天
+
+// 检查当前是否在预约时间内
 const isWithinBookingHours = computed(() => {
   const now = new Date()
-  const hours = now.getHours()
-  return hours >= 12 && hours < 22
+  const selectedDate = currentDate.value
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const tomorrow = new Date(today)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+
+  // 如果选择的是今天的日期
+  if (selectedDate.toDateString() === today.toDateString()) {
+    // 今天的场地：只要在开始时间之前就可以预约
+    if (!startTime.value) return true
+
+    const [targetHour, targetMinute] = startTime.value.split(':').map(Number)
+    const targetTime = new Date(now)
+    targetTime.setHours(targetHour, targetMinute, 0, 0)
+
+    return now < targetTime
+  }
+
+  // 如果选择的是明天的日期
+  if (selectedDate.toDateString() === tomorrow.toDateString()) {
+    // 明天的场地：今天18:00后才能预约
+    return now.getHours() >= 18
+  }
+
+  return false
 })
 
 // 添加时间选择
-const startTime = ref('8:00')
-const endTime = ref('9:00')
+const startTime = ref('18:00')
+const endTime = ref('19:00')
+
+// 当日期改变时，重置时间选择
+const handleDateChange = (date) => {
+  const options = getTimeOptionsForDate(date)
+  if (options.startOptions.length > 0) {
+    startTime.value = options.startOptions[0]
+    // 设置结束时间为开始时间后1小时
+    const [hour, minute] = startTime.value.split(':').map(Number)
+    let endHour = hour + 1
+    let endMinute = minute
+
+    if (endHour > 23) {
+      endHour = 23
+      endMinute = 30
+    }
+
+    const targetEndTime = `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`
+
+    // 在结束时间选项中找到最接近的时间
+    const availableEndTime = options.endOptions.find(t => t >= targetEndTime)
+    if (availableEndTime) {
+      endTime.value = availableEndTime
+    } else if (options.endOptions.length > 0) {
+      endTime.value = options.endOptions[0]
+    } else {
+      endTime.value = startTime.value
+    }
+  } else {
+    startTime.value = ''
+    endTime.value = ''
+  }
+}
+
+// 获取日期状态文本
+const getDateStatusText = (date) => {
+  if (isWeekday(date)) {
+    return '工作日（仅晚上18:00-21:00开放）'
+  }
+
+  if (isWeekend(date)) {
+    return '周末（全天开放8:00-21:00）'
+  }
+
+  return ''
+}
 
 // 修改场地数据结构，添加bookedTimes数组表示已预约时间段
 const courts = ref([
@@ -141,16 +264,6 @@ const formRules = {
 // 用户表单引用
 const userFormRef = ref(null)
 
-// 可选时间段
-const timeOptions = Array.from({ length: 29 }, (_, i) => {
-  const hour = Math.floor(i / 2) + 8
-  const minute = i % 2 === 0 ? '00' : '30'
-  return `${hour}:${minute}`
-}).filter((time) => {
-  const [hour] = time.split(':')
-  return parseInt(hour) < 22
-})
-
 // 计算时间间隔（小时）
 const calculateHours = (start, end) => {
   if (!start || !end) return 0
@@ -198,6 +311,33 @@ const isCourAvailable = (court) => {
     return false
   }
 
+  // 检查选定日期是否有开放时间
+  const availableSlots = getAvailableTimeSlots(currentDate.value)
+  if (availableSlots.length === 0) {
+    return false
+  }
+
+  // 检查所选时间段是否在开放时间内
+  const selectedStart = startTime.value
+  const selectedEnd = endTime.value
+
+  if (!selectedStart || !selectedEnd) {
+    return false
+  }
+
+  let isInOpenTime = false
+  for (const slot of availableSlots) {
+    const [slotStart, slotEnd] = slot.split('-')
+    if (selectedStart >= slotStart && selectedEnd <= slotEnd) {
+      isInOpenTime = true
+      break
+    }
+  }
+
+  if (!isInOpenTime) {
+    return false
+  }
+
   // 检查所选时间段是否与已预约时间重叠
   const selectedDate = currentDate.value.toLocaleDateString()
 
@@ -208,13 +348,10 @@ const isCourAvailable = (court) => {
     }
 
     // 检查时间是否重叠
-    // 情况1：所选开始时间在已预约时间段内
-    // 情况2：所选结束时间在已预约时间段内
-    // 情况3：所选时间段完全包含已预约时间段
     if (
-      (startTime.value >= bookedTime.start && startTime.value < bookedTime.end) ||
-      (endTime.value > bookedTime.start && endTime.value <= bookedTime.end) ||
-      (startTime.value <= bookedTime.start && endTime.value >= bookedTime.end)
+      (selectedStart >= bookedTime.start && selectedStart < bookedTime.end) ||
+      (selectedEnd > bookedTime.start && selectedEnd <= bookedTime.end) ||
+      (selectedStart <= bookedTime.start && selectedEnd >= bookedTime.end)
     ) {
       return false
     }
@@ -229,6 +366,12 @@ const getStatusClass = (court) => {
     return 'status-maintenance'
   }
 
+  // 检查日期是否可预约
+  const availableSlots = getAvailableTimeSlots(currentDate.value)
+  if (availableSlots.length === 0) {
+    return 'status-closed'
+  }
+
   return isCourAvailable(court) ? 'status-available' : 'status-booked'
 }
 
@@ -238,70 +381,110 @@ const getStatusText = (court) => {
     return '维护中'
   }
 
+  // 检查日期是否可预约
+  const availableSlots = getAvailableTimeSlots(currentDate.value)
+  if (availableSlots.length === 0) {
+    return '不开放'
+  }
+
   return isCourAvailable(court) ? '可预约' : '已预约'
 }
 
-// 监听开始时间变化，确保结束时间始终大于开始时间
+// 监听开始时间变化，确保结束时间始终大于开始时间且不超过3小时
 const handleStartTimeChange = (time) => {
+  const options = getTimeOptionsForDate(currentDate.value)
+  if (options.startOptions.length === 0) return
+
   // 如果开始时间大于等于结束时间，自动调整结束时间
   if (time >= endTime.value) {
-    // 找到当前开始时间在选项中的索引
-    const timeIndex = timeOptions.findIndex((t) => t === time)
-    if (timeIndex !== -1 && timeIndex < timeOptions.length - 1) {
-      // 至少预约1小时（即开始时间+2个时间点，因为每个时间点间隔30分钟）
-      const endIndex = timeIndex + 2
-      if (endIndex < timeOptions.length) {
-        endTime.value = timeOptions[endIndex]
-      } else {
-        endTime.value = timeOptions[timeOptions.length - 1]
+    const [hour, minute] = time.split(':').map(Number)
+    let endHour = hour + 1
+    let endMinute = minute
+
+    if (endHour > 23) {
+      endHour = 23
+      endMinute = 0
+    }
+
+    const targetEndTime = `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`
+
+    // 在结束时间选项中找到最接近的时间，但不超过3小时
+    const maxEndHour = hour + 3
+    const maxEndTime = `${maxEndHour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
+
+    const availableEndTimes = options.endOptions.filter(t => t >= targetEndTime && t <= maxEndTime)
+    if (availableEndTimes.length > 0) {
+      endTime.value = availableEndTimes[0]
+    } else if (options.endOptions.length > 0) {
+      // 如果没有合适的时间，选择最后一个可用时间
+      const validEndTimes = options.endOptions.filter(t => t <= maxEndTime)
+      if (validEndTimes.length > 0) {
+        endTime.value = validEndTimes[validEndTimes.length - 1]
       }
     }
   }
 
-  // 检查时间间隔是否至少为1小时，如果小于1小时则调整结束时间
+  // 检查时间间隔是否超过3小时，如果超过则调整结束时间
   const hours = calculateHours(time, endTime.value)
-  if (hours < 1) {
-    // 找到当前开始时间在选项中的索引
-    const timeIndex = timeOptions.findIndex((t) => t === time)
-    if (timeIndex !== -1 && timeIndex < timeOptions.length - 1) {
-      // 调整为1小时
-      const endIndex = timeIndex + 2
-      if (endIndex < timeOptions.length) {
-        endTime.value = timeOptions[endIndex]
-      } else {
-        endTime.value = timeOptions[timeOptions.length - 1]
-      }
+  if (hours > 3) {
+    const [hour, minute] = time.split(':').map(Number)
+    const maxEndHour = hour + 3
+    const maxEndTime = `${maxEndHour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
+
+    const availableEndTimes = options.endOptions.filter(t => t <= maxEndTime)
+    if (availableEndTimes.length > 0) {
+      endTime.value = availableEndTimes[availableEndTimes.length - 1]
     }
   }
 }
 
-// 监听结束时间变化，确保结束时间始终大于开始时间
+// 监听结束时间变化，确保结束时间始终大于开始时间且不超过3小时
 const handleEndTimeChange = (time) => {
+  const options = getTimeOptionsForDate(currentDate.value)
+  if (options.endOptions.length === 0) return
+
   // 如果结束时间小于等于开始时间，自动调整开始时间
   if (time <= startTime.value) {
-    // 找到当前结束时间在选项中的索引
-    const timeIndex = timeOptions.findIndex((t) => t === time)
-    if (timeIndex > 1) {
-      // 至少预约1小时（即结束时间-2个时间点）
-      startTime.value = timeOptions[timeIndex - 2]
-    } else {
-      startTime.value = timeOptions[0]
+    const [hour, minute] = time.split(':').map(Number)
+    let startHour = hour - 1
+    let startMinute = minute
+
+    if (startHour < 0) {
+      startHour = 0
+      startMinute = 0
+    }
+
+    const targetStartTime = `${startHour.toString().padStart(2, '0')}:${startMinute.toString().padStart(2, '0')}`
+
+    // 在开始时间选项中找到最接近的时间
+    const availableStartTimes = options.startOptions.filter(t => t <= targetStartTime)
+    if (availableStartTimes.length > 0) {
+      startTime.value = availableStartTimes[availableStartTimes.length - 1]
+    } else if (options.startOptions.length > 0) {
+      startTime.value = options.startOptions[0]
     }
   }
 
-  // 检查时间间隔是否至少为1小时，如果小于1小时则调整开始时间
+  // 检查时间间隔是否超过3小时，如果超过则调整开始时间
   const hours = calculateHours(startTime.value, time)
-  if (hours < 1) {
-    // 找到当前结束时间在选项中的索引
-    const timeIndex = timeOptions.findIndex((t) => t === time)
-    if (timeIndex > 1) {
-      // 调整为1小时
-      startTime.value = timeOptions[timeIndex - 2]
-    } else if (timeIndex === 1) {
-      startTime.value = timeOptions[0]
-    } else {
-      // 如果结束时间是第一个选项，将开始时间设为第一个选项（理论上不应该发生）
-      startTime.value = timeOptions[0]
+  if (hours > 3) {
+    const [hour, minute] = time.split(':').map(Number)
+    let startHour = hour - 3
+    let startMinute = minute
+
+    if (startHour < 0) {
+      startHour = 0
+      startMinute = 0
+    }
+
+    const targetStartTime = `${startHour.toString().padStart(2, '0')}:${startMinute.toString().padStart(2, '0')}`
+
+    // 在开始时间选项中找到最接近的时间
+    const availableStartTimes = options.startOptions.filter(t => t >= targetStartTime)
+    if (availableStartTimes.length > 0) {
+      startTime.value = availableStartTimes[0]
+    } else if (options.startOptions.length > 0) {
+      startTime.value = options.startOptions[0]
     }
   }
 }
@@ -310,14 +493,43 @@ const handleEndTimeChange = (time) => {
 const openBookingDialog = (court) => {
   // 检查是否在预约时间内
   if (!isWithinBookingHours.value) {
-    ElMessage.warning('预约时间为每天中午12:00-22:00，请在规定时间内预约')
+    const selectedDate = currentDate.value
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+
+    let timeMsg = ''
+
+    // 如果选择的是今天的日期
+    if (selectedDate.toDateString() === today.toDateString()) {
+      timeMsg = `今天${startTime.value}之前可以预约该时间段的场地`
+    }
+    // 如果选择的是明天的日期
+    else if (selectedDate.toDateString() === tomorrow.toDateString()) {
+      timeMsg = '今天18:00之后可以预约明天的场地'
+    }
+
+    ElMessage.warning(`${timeMsg}，请在规定时间内预约`)
     return
   }
 
-  // 检查选定的时间是否至少为1小时
+  // 检查选定日期是否开放
+  const availableSlots = getAvailableTimeSlots(currentDate.value)
+  if (availableSlots.length === 0) {
+    ElMessage.warning('选定日期不开放预约')
+    return
+  }
+
+  // 检查选定的时间是否至少为1小时且不超过3小时
   const hours = calculateHours(startTime.value, endTime.value)
   if (hours < 1) {
     ElMessage.warning('预约时间至少为1小时')
+    return
+  }
+  if (hours > 3) {
+    ElMessage.warning('预约时间最长为3小时')
     return
   }
 
@@ -345,6 +557,19 @@ const goToPayment = async () => {
 
   try {
     await userFormRef.value.validate()
+
+    // 检查用户当天是否已经预约
+    if (hasUserBookedToday(userForm.phone, currentDate.value)) {
+      ElMessage.warning('您今天已经预约过场地，一人一天只能预约一次')
+      return
+    }
+
+    // 检查预约时间是否有效（1-3小时）
+    if (!isBookingTimeValid(startTime.value, endTime.value)) {
+      ElMessage.warning('预约时间必须在1-3小时之间')
+      return
+    }
+
     currentStep.value = 2
   } catch {
     ElMessage.warning('请完善预约信息')
@@ -359,6 +584,16 @@ const backToInfo = () => {
 // 确认预约
 const confirmBooking = () => {
   // TODO: 调用API提交预约信息到后端
+
+  // 添加用户预约记录
+  userBookings.value.push({
+    phone: userForm.phone,
+    date: currentDate.value.toLocaleDateString(),
+    courtId: selectedCourt.value.id,
+    startTime: startTime.value,
+    endTime: endTime.value,
+  })
+
   // 更新场地预约状态
   const courtIndex = courts.value.findIndex((c) => c.id === selectedCourt.value.id)
   if (courtIndex !== -1) {
@@ -375,41 +610,33 @@ const confirmBooking = () => {
   )
   closeBookingDialog()
 }
+
+// 用户预约记录（模拟数据，实际应该从后端获取）
+const userBookings = ref([
+  // 格式：{ phone: '手机号', date: '日期', courtId: 场地ID, startTime: '开始时间', endTime: '结束时间' }
+])
+
+// 检查用户当天是否已经预约
+const hasUserBookedToday = (phone, date) => {
+  const dateStr = date.toLocaleDateString()
+  return userBookings.value.some(booking =>
+    booking.phone === phone && booking.date === dateStr
+  )
+}
+
+// 检查预约时间是否超过3小时
+const isBookingTimeValid = (startTime, endTime) => {
+  const hours = calculateHours(startTime, endTime)
+  return hours >= 1 && hours <= 3
+}
 </script>
 
 <template>
   <div class="booking-container">
-    <!-- 通知公告区域 -->
-    <div class="notice-container">
-      <div class="notice-header">
-        <h3>官方公告</h3>
-        <el-button type="text" @click="toggleNotices">
-          {{ showNotices ? '收起' : '展开' }}
-        </el-button>
-      </div>
-      <div class="notice-list" v-if="showNotices">
-        <el-carousel height="120px" indicator-position="none" :autoplay="true" arrow="always">
-          <el-carousel-item v-for="notice in notices" :key="notice.id">
-            <div class="notice-item">
-              <div class="notice-title">
-                <el-tag
-                  :type="getNoticeTagType(notice.type)"
-                  size="small"
-                  v-if="notice.type !== 'normal'"
-                >
-                  {{ notice.type === 'important' ? '重要' : '紧急' }}
-                </el-tag>
-                <span>{{ notice.title }}</span>
-              </div>
-              <div class="notice-content">{{ notice.content }}</div>
-              <div class="notice-time">{{ notice.createTime }}</div>
-            </div>
-          </el-carousel-item>
-        </el-carousel>
-      </div>
-    </div>
-
     <h2>场地预约</h2>
+
+    <!-- 通知公告区域 -->
+    <NoticeList />
 
     <div class="booking-tools">
       <div class="date-time-selector">
@@ -419,30 +646,31 @@ const confirmBooking = () => {
             v-model="currentDate"
             type="date"
             placeholder="选择预约日期"
-            :disabled="!isWithinBookingHours"
             :disabled-date="
               (time) => {
-                // 只能预约第二天
-                const tomorrow = new Date()
+                const today = new Date()
+                today.setHours(0, 0, 0, 0)
+
+                const tomorrow = new Date(today)
                 tomorrow.setDate(tomorrow.getDate() + 1)
-                tomorrow.setHours(0, 0, 0, 0)
 
-                const dayAfterTomorrow = new Date()
-                dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2)
-                dayAfterTomorrow.setHours(0, 0, 0, 0)
-
-                return (
-                  time.getTime() < tomorrow.getTime() ||
-                  time.getTime() >= dayAfterTomorrow.getTime()
-                )
+                // 只允许选择今天和明天
+                return !(time.toDateString() === today.toDateString() ||
+                        time.toDateString() === tomorrow.toDateString())
               }
             "
             format="YYYY年MM月DD日"
+            @change="handleDateChange"
           />
         </div>
 
+        <!-- 日期状态显示 -->
+        <div class="date-status">
+          <span class="status-text">{{ getDateStatusText(currentDate) }}</span>
+        </div>
+
         <!-- 移动到主页面的时间选择器 -->
-        <div class="selector-group time-selector">
+        <div class="selector-group time-selector" v-if="timeOptions.length > 0">
           <p>时间段：</p>
           <div class="time-picker-container">
             <div class="time-picker">
@@ -469,7 +697,7 @@ const confirmBooking = () => {
                 class="time-select"
               >
                 <el-option
-                  v-for="time in timeOptions"
+                  v-for="time in endTimeOptions"
                   :key="time"
                   :label="time"
                   :value="time"
@@ -479,7 +707,7 @@ const confirmBooking = () => {
           </div>
         </div>
 
-        <div class="selector-group price-info-group">
+        <div class="selector-group price-info-group" v-if="timeOptions.length > 0">
           <div class="booking-hours-info">
             预订时长：<span class="highlight">{{
               Math.max(1, calculateHours(startTime, endTime))
@@ -492,7 +720,16 @@ const confirmBooking = () => {
         </div>
       </div>
       <div class="booking-rules">
-        <p>预约规则：每天12:00-22:00开放预约，且只能预约次日场地。</p>
+        <p><strong>预约规则：</strong></p>
+        <ul>
+          <li>工作日（周一至周五）：白天场地用于校内上课，仅晚上18:00-21:00开放预约</li>
+          <li>周末（周六、周日）：全天开放预约，时间为8:00-21:00</li>
+          <li>预约时长为1-3小时，每小时20元，时间选择步长为1小时</li>
+          <li>一人一天只能预约一次，如果当天已预约则无法再次预约</li>
+          <li>只能预约今天和明天的场地</li>
+          <li>今天场地：只要在开始时间之前都可以预约（如果有剩余）</li>
+          <li>明天场地：今天18:00之后才能开始预约</li>
+        </ul>
       </div>
     </div>
 
@@ -531,6 +768,10 @@ const confirmBooking = () => {
       <div class="legend-item">
         <div class="legend-color maintenance"></div>
         <div class="legend-text">维护中</div>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color closed"></div>
+        <div class="legend-text">不开放</div>
       </div>
     </div>
 
@@ -675,68 +916,6 @@ const confirmBooking = () => {
   padding: 20px;
 }
 
-/* 通知区域样式 */
-.notice-container {
-  background-color: #fff;
-  border-radius: 4px;
-  box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
-  margin-bottom: 20px;
-  overflow: hidden;
-
-  .notice-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 16px;
-    border-bottom: 1px solid #ebeef5;
-
-    h3 {
-      margin: 0;
-      font-size: 16px;
-      font-weight: 500;
-      color: #333;
-    }
-  }
-
-  .notice-list {
-    padding: 10px;
-  }
-
-  .notice-item {
-    padding: 10px;
-    height: 100px;
-
-    .notice-title {
-      font-size: 16px;
-      font-weight: bold;
-      margin-bottom: 10px;
-      display: flex;
-      align-items: center;
-
-      .el-tag {
-        margin-right: 8px;
-      }
-    }
-
-    .notice-content {
-      font-size: 14px;
-      color: #606266;
-      margin-bottom: 10px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-    }
-
-    .notice-time {
-      font-size: 12px;
-      color: #909399;
-      text-align: right;
-    }
-  }
-}
-
 h2 {
   text-align: center;
   color: #2b6fc2;
@@ -760,6 +939,7 @@ h4 {
   padding: 20px;
   border-radius: 8px;
   margin-bottom: 30px;
+  margin-top: 40px;
 }
 
 .date-time-selector {
@@ -910,6 +1090,10 @@ h4 {
 
 .legend-color.maintenance {
   background-color: #e6a23c;
+}
+
+.legend-color.closed {
+  background-color: #909399;
 }
 
 /* 预约弹窗样式 */
@@ -1170,6 +1354,41 @@ h4 {
   margin-top: 15px;
   font-size: 13px;
   color: #909399;
-  text-align: center;
+
+  p {
+    margin-bottom: 10px;
+    font-weight: bold;
+    color: #333;
+  }
+
+  ul {
+    margin: 0;
+    padding-left: 20px;
+
+    li {
+      margin-bottom: 8px;
+      line-height: 1.5;
+    }
+  }
+}
+
+.date-status {
+  margin-left: 15px;
+
+  .status-text {
+    font-size: 14px;
+    color: #666;
+    background-color: #f5f5f5;
+    padding: 5px 10px;
+    border-radius: 4px;
+  }
+}
+
+.status-closed {
+  border-left: 4px solid #909399;
+}
+
+.status-closed .court-status {
+  color: #909399;
 }
 </style>

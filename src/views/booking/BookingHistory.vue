@@ -270,7 +270,7 @@ onMounted(() => {
       <div class="filter-section">
         <el-form :inline="true" :model="filterForm">
           <el-form-item label="预订状态">
-            <el-select v-model="filterForm.status" placeholder="预订状态" clearable>
+            <el-select v-model="filterForm.status" placeholder="预订状态" clearable style="width: 100px">
               <el-option label="全部" value="all" />
               <el-option label="已预约" value="reserved" />
               <el-option label="审核中" value="reviewing" />

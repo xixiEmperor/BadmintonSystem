@@ -129,7 +129,7 @@ onBeforeUnmount(() => {
         <div class="container">
           <div class="header__logo">
             <img src="../../assets/whlg_logo.png" alt="" />
-            <p>南湖校区羽毛球场地预定</p>
+            <p style="font-size: 22px">南湖校区羽毛球场地预定</p>
           </div>
 
           <!-- 用户信息区域 -->
@@ -151,6 +151,12 @@ onBeforeUnmount(() => {
             >
               <el-icon><Calendar /></el-icon>
               <span>商品订单</span>
+            </el-button>
+
+            <!-- 场地预订入口 -->
+            <el-button v-if="isLogin" type="text" class="booking-history-btn" @click="goToBookingHistory">
+              <el-icon><Calendar /></el-icon>
+              <span>场地预订</span>
             </el-button>
 
             <!-- 个人中心入口 -->
@@ -177,7 +183,7 @@ onBeforeUnmount(() => {
                   <el-dropdown-menu>
                     <el-dropdown-item @click="goToUserCenter">个人中心</el-dropdown-item>
                     <el-dropdown-item @click="goToMyPost">我的发帖</el-dropdown-item>
-                    <el-dropdown-item @click="goToBookingHistory">预订记录</el-dropdown-item>
+                    <el-dropdown-item @click="goToBookingHistory">场地预订</el-dropdown-item>
                     <el-dropdown-item @click="goToOrders">商品订单</el-dropdown-item>
                     <el-dropdown-item @click="logout">退出登录</el-dropdown-item>
                   </el-dropdown-menu>
@@ -269,7 +275,7 @@ onBeforeUnmount(() => {
         height: auto;
       }
       .header__logo p {
-        font-size: 18px;
+        font-size: 10px;
       }
       .login {
         font-size: 16px;

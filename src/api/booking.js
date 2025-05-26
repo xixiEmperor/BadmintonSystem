@@ -1,98 +1,126 @@
 import request from '@/utils/request'
 
 /**
- * 获取场地列表
- * @returns {Promise<Array>} 场地列表
+ * 获取已发布通知列表（用户端）
+ * @param {Object} params - 查询参数
+ * @param {number} [params.pageNum=1] - 页码
+ * @param {number} [params.pageSize=10] - 每页数量
+ * @param {number} [params.type] - 通知类型：1-普通通知，2-重要通知，null-全部类型
+ * @returns {Promise<Object>} 通知列表
  */
-export function getCourts() {
-  // TODO: 将场地列表数据保存到Pinia store中
-  return request.get('/courts')
-}
-
-/**
- * 获取场地详情
- * @param {number} id - 场地ID
- * @returns {Promise<Object>} 场地详细信息
- */
-export function getCourtDetail(id) {
-  return request.get(`/courts/${id}`)
-}
-
-/**
- * 获取场地预约状态
- * @param {string} date - 日期，格式为YYYY-MM-DD
- * @returns {Promise<Array>} 场地预约状态
- */
-export function getCourtAvailability(date) {
-  // TODO: 考虑将场地可用状态保存到Pinia store中
-  return request.get('/courts/availability', {
-    params: { date },
+export function getNoticeList(params = {}) {
+  return request({
+    url: '/api/reservation/notice',
+    method: 'get',
+    params: {
+      pageNum: params.pageNum || 1,
+      pageSize: params.pageSize || 10,
+      type: params.type || null,
+    },
   })
 }
 
 /**
- * 创建预约
- * @param {Object} bookingData - 预约数据
- * @param {number} bookingData.courtId - 场地ID
- * @param {string} bookingData.date - 预约日期，格式为YYYY-MM-DD
- * @param {string} bookingData.startTime - 开始时间，格式为HH:MM
- * @param {string} bookingData.endTime - 结束时间，格式为HH:MM
- * @param {string} bookingData.name - 预约人姓名
- * @param {string} bookingData.phone - 预约人电话
- * @returns {Promise<Object>} 预约结果
+ * 获取通知详情
+ * @param {number} id - 通知ID
+ * @returns {Promise<Object>} 通知详情
  */
-export function createBooking(bookingData) {
-  // TODO: 创建成功后更新Pinia中的预约列表
-  return request.post('/bookings', bookingData)
+export function getNoticeDetail(id) {
+  return request({
+    url: `/api/reservation/notice/${id}`,
+    method: 'get',
+  })
 }
 
 /**
- * 获取用户预约列表
+ * 管理员获取所有通知列表（包含草稿）
  * @param {Object} params - 查询参数
- * @param {string} [params.status] - 预约状态(pending/paid/cancelled/all)
- * @param {number} [params.page=1] - 页码
+ * @param {number} [params.pageNum=1] - 页码
  * @param {number} [params.pageSize=10] - 每页数量
- * @returns {Promise<Object>} 用户预约列表
+ * @returns {Promise<Object>} 通知列表
  */
-export function getUserBookings(params = {}) {
-  // TODO: 将用户预约列表保存到Pinia store中
-  return request.get('/bookings/user', {
+export function getAdminNoticeList(params = {}) {
+  return request({
+    url: '/api/reservation/notice/admin',
+    method: 'get',
     params: {
-      status: params.status || 'all',
-      page: params.page || 1,
+      pageNum: params.pageNum || 1,
       pageSize: params.pageSize || 10,
     },
   })
 }
 
 /**
- * 取消预约
- * @param {number} id - 预约ID
- * @returns {Promise<Object>} 取消结果
+ * 创建通知（草稿）
+ * @param {Object} data - 通知数据
+ * @param {string} data.title - 通知标题
+ * @param {string} data.content - 通知内容
+ * @param {number} data.type - 通知类型：1-普通通知，2-重要通知
+ * @returns {Promise<Object>} 创建结果
  */
-export function cancelBooking(id) {
-  // TODO: 取消成功后更新Pinia中的预约列表
-  return request.post(`/bookings/${id}/cancel`)
-}
-
-/**
- * 支付预约订单
- * @param {number} id - 预约ID
- * @param {string} paymentMethod - 支付方式(alipay/wechat)
- * @returns {Promise<Object>} 支付结果
- */
-export function payBooking(id, paymentMethod) {
-  // TODO: 支付成功后更新Pinia中的预约数据
-  return request.post(`/bookings/${id}/pay`, {
-    paymentMethod,
+export function createNotice(data) {
+  return request({
+    url: '/api/reservation/notice',
+    method: 'post',
+    data: {
+      title: data.title,
+      content: data.content,
+      type: data.type,
+    },
   })
 }
 
 /**
- * 获取预约详情
- * @param {number} id - 预约ID
- * @returns {Promise<Object>} 预约详情
+ * 更新通知内容
+ * @param {number} id - 通知ID
+ * @param {Object} data - 通知数据
+ * @param {string} data.title - 通知标题
+ * @param {string} data.content - 通知内容
+ * @param {number} data.type - 通知类型：1-普通通知，2-重要通知
+ * @returns {Promise<Object>} 更新结果
  */
-export function getBookingDetail(id) {
-  return request.get(`/bookings/${id}`)
+export function updateNotice(id, data) {
+  return request({
+    url: `/api/reservation/notice/${id}`,
+    method: 'put',
+    data: {
+      title: data.title,
+      content: data.content,
+      type: data.type,
+    },
+  })
+}
+
+/**
+ * 发布通知
+ * @param {number} id - 通知ID
+ * @returns {Promise<Object>} 发布结果
+ */
+export function publishNotice(id) {
+  return request({
+    url: `/api/reservation/notice/${id}/publish`,
+    method: 'post',
+  })
+}
+
+/**
+ * 删除通知
+ * @param {number} id - 通知ID
+ * @returns {Promise<Object>} 删除结果
+ */
+export function deleteNotice(id) {
+  return request({
+    url: `/api/reservation/notice/${id}`,
+    method: 'delete',
+  })
+}
+
+export default {
+  getNoticeList,
+  getNoticeDetail,
+  getAdminNoticeList,
+  createNotice,
+  updateNotice,
+  publishNotice,
+  deleteNotice,
 }
