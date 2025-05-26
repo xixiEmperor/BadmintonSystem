@@ -8,6 +8,7 @@ import {
   ShoppingBag,
   ChatDotRound,
 } from '@element-plus/icons-vue'
+import imgUrl from '@/assets/index_img.png'
 
 const router = useRouter()
 
@@ -29,7 +30,7 @@ const goToForum = () => {
 
 <template>
   <div class="home-container">
-    <img src="../../assets/index_img.png" alt="" />
+    <el-image :src="imgUrl" alt="" fit="contain" class="hero-image" />
     <h2>欢迎使用南湖校区羽毛球场预定系统</h2>
 
     <div class="info-section">
@@ -125,12 +126,44 @@ const goToForum = () => {
 
 .home-container {
   padding: 0;
+  margin-top: 20px;
 
-  img {
+  @media (max-width: 768px) {
+    margin-top: 10px;
+    padding: 0 10px;
+  }
+
+  @media (max-width: 480px) {
+    margin-top: 5px;
+    padding: 0 5px;
+  }
+
+  .hero-image {
     width: 1200px;
-    height: auto;
+    height: 500px;
     margin: 20px auto;
     display: block;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+    @media (max-width: 1200px) {
+      width: 100%;
+      height: 400px;
+      margin: 15px auto;
+    }
+
+    @media (max-width: 768px) {
+      width: 100%;
+      height: 250px;
+      margin: 10px auto;
+      border-radius: 4px;
+    }
+
+    @media (max-width: 480px) {
+      width: 100%;
+      height: 200px;
+      margin: 10px auto;
+    }
   }
 }
 
@@ -138,6 +171,17 @@ h2 {
   text-align: center;
   color: @primary-color;
   margin-bottom: 20px;
+
+  @media (max-width: 768px) {
+    font-size: 20px;
+    margin-bottom: 15px;
+    padding: 0 10px;
+  }
+
+  @media (max-width: 480px) {
+    font-size: 18px;
+    margin-bottom: 10px;
+  }
 }
 
 .info-section {
@@ -145,6 +189,18 @@ h2 {
   margin-bottom: 30px;
   color: @text-color;
   line-height: 1.6;
+
+  @media (max-width: 768px) {
+    margin-bottom: 20px;
+    padding: 0 15px;
+    font-size: 14px;
+  }
+
+  @media (max-width: 480px) {
+    margin-bottom: 15px;
+    padding: 0 10px;
+    font-size: 13px;
+  }
 }
 
 .quick-actions {
@@ -152,6 +208,16 @@ h2 {
   justify-content: space-between;
   margin: 30px 0;
   flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    margin: 20px 0;
+    padding: 0 10px;
+  }
+
+  @media (max-width: 480px) {
+    margin: 15px 0;
+    padding: 0 5px;
+  }
 }
 
 .action-card {
@@ -173,6 +239,14 @@ h2 {
       margin: 0;
       font-size: 18px;
       color: @primary-color;
+
+      @media (max-width: 768px) {
+        font-size: 16px;
+      }
+
+      @media (max-width: 480px) {
+        font-size: 14px;
+      }
     }
   }
 
@@ -182,8 +256,50 @@ h2 {
     align-items: center;
     padding: 20px;
 
+    @media (max-width: 768px) {
+      padding: 15px;
+    }
+
+    @media (max-width: 480px) {
+      padding: 10px;
+    }
+
     .el-icon {
       margin-bottom: 15px;
+
+      @media (max-width: 768px) {
+        margin-bottom: 10px;
+        font-size: 60px !important;
+      }
+
+      @media (max-width: 480px) {
+        margin-bottom: 8px;
+        font-size: 50px !important;
+      }
+    }
+
+    p {
+      @media (max-width: 768px) {
+        font-size: 14px;
+        margin-bottom: 10px;
+      }
+
+      @media (max-width: 480px) {
+        font-size: 12px;
+        margin-bottom: 8px;
+      }
+    }
+
+    .el-button {
+      @media (max-width: 768px) {
+        font-size: 14px;
+        padding: 8px 16px;
+      }
+
+      @media (max-width: 480px) {
+        font-size: 12px;
+        padding: 6px 12px;
+      }
     }
   }
 
@@ -195,6 +311,16 @@ h2 {
 
 .statistics-section {
   margin: 40px 0 20px;
+
+  @media (max-width: 768px) {
+    margin: 30px 0 15px;
+    padding: 0 10px;
+  }
+
+  @media (max-width: 480px) {
+    margin: 20px 0 10px;
+    padding: 0 5px;
+  }
 }
 
 .statistic-card {
@@ -205,10 +331,33 @@ h2 {
   align-items: center;
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
 
+  @media (max-width: 768px) {
+    padding: 15px;
+    margin-bottom: 15px;
+  }
+
+  @media (max-width: 480px) {
+    padding: 12px;
+    margin-bottom: 10px;
+    flex-direction: column;
+    text-align: center;
+  }
+
   .statistic-icon {
     font-size: 30px;
     color: @primary-color;
     margin-right: 15px;
+
+    @media (max-width: 768px) {
+      font-size: 25px;
+      margin-right: 12px;
+    }
+
+    @media (max-width: 480px) {
+      font-size: 20px;
+      margin-right: 0;
+      margin-bottom: 8px;
+    }
   }
 
   .statistic-info {
@@ -216,12 +365,29 @@ h2 {
       font-size: 24px;
       font-weight: bold;
       color: @primary-color;
+
+      @media (max-width: 768px) {
+        font-size: 20px;
+      }
+
+      @media (max-width: 480px) {
+        font-size: 18px;
+      }
     }
 
     .statistic-label {
       font-size: 14px;
       color: @text-color;
       margin-top: 5px;
+
+      @media (max-width: 768px) {
+        font-size: 13px;
+      }
+
+      @media (max-width: 480px) {
+        font-size: 12px;
+        margin-top: 3px;
+      }
     }
   }
 }

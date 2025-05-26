@@ -5,7 +5,7 @@ import AIChatDialog from '@/components/AiChatDialog.vue'
 import { useUserStore, useCartStore } from '@/stores'
 import { useRouter } from 'vue-router'
 import { navigate } from '@/utils/router'
-import { ElMessageBox } from 'element-plus'
+import logoImg from '@/assets/whlg_logo.png'
 
 // 路由
 const userStore = useUserStore()
@@ -128,7 +128,7 @@ onBeforeUnmount(() => {
       <div class="header__content">
         <div class="container">
           <div class="header__logo">
-            <img src="../../assets/whlg_logo.png" alt="" />
+            <el-image :src="logoImg" alt="" fit="contain" style="width: 300px; height: 100px" />
             <p style="font-size: 22px">南湖校区羽毛球场地预定</p>
           </div>
 
@@ -262,38 +262,201 @@ onBeforeUnmount(() => {
   background-color: rgb(50, 114, 185);
   box-sizing: border-box;
   overflow: hidden;
+
+  // 移动端适配
+  @media (max-width: 768px) {
+    height: 170px; // 增加移动端header高度以容纳换行的用户信息
+  }
+
   .header__content {
     display: flex;
     flex-direction: column;
+
+    // 中等屏幕适配
     @media (max-width: 1200px) {
       .container {
         width: 100%;
         padding: 0 20px;
       }
-      .header__logo img {
-        width: 200px;
-        height: auto;
+      .header__logo {
+        .el-image {
+          width: 200px !important;
+          height: 60px !important;
+        }
+        p {
+          font-size: 18px;
+          margin-left: 15px;
+        }
       }
-      .header__logo p {
-        font-size: 10px;
-      }
-      .login {
-        font-size: 16px;
+      .user-area {
+        .cart-btn,
+        .booking-history-btn,
+        .user-center-btn {
+          font-size: 14px;
+          margin-right: 15px;
+          span {
+            display: none; // 隐藏文字，只显示图标
+          }
+        }
+        .username {
+          font-size: 14px;
+        }
+        .login {
+          font-size: 14px;
+          padding: 8px 16px;
+        }
       }
     }
+
+    // 移动端适配
     @media (max-width: 768px) {
       .container {
-        flex-direction: column;
-        align-items: flex-start;
+        flex-direction: column !important; // 改为垂直布局
+        align-items: stretch !important;
+        justify-content: flex-start;
+        height: auto !important;
+        margin: 10px auto !important;
+        padding: 10px 15px;
+        position: relative; // 添加相对定位
+      }
+
+      .header__logo {
+        margin-bottom: 15px !important;
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+        padding-right: 120px;
+
+        .el-image {
+          width: 120px !important;
+          height: 40px !important;
+        }
+        p {
+          font-size: 14px !important;
+          margin-left: 8px !important;
+          white-space: nowrap;
+        }
+      }
+
+      .user-area {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+
+        // 用户信息区域移到右上角，增加宽度
+        .user-info {
+          position: absolute !important;
+          top: 10px;
+          right: 15px;
+          z-index: 10;
+          min-width: 100px;
+        }
+
+        // 登录按钮也移到右上角
+        .login {
+          position: absolute !important;
+          top: 10px;
+          right: 15px;
+          z-index: 10;
+          font-size: 12px;
+          padding: 6px 12px;
+        }
+
+        // 其他按钮保持居中，但需要排除用户信息和登录按钮
+        .cart-btn,
+        .booking-history-btn,
+        .user-center-btn {
+          margin-right: 8px;
+          font-size: 12px;
+          span {
+            display: none;
+          }
+          .el-icon {
+            margin-right: 0;
+            font-size: 16px;
+          }
+        }
+
+        .user-info-wrapper {
+          padding: 2px;
+          min-width: 90px;
+        }
+        .user-avatar {
+          width: 30px;
+          height: 30px;
+          margin-right: 5px;
+        }
+        .username {
+          font-size: 12px;
+          max-width: none;
+          overflow: visible;
+          text-overflow: unset;
+          white-space: nowrap;
+        }
+      }
+    }
+
+    // 超小屏幕适配
+    @media (max-width: 480px) {
+      .container {
+        padding: 10px;
       }
       .header__logo {
-        margin-bottom: 10px;
+        padding-right: 100px; // 超小屏幕减少右边距
+
+        .el-image {
+          width: 100px !important;
+          height: 35px !important;
+        }
+        p {
+          font-size: 12px !important;
+          margin-left: 5px !important;
+        }
       }
-      .login {
-        align-self: flex-end;
+      .user-area {
+        // 调整右上角用户信息位置
+        .user-info {
+          top: 5px !important;
+          right: 10px !important;
+          min-width: 80px; // 超小屏幕适当减少宽度
+        }
+
+        // 调整右上角登录按钮位置
+        .login {
+          top: 5px !important;
+          right: 10px !important;
+          font-size: 10px;
+          padding: 4px 8px;
+        }
+
+        // 在超小屏幕也隐藏这些按钮
+        .cart-btn,
+        .booking-history-btn,
+        .user-center-btn {
+          display: none !important; // 完全隐藏，不占位
+        }
+
+        .user-info-wrapper {
+          min-width: 70px; // 超小屏幕的包装器宽度
+        }
+
+        .user-avatar {
+          width: 25px;
+          height: 25px;
+          margin-right: 3px;
+        }
+        .username {
+          font-size: 10px;
+          max-width: none; // 移除最大宽度限制
+          overflow: visible; // 允许完全显示
+          text-overflow: unset; // 移除省略号
+        }
       }
     }
   }
+
   .container {
     display: flex;
     align-items: center;
@@ -303,20 +466,19 @@ onBeforeUnmount(() => {
     .header__logo {
       display: flex;
       align-items: center;
-      img {
-        width: 320px;
-        height: 64px;
-      }
+      flex-shrink: 0; // 防止logo被压缩
       p {
         color: #fff;
         font-size: 24px;
         margin-left: 20px;
+        white-space: nowrap; // 防止标题换行
       }
     }
     .user-area {
       margin-left: auto;
       display: flex;
       align-items: center;
+      flex-shrink: 0; // 防止用户区域被压缩
 
       .cart-btn,
       .booking-history-btn,
@@ -326,6 +488,7 @@ onBeforeUnmount(() => {
         margin-right: 20px;
         display: flex;
         align-items: center;
+        white-space: nowrap; // 防止按钮文字换行
 
         .el-icon {
           margin-right: 5px;
@@ -395,34 +558,100 @@ onBeforeUnmount(() => {
         background-color: rgb(50, 114, 185);
         border: none;
         font-size: 18px;
+        white-space: nowrap; // 防止登录按钮文字换行
       }
     }
   }
 }
 
 .nav {
+  // 移动端适配
+  @media (max-width: 768px) {
+    height: 50px; // 减少导航高度
+    margin-top: 0; // 确保导航栏紧贴header
+  }
+
   .container {
     display: flex;
     justify-content: center;
     margin: 0 auto;
+
+    // 移动端适配
+    @media (max-width: 768px) {
+      padding: 0 10px;
+      width: 100%;
+    }
+
     .el-menu-demo {
       width: 100%;
       background-color: rgb(50, 114, 185);
       display: flex;
       justify-content: space-evenly;
       border-bottom: none;
+
+      // 移动端适配
+      @media (max-width: 768px) {
+        height: 50px;
+        line-height: 50px;
+      }
+
       .el-sub-menu {
         width: 200px;
         text-align: center;
+
+        // 移动端适配
+        @media (max-width: 768px) {
+          width: auto;
+          flex: 1;
+        }
+
         .el-menu-item {
           width: 200px;
+
+          // 移动端适配
+          @media (max-width: 768px) {
+            width: 100%;
+            font-size: 12px;
+            padding: 0 5px;
+          }
         }
       }
+
       .el-menu-item {
         width: 200px;
         text-align: center;
+
+        // 移动端适配
+        @media (max-width: 768px) {
+          width: auto;
+          flex: 1;
+          font-size: 12px;
+          padding: 0 5px;
+          height: 50px;
+          line-height: 50px;
+        }
+
+        // 超小屏幕适配
+        @media (max-width: 480px) {
+          font-size: 10px;
+          padding: 0 2px;
+        }
+
         a {
           text-align: center;
+
+          // 移动端适配
+          @media (max-width: 768px) {
+            font-size: 12px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          // 超小屏幕适配
+          @media (max-width: 480px) {
+            font-size: 10px;
+          }
         }
       }
 
@@ -434,6 +663,7 @@ onBeforeUnmount(() => {
         height: 100%;
         position: relative;
       }
+
       .router-link-active {
         color: #ffd04b; // 修改激活状态的文字颜色
 
@@ -463,13 +693,34 @@ onBeforeUnmount(() => {
   right: 50px;
   bottom: 50px;
   z-index: 1000;
+
+  // 移动端适配
+  @media (max-width: 768px) {
+    right: 20px;
+    bottom: 20px;
+  }
 }
+
 .ai-btn {
   width: 60px;
   height: 60px;
   font-size: 24px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   transition: all 0.3s ease;
+
+  // 移动端适配
+  @media (max-width: 768px) {
+    width: 50px;
+    height: 50px;
+    font-size: 20px;
+  }
+
+  // 超小屏幕适配
+  @media (max-width: 480px) {
+    width: 45px;
+    height: 45px;
+    font-size: 18px;
+  }
 
   &:hover {
     transform: scale(1.1);

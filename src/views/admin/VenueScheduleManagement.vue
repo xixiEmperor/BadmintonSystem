@@ -1,162 +1,6 @@
-<template>
-  <div class="venue-schedule-management">
-    <el-card class="page-header">
-      <div class="header-content">
-        <div>
-          <h2>{{ venueName }} - 时段管理</h2>
-          <p>管理场地的时段开放状态和预约情况</p>
-        </div>
-        <el-button @click="$router.go(-1)">返回</el-button>
-      </div>
-    </el-card>
-
-    <!-- 日期选择和操作 -->
-    <el-card class="date-selector-card">
-      <div class="date-controls">
-        <div class="date-picker-group">
-          <el-date-picker
-            v-model="selectedDate"
-            type="date"
-            placeholder="选择日期"
-            @change="loadScheduleData"
-            :disabled-date="disabledDate"
-          />
-          <el-button type="primary" @click="loadScheduleData">查询</el-button>
-        </div>
-        <div class="batch-controls">
-          <el-button @click="batchEnable">批量启用</el-button>
-          <el-button @click="batchDisable">批量停用</el-button>
-          <el-button type="warning" @click="resetToDefault">恢复默认</el-button>
-        </div>
-      </div>
-    </el-card>
-
-    <!-- 时段管理表格 -->
-    <el-card class="schedule-table-card">
-      <template #header>
-        <div class="card-header">
-          <span>时段安排 - {{ formatDate(selectedDate) }}</span>
-          <el-tag :type="getDateStatusType()">{{ getDateStatusText() }}</el-tag>
-        </div>
-      </template>
-
-      <el-table
-        :data="scheduleData"
-        style="width: 100%"
-        @selection-change="handleSelectionChange"
-      >
-        <el-table-column type="selection" width="55" />
-        <el-table-column prop="timeSlot" label="时段" width="150">
-          <template #default="scope">
-            <strong>{{ scope.row.timeSlot }}</strong>
-          </template>
-        </el-table-column>
-        <el-table-column prop="status" label="状态" width="120">
-          <template #default="scope">
-            <el-switch
-              v-model="scope.row.isAvailable"
-              @change="updateTimeSlotStatus(scope.row)"
-              active-text="开放"
-              inactive-text="关闭"
-              :disabled="scope.row.isBooked"
-            />
-          </template>
-        </el-table-column>
-        <el-table-column prop="bookingStatus" label="预约状态" width="120">
-          <template #default="scope">
-            <el-tag :type="getBookingStatusType(scope.row.bookingStatus)">
-              {{ getBookingStatusText(scope.row.bookingStatus) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="bookedBy" label="预约人" width="120">
-          <template #default="scope">
-            <span v-if="scope.row.bookedBy">{{ scope.row.bookedBy }}</span>
-            <span v-else class="text-muted">-</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="bookingTime" label="预约时间" width="150">
-          <template #default="scope">
-            <span v-if="scope.row.bookingTime">{{ formatDateTime(scope.row.bookingTime) }}</span>
-            <span v-else class="text-muted">-</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="price" label="价格" width="100">
-          <template #default="scope">
-            <span>¥{{ scope.row.price }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="备注" min-width="200">
-          <template #default="scope">
-            <el-input
-              v-model="scope.row.remark"
-              placeholder="添加备注"
-              @blur="updateRemark(scope.row)"
-              size="small"
-            />
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="150">
-          <template #default="scope">
-            <el-button
-              v-if="scope.row.isBooked"
-              size="small"
-              type="danger"
-              @click="cancelBooking(scope.row)"
-            >
-              取消预约
-            </el-button>
-            <el-button
-              v-else
-              size="small"
-              @click="viewDetails(scope.row)"
-            >
-              查看详情
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-card>
-
-    <!-- 统计信息 -->
-    <el-card class="stats-card">
-      <template #header>
-        <span>统计信息</span>
-      </template>
-      <el-row :gutter="20">
-        <el-col :span="6">
-          <div class="stat-item">
-            <div class="stat-value">{{ stats.totalSlots }}</div>
-            <div class="stat-label">总时段数</div>
-          </div>
-        </el-col>
-        <el-col :span="6">
-          <div class="stat-item">
-            <div class="stat-value">{{ stats.availableSlots }}</div>
-            <div class="stat-label">可预约时段</div>
-          </div>
-        </el-col>
-        <el-col :span="6">
-          <div class="stat-item">
-            <div class="stat-value">{{ stats.bookedSlots }}</div>
-            <div class="stat-label">已预约时段</div>
-          </div>
-        </el-col>
-        <el-col :span="6">
-          <div class="stat-item">
-            <div class="stat-value">¥{{ stats.totalRevenue }}</div>
-            <div class="stat-label">预计收入</div>
-          </div>
-        </el-col>
-      </el-row>
-    </el-card>
-  </div>
-</template>
-
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
 
 const route = useRoute()
 const venueId = route.params.venueId || 1
@@ -395,6 +239,161 @@ onMounted(() => {
   loadScheduleData()
 })
 </script>
+
+<template>
+  <div class="venue-schedule-management">
+    <el-card class="page-header">
+      <div class="header-content">
+        <div>
+          <h2>{{ venueName }} - 时段管理</h2>
+          <p>管理场地的时段开放状态和预约情况</p>
+        </div>
+        <el-button @click="$router.go(-1)">返回</el-button>
+      </div>
+    </el-card>
+
+    <!-- 日期选择和操作 -->
+    <el-card class="date-selector-card">
+      <div class="date-controls">
+        <div class="date-picker-group">
+          <el-date-picker
+            v-model="selectedDate"
+            type="date"
+            placeholder="选择日期"
+            @change="loadScheduleData"
+            :disabled-date="disabledDate"
+          />
+          <el-button type="primary" @click="loadScheduleData">查询</el-button>
+        </div>
+        <div class="batch-controls">
+          <el-button @click="batchEnable">批量启用</el-button>
+          <el-button @click="batchDisable">批量停用</el-button>
+          <el-button type="warning" @click="resetToDefault">恢复默认</el-button>
+        </div>
+      </div>
+    </el-card>
+
+    <!-- 时段管理表格 -->
+    <el-card class="schedule-table-card">
+      <template #header>
+        <div class="card-header">
+          <span>时段安排 - {{ formatDate(selectedDate) }}</span>
+          <el-tag :type="getDateStatusType()">{{ getDateStatusText() }}</el-tag>
+        </div>
+      </template>
+
+      <el-table
+        :data="scheduleData"
+        style="width: 100%"
+        @selection-change="handleSelectionChange"
+      >
+        <el-table-column type="selection" width="55" />
+        <el-table-column prop="timeSlot" label="时段" width="150">
+          <template #default="scope">
+            <strong>{{ scope.row.timeSlot }}</strong>
+          </template>
+        </el-table-column>
+        <el-table-column prop="status" label="状态" width="120">
+          <template #default="scope">
+            <el-switch
+              v-model="scope.row.isAvailable"
+              @change="updateTimeSlotStatus(scope.row)"
+              active-text="开放"
+              inactive-text="关闭"
+              :disabled="scope.row.isBooked"
+            />
+          </template>
+        </el-table-column>
+        <el-table-column prop="bookingStatus" label="预约状态" width="120">
+          <template #default="scope">
+            <el-tag :type="getBookingStatusType(scope.row.bookingStatus)">
+              {{ getBookingStatusText(scope.row.bookingStatus) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="bookedBy" label="预约人" width="120">
+          <template #default="scope">
+            <span v-if="scope.row.bookedBy">{{ scope.row.bookedBy }}</span>
+            <span v-else class="text-muted">-</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="bookingTime" label="预约时间" width="150">
+          <template #default="scope">
+            <span v-if="scope.row.bookingTime">{{ formatDateTime(scope.row.bookingTime) }}</span>
+            <span v-else class="text-muted">-</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="price" label="价格" width="100">
+          <template #default="scope">
+            <span>¥{{ scope.row.price }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="备注" min-width="200">
+          <template #default="scope">
+            <el-input
+              v-model="scope.row.remark"
+              placeholder="添加备注"
+              @blur="updateRemark(scope.row)"
+              size="small"
+            />
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="150">
+          <template #default="scope">
+            <el-button
+              v-if="scope.row.isBooked"
+              size="small"
+              type="danger"
+              @click="cancelBooking(scope.row)"
+            >
+              取消预约
+            </el-button>
+            <el-button
+              v-else
+              size="small"
+              @click="viewDetails(scope.row)"
+            >
+              查看详情
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+
+    <!-- 统计信息 -->
+    <el-card class="stats-card">
+      <template #header>
+        <span>统计信息</span>
+      </template>
+      <el-row :gutter="20">
+        <el-col :span="6">
+          <div class="stat-item">
+            <div class="stat-value">{{ stats.totalSlots }}</div>
+            <div class="stat-label">总时段数</div>
+          </div>
+        </el-col>
+        <el-col :span="6">
+          <div class="stat-item">
+            <div class="stat-value">{{ stats.availableSlots }}</div>
+            <div class="stat-label">可预约时段</div>
+          </div>
+        </el-col>
+        <el-col :span="6">
+          <div class="stat-item">
+            <div class="stat-value">{{ stats.bookedSlots }}</div>
+            <div class="stat-label">已预约时段</div>
+          </div>
+        </el-col>
+        <el-col :span="6">
+          <div class="stat-item">
+            <div class="stat-value">¥{{ stats.totalRevenue }}</div>
+            <div class="stat-label">预计收入</div>
+          </div>
+        </el-col>
+      </el-row>
+    </el-card>
+  </div>
+</template>
 
 <style lang="less" scoped>
 .venue-schedule-management {

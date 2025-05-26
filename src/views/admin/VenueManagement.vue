@@ -1,214 +1,5 @@
-<template>
-  <div class="venue-management">
-    <el-card class="page-header">
-      <h2>场地管理</h2>
-      <p>管理羽毛球场地的上架状态和特殊日期设置</p>
-    </el-card>
-
-    <!-- 场地状态管理 -->
-    <el-card class="venue-status-card">
-      <template #header>
-        <div class="card-header">
-          <span>场地状态管理</span>
-          <el-button type="primary" @click="batchOperation">批量操作</el-button>
-        </div>
-      </template>
-
-      <div class="venue-grid">
-        <div
-          v-for="venue in venues"
-          :key="venue.id"
-          class="venue-item"
-          :class="{ 'disabled': !venue.isActive }"
-        >
-          <div class="venue-header">
-            <h3>{{ venue.name }}</h3>
-            <el-switch
-              v-model="venue.isActive"
-              @change="toggleVenueStatus(venue)"
-              active-text="启用"
-              inactive-text="停用"
-            />
-          </div>
-          <div class="venue-info">
-            <p><strong>场地编号：</strong>{{ venue.code }}</p>
-            <p><strong>状态：</strong>
-              <el-tag :type="venue.isActive ? 'success' : 'danger'">
-                {{ venue.isActive ? '正常营业' : '暂停营业' }}
-              </el-tag>
-            </p>
-            <p><strong>今日预约：</strong>{{ venue.todayBookings }}/{{ venue.maxBookings }}</p>
-          </div>
-          <div class="venue-actions">
-            <el-button size="small" @click="viewVenueDetail(venue)">查看详情</el-button>
-            <el-button size="small" type="primary" @click="manageSchedule(venue)">时段管理</el-button>
-          </div>
-        </div>
-      </div>
-    </el-card>
-
-    <!-- 特殊日期管理 -->
-    <el-card class="special-dates-card">
-      <template #header>
-        <div class="card-header">
-          <span>特殊日期管理</span>
-          <el-button type="primary" @click="showAddSpecialDate = true">添加特殊日期</el-button>
-        </div>
-      </template>
-
-      <el-table :data="specialDates" style="width: 100%">
-        <el-table-column prop="date" label="日期" width="120">
-          <template #default="scope">
-            {{ formatDate(scope.row.date) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="name" label="名称" width="150" />
-        <el-table-column prop="type" label="类型" width="100">
-          <template #default="scope">
-            <el-tag :type="scope.row.type === 'holiday' ? 'warning' : 'info'">
-              {{ scope.row.type === 'holiday' ? '节假日' : '特殊日期' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="status" label="状态" width="100">
-          <template #default="scope">
-            <el-tag :type="scope.row.status === 'closed' ? 'danger' : 'success'">
-              {{ scope.row.status === 'closed' ? '全部停用' : '正常营业' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="affectedVenues" label="影响场地">
-          <template #default="scope">
-            <span v-if="scope.row.affectedVenues.length === venues.length">全部场地</span>
-            <span v-else>{{ scope.row.affectedVenues.join(', ') }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="timeSlots" label="影响时段">
-          <template #default="scope">
-            <span v-if="scope.row.timeSlots.length === 0">全天</span>
-            <span v-else>{{ scope.row.timeSlots.join(', ') }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="200">
-          <template #default="scope">
-            <el-button size="small" @click="editSpecialDate(scope.row)">编辑</el-button>
-            <el-button size="small" type="danger" @click="deleteSpecialDate(scope.row)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-card>
-
-    <!-- 添加/编辑特殊日期对话框 -->
-    <el-dialog
-      v-model="showAddSpecialDate"
-      :title="editingSpecialDate ? '编辑特殊日期' : '添加特殊日期'"
-      width="600px"
-    >
-      <el-form :model="specialDateForm" :rules="specialDateRules" ref="specialDateFormRef" label-width="100px">
-        <el-form-item label="日期" prop="date">
-          <el-date-picker
-            v-model="specialDateForm.date"
-            type="date"
-            placeholder="选择日期"
-            style="width: 100%"
-          />
-        </el-form-item>
-        <el-form-item label="名称" prop="name">
-          <el-input v-model="specialDateForm.name" placeholder="请输入特殊日期名称" />
-        </el-form-item>
-        <el-form-item label="类型" prop="type">
-          <el-select v-model="specialDateForm.type" placeholder="请选择类型" style="width: 100%">
-            <el-option label="节假日" value="holiday" />
-            <el-option label="特殊日期" value="special" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="状态" prop="status">
-          <el-radio-group v-model="specialDateForm.status">
-            <el-radio value="open">正常营业</el-radio>
-            <el-radio value="closed">全部停用</el-radio>
-            <el-radio value="partial">部分停用</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="影响场地" prop="affectedVenues" v-if="specialDateForm.status !== 'closed'">
-          <el-select
-            v-model="specialDateForm.affectedVenues"
-            multiple
-            placeholder="请选择影响的场地"
-            style="width: 100%"
-          >
-            <el-option
-              v-for="venue in venues"
-              :key="venue.id"
-              :label="venue.name"
-              :value="venue.name"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="影响时段" prop="timeSlots" v-if="specialDateForm.status === 'partial'">
-          <el-select
-            v-model="specialDateForm.timeSlots"
-            multiple
-            placeholder="请选择影响的时段"
-            style="width: 100%"
-          >
-            <el-option
-              v-for="slot in timeSlots"
-              :key="slot"
-              :label="slot"
-              :value="slot"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input
-            v-model="specialDateForm.remark"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入备注信息"
-          />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="showAddSpecialDate = false">取消</el-button>
-          <el-button type="primary" @click="saveSpecialDate">确定</el-button>
-        </span>
-      </template>
-    </el-dialog>
-
-    <!-- 批量操作对话框 -->
-    <el-dialog v-model="showBatchOperation" title="批量操作" width="500px">
-      <el-form :model="batchForm" label-width="100px">
-        <el-form-item label="操作类型">
-          <el-radio-group v-model="batchForm.operation">
-            <el-radio value="enable">批量启用</el-radio>
-            <el-radio value="disable">批量停用</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="选择场地">
-          <el-checkbox-group v-model="batchForm.selectedVenues">
-            <el-checkbox
-              v-for="venue in venues"
-              :key="venue.id"
-              :value="venue.id"
-              :label="venue.name"
-            />
-          </el-checkbox-group>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="showBatchOperation = false">取消</el-button>
-          <el-button type="primary" @click="executeBatchOperation">确定</el-button>
-        </span>
-      </template>
-    </el-dialog>
-  </div>
-</template>
-
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -437,6 +228,214 @@ onMounted(() => {
   initSpecialDates()
 })
 </script>
+
+<template>
+  <div class="venue-management">
+    <el-card class="page-header">
+      <h2>场地管理</h2>
+      <p>管理羽毛球场地的上架状态和特殊日期设置</p>
+    </el-card>
+
+    <!-- 场地状态管理 -->
+    <el-card class="venue-status-card">
+      <template #header>
+        <div class="card-header">
+          <span>场地状态管理</span>
+          <el-button type="primary" @click="batchOperation">批量操作</el-button>
+        </div>
+      </template>
+
+      <div class="venue-grid">
+        <div
+          v-for="venue in venues"
+          :key="venue.id"
+          class="venue-item"
+          :class="{ 'disabled': !venue.isActive }"
+        >
+          <div class="venue-header">
+            <h3>{{ venue.name }}</h3>
+            <el-switch
+              v-model="venue.isActive"
+              @change="toggleVenueStatus(venue)"
+              active-text="启用"
+              inactive-text="停用"
+            />
+          </div>
+          <div class="venue-info">
+            <p><strong>场地编号：</strong>{{ venue.code }}</p>
+            <p><strong>状态：</strong>
+              <el-tag :type="venue.isActive ? 'success' : 'danger'">
+                {{ venue.isActive ? '正常营业' : '暂停营业' }}
+              </el-tag>
+            </p>
+            <p><strong>今日预约：</strong>{{ venue.todayBookings }}/{{ venue.maxBookings }}</p>
+          </div>
+          <div class="venue-actions">
+            <el-button size="small" @click="viewVenueDetail(venue)">查看详情</el-button>
+            <el-button size="small" type="primary" @click="manageSchedule(venue)">时段管理</el-button>
+          </div>
+        </div>
+      </div>
+    </el-card>
+
+    <!-- 特殊日期管理 -->
+    <el-card class="special-dates-card">
+      <template #header>
+        <div class="card-header">
+          <span>特殊日期管理</span>
+          <el-button type="primary" @click="showAddSpecialDate = true">添加特殊日期</el-button>
+        </div>
+      </template>
+
+      <el-table :data="specialDates" style="width: 100%">
+        <el-table-column prop="date" label="日期" width="120">
+          <template #default="scope">
+            {{ formatDate(scope.row.date) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="name" label="名称" width="150" />
+        <el-table-column prop="type" label="类型" width="100">
+          <template #default="scope">
+            <el-tag :type="scope.row.type === 'holiday' ? 'warning' : 'info'">
+              {{ scope.row.type === 'holiday' ? '节假日' : '特殊日期' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="status" label="状态" width="100">
+          <template #default="scope">
+            <el-tag :type="scope.row.status === 'closed' ? 'danger' : 'success'">
+              {{ scope.row.status === 'closed' ? '全部停用' : '正常营业' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="affectedVenues" label="影响场地">
+          <template #default="scope">
+            <span v-if="scope.row.affectedVenues.length === venues.length">全部场地</span>
+            <span v-else>{{ scope.row.affectedVenues.join(', ') }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="timeSlots" label="影响时段">
+          <template #default="scope">
+            <span v-if="scope.row.timeSlots.length === 0">全天</span>
+            <span v-else>{{ scope.row.timeSlots.join(', ') }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="200">
+          <template #default="scope">
+            <el-button size="small" @click="editSpecialDate(scope.row)">编辑</el-button>
+            <el-button size="small" type="danger" @click="deleteSpecialDate(scope.row)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+
+    <!-- 添加/编辑特殊日期对话框 -->
+    <el-dialog
+      v-model="showAddSpecialDate"
+      :title="editingSpecialDate ? '编辑特殊日期' : '添加特殊日期'"
+      width="600px"
+    >
+      <el-form :model="specialDateForm" :rules="specialDateRules" ref="specialDateFormRef" label-width="100px">
+        <el-form-item label="日期" prop="date">
+          <el-date-picker
+            v-model="specialDateForm.date"
+            type="date"
+            placeholder="选择日期"
+            style="width: 100%"
+          />
+        </el-form-item>
+        <el-form-item label="名称" prop="name">
+          <el-input v-model="specialDateForm.name" placeholder="请输入特殊日期名称" />
+        </el-form-item>
+        <el-form-item label="类型" prop="type">
+          <el-select v-model="specialDateForm.type" placeholder="请选择类型" style="width: 100%">
+            <el-option label="节假日" value="holiday" />
+            <el-option label="特殊日期" value="special" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="状态" prop="status">
+          <el-radio-group v-model="specialDateForm.status">
+            <el-radio value="open">正常营业</el-radio>
+            <el-radio value="closed">全部停用</el-radio>
+            <el-radio value="partial">部分停用</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="影响场地" prop="affectedVenues" v-if="specialDateForm.status !== 'closed'">
+          <el-select
+            v-model="specialDateForm.affectedVenues"
+            multiple
+            placeholder="请选择影响的场地"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="venue in venues"
+              :key="venue.id"
+              :label="venue.name"
+              :value="venue.name"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="影响时段" prop="timeSlots" v-if="specialDateForm.status === 'partial'">
+          <el-select
+            v-model="specialDateForm.timeSlots"
+            multiple
+            placeholder="请选择影响的时段"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="slot in timeSlots"
+              :key="slot"
+              :label="slot"
+              :value="slot"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input
+            v-model="specialDateForm.remark"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入备注信息"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="showAddSpecialDate = false">取消</el-button>
+          <el-button type="primary" @click="saveSpecialDate">确定</el-button>
+        </span>
+      </template>
+    </el-dialog>
+
+    <!-- 批量操作对话框 -->
+    <el-dialog v-model="showBatchOperation" title="批量操作" width="500px">
+      <el-form :model="batchForm" label-width="100px">
+        <el-form-item label="操作类型">
+          <el-radio-group v-model="batchForm.operation">
+            <el-radio value="enable">批量启用</el-radio>
+            <el-radio value="disable">批量停用</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="选择场地">
+          <el-checkbox-group v-model="batchForm.selectedVenues">
+            <el-checkbox
+              v-for="venue in venues"
+              :key="venue.id"
+              :value="venue.id"
+              :label="venue.name"
+            />
+          </el-checkbox-group>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="showBatchOperation = false">取消</el-button>
+          <el-button type="primary" @click="executeBatchOperation">确定</el-button>
+        </span>
+      </template>
+    </el-dialog>
+  </div>
+</template>
 
 <style lang="less" scoped>
 .venue-management {
