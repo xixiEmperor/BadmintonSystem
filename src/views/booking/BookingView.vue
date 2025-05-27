@@ -1,7 +1,10 @@
 <script setup>
-import { ref, computed, reactive } from 'vue'
+import { ref, computed, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import NoticeList from './components/NoticeList.vue'
+import VenueStatusMatrix from './components/VenueStatusMatrix.vue'
+import { Calendar } from '@element-plus/icons-vue'
+import { getVenueList, getVenueAvailability, VENUE_STATUS } from '@/api/venue'
 
 // 检查是否为工作日（周一到周五）
 const isWeekday = (date) => {
@@ -116,43 +119,12 @@ const endTimeOptions = computed(() => {
 
 const currentDate = ref(new Date()) // 默认选择今天
 
-// 检查当前是否在预约时间内
-const isWithinBookingHours = computed(() => {
-  const now = new Date()
-  const selectedDate = currentDate.value
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-
-  const tomorrow = new Date(today)
-  tomorrow.setDate(tomorrow.getDate() + 1)
-
-  // 如果选择的是今天的日期
-  if (selectedDate.toDateString() === today.toDateString()) {
-    // 今天的场地：只要在开始时间之前就可以预约
-    if (!startTime.value) return true
-
-    const [targetHour, targetMinute] = startTime.value.split(':').map(Number)
-    const targetTime = new Date(now)
-    targetTime.setHours(targetHour, targetMinute, 0, 0)
-
-    return now < targetTime
-  }
-
-  // 如果选择的是明天的日期
-  if (selectedDate.toDateString() === tomorrow.toDateString()) {
-    // 明天的场地：今天18:00后才能预约
-    return now.getHours() >= 18
-  }
-
-  return false
-})
-
 // 添加时间选择
 const startTime = ref('18:00')
 const endTime = ref('19:00')
 
-// 当日期改变时，重置时间选择
-const handleDateChange = (date) => {
+// 当日期改变时，重置时间选择并检查场地可用性
+const handleDateChange = async (date) => {
   const options = getTimeOptionsForDate(date)
   if (options.startOptions.length > 0) {
     startTime.value = options.startOptions[0]
@@ -181,6 +153,11 @@ const handleDateChange = (date) => {
     startTime.value = ''
     endTime.value = ''
   }
+
+  // 检查场地可用性
+  if (startTime.value && endTime.value) {
+    await checkVenueAvailability(date, startTime.value, endTime.value)
+  }
 }
 
 // 获取日期状态文本
@@ -197,45 +174,98 @@ const getDateStatusText = (date) => {
 }
 
 // 修改场地数据结构，添加bookedTimes数组表示已预约时间段
-const courts = ref([
-  {
-    id: 1,
-    name: '羽毛球场1号',
-    description: '专业比赛场地，设备齐全，适合高水平比赛和训练。',
-    bookedTimes: [], // 存储格式为 {date: '2023-05-20', start: '10:00', end: '11:00'}
-  },
-  {
-    id: 2,
-    name: '羽毛球场2号',
-    description: '标准场地，光线充足，地面采用专业PVC材料。',
-    bookedTimes: [{ date: new Date().toLocaleDateString(), start: '14:00', end: '16:00' }],
-  },
-  {
-    id: 3,
-    name: '羽毛球场3号',
-    description: '初学者友好场地，空间宽敞，适合教学使用。',
-    bookedTimes: [],
-  },
-  {
-    id: 4,
-    name: '羽毛球场4号',
-    description: '双打专用场地，场地宽敞，四周空间充足。',
-    bookedTimes: [],
-  },
-  {
-    id: 5,
-    name: '羽毛球场5号',
-    description: '高级场地，配备专业照明和空调系统。',
-    bookedTimes: [],
-    maintenance: true, // 维护中标记
-  },
-  {
-    id: 6,
-    name: '羽毛球场6号',
-    description: '多功能场地，可调整为单打或双打比赛。',
-    bookedTimes: [{ date: new Date().toLocaleDateString(), start: '9:00', end: '12:00' }],
-  },
-])
+const courts = ref([])
+const loading = ref(false)
+
+// 获取场地列表
+const fetchVenueList = async () => {
+  loading.value = true
+  try {
+    const response = await getVenueList()
+    if (response.data.code === 0) {
+      // 转换API数据格式为组件需要的格式
+      courts.value = response.data.data.map(venue => ({
+        id: venue.id,
+        name: venue.name,
+        description: venue.description,
+        price: venue.pricePerHour || 20, // 每小时价格
+        status: venue.status,
+        isRecommended: venue.status === 1 ? true : false,
+        maintenance: venue.status === VENUE_STATUS.MAINTENANCE
+      }))
+    } else {
+      ElMessage.error(response.message || '获取场地列表失败')
+      // 如果API失败，使用默认数据
+      setDefaultVenues()
+    }
+  } catch (error) {
+    console.error('获取场地列表失败:', error)
+    ElMessage.error('获取场地列表失败，请稍后重试')
+    // 如果API失败，使用默认数据
+    setDefaultVenues()
+  } finally {
+    loading.value = false
+  }
+}
+
+// 检查场地可用性
+const checkVenueAvailability = async (date, startTime, endTime) => {
+  try {
+    const dateStr = date.toISOString().split('T')[0] // 格式化为 yyyy-MM-dd
+    const response = await getVenueAvailability({
+      date: dateStr,
+      startTime,
+      endTime
+    })
+
+    if (response.data.code === 0) {
+      // 更新场地的预约状态
+      const availabilityData = response.data.data
+      courts.value.forEach(court => {
+        const venueData = availabilityData.find(item => item.venueId === court.id)
+        if (venueData) {
+          court.isRecommended = venueData.isRecommended || false
+        }
+      })
+    }
+  } catch (error) {
+    console.error('检查场地可用性失败:', error)
+  }
+}
+
+// 组件挂载时获取场地列表
+onMounted(async () => {
+  await fetchVenueList()
+
+  // 初始化时间选择
+  const options = getTimeOptionsForDate(currentDate.value)
+  if (options.startOptions.length > 0) {
+    startTime.value = options.startOptions[0]
+
+    // 设置结束时间为开始时间后1小时
+    const [hour, minute] = startTime.value.split(':').map(Number)
+    let endHour = hour + 1
+    let endMinute = minute
+
+    if (endHour > 23) {
+      endHour = 23
+      endMinute = 0
+    }
+
+    const targetEndTime = `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`
+    const availableEndTime = options.endOptions.find(t => t >= targetEndTime)
+    if (availableEndTime) {
+      endTime.value = availableEndTime
+    } else if (options.endOptions.length > 0) {
+      endTime.value = options.endOptions[0]
+    }
+
+    // 检查场地可用性
+    if (startTime.value && endTime.value) {
+      await checkVenueAvailability(currentDate.value, startTime.value, endTime.value)
+    }
+  }
+})
 
 // 预约弹窗相关
 const bookingDialogVisible = ref(false)
@@ -283,8 +313,8 @@ const calculateHours = (start, end) => {
   return hours
 }
 
-// 计算价格
-const calculatePrice = (start, end) => {
+// 计算价格（使用场地的实际价格）
+const calculatePrice = (start, end, court = null) => {
   if (!start || !end) return 0
 
   // 计算小时差
@@ -293,105 +323,61 @@ const calculatePrice = (start, end) => {
   // 小于1小时按1小时计算
   const effectiveHours = Math.max(1, hours)
 
-  // 价格：20元/小时
-  const price = Math.ceil(effectiveHours) * 20
+  // 获取场地价格，如果没有指定场地则使用默认价格20元/小时
+  const hourlyPrice = court?.price || 20
+
+  const price = Math.ceil(effectiveHours) * hourlyPrice
 
   return price
 }
 
 // 计算价格（响应式）
 const bookingPrice = computed(() => {
-  return calculatePrice(startTime.value, endTime.value)
+  return calculatePrice(startTime.value, endTime.value, selectedCourt.value)
 })
 
 // 检查场地在选定时间段是否可用
 const isCourAvailable = (court) => {
-  // 如果场地在维护中，则不可用
-  if (court.maintenance) {
-    return false
-  }
-
-  // 检查选定日期是否有开放时间
-  const availableSlots = getAvailableTimeSlots(currentDate.value)
-  if (availableSlots.length === 0) {
-    return false
-  }
-
-  // 检查所选时间段是否在开放时间内
-  const selectedStart = startTime.value
-  const selectedEnd = endTime.value
-
-  if (!selectedStart || !selectedEnd) {
-    return false
-  }
-
-  let isInOpenTime = false
-  for (const slot of availableSlots) {
-    const [slotStart, slotEnd] = slot.split('-')
-    if (selectedStart >= slotStart && selectedEnd <= slotEnd) {
-      isInOpenTime = true
-      break
-    }
-  }
-
-  if (!isInOpenTime) {
-    return false
-  }
-
-  // 检查所选时间段是否与已预约时间重叠
-  const selectedDate = currentDate.value.toLocaleDateString()
-
-  for (const bookedTime of court.bookedTimes) {
-    // 如果日期不同，跳过
-    if (bookedTime.date !== selectedDate) {
-      continue
-    }
-
-    // 检查时间是否重叠
-    if (
-      (selectedStart >= bookedTime.start && selectedStart < bookedTime.end) ||
-      (selectedEnd > bookedTime.start && selectedEnd <= bookedTime.end) ||
-      (selectedStart <= bookedTime.start && selectedEnd >= bookedTime.end)
-    ) {
-      return false
-    }
-  }
-
-  return true
+  // 直接使用isRecommended字段判断场地是否可预约
+  return court.isRecommended === true
 }
 
 // 获取场地状态类名
 const getStatusClass = (court) => {
-  if (court.maintenance) {
-    return 'status-maintenance'
+  // 根据场地状态返回对应的样式类
+  switch (court.status) {
+    case 1: // 空闲中
+      return court.isRecommended ? 'status-available' : 'status-booked'
+    case 2: // 使用中
+      return 'status-occupied'
+    case 3: // 已预约
+      return 'status-booked'
+    case 4: // 不开放
+      return 'status-closed'
+    default:
+      return 'status-closed'
   }
-
-  // 检查日期是否可预约
-  const availableSlots = getAvailableTimeSlots(currentDate.value)
-  if (availableSlots.length === 0) {
-    return 'status-closed'
-  }
-
-  return isCourAvailable(court) ? 'status-available' : 'status-booked'
 }
 
 // 获取场地状态文本
 const getStatusText = (court) => {
-  if (court.maintenance) {
-    return '维护中'
+  // 根据场地状态返回对应的文本
+  switch (court.status) {
+    case 1: // 空闲中
+      return court.isRecommended ? '可预约' : '已预约'
+    case 2: // 使用中
+      return '使用中'
+    case 3: // 已预约
+      return '已预约'
+    case 4: // 不开放
+      return '不开放'
+    default:
+      return '未知状态'
   }
-
-  // 检查日期是否可预约
-  const availableSlots = getAvailableTimeSlots(currentDate.value)
-  if (availableSlots.length === 0) {
-    return '不开放'
-  }
-
-  return isCourAvailable(court) ? '可预约' : '已预约'
 }
 
 // 监听开始时间变化，确保结束时间始终大于开始时间且不超过3小时
-const handleStartTimeChange = (time) => {
+const handleStartTimeChange = async (time) => {
   const options = getTimeOptionsForDate(currentDate.value)
   if (options.startOptions.length === 0) return
 
@@ -436,10 +422,15 @@ const handleStartTimeChange = (time) => {
       endTime.value = availableEndTimes[availableEndTimes.length - 1]
     }
   }
+
+  // 检查场地可用性
+  if (endTime.value) {
+    await checkVenueAvailability(currentDate.value, time, endTime.value)
+  }
 }
 
 // 监听结束时间变化，确保结束时间始终大于开始时间且不超过3小时
-const handleEndTimeChange = (time) => {
+const handleEndTimeChange = async (time) => {
   const options = getTimeOptionsForDate(currentDate.value)
   if (options.endOptions.length === 0) return
 
@@ -487,49 +478,18 @@ const handleEndTimeChange = (time) => {
       startTime.value = options.startOptions[0]
     }
   }
+
+  // 检查场地可用性
+  if (startTime.value) {
+    await checkVenueAvailability(currentDate.value, startTime.value, time)
+  }
 }
 
 // 打开预约弹窗
 const openBookingDialog = (court) => {
-  // 检查是否在预约时间内
-  if (!isWithinBookingHours.value) {
-    const selectedDate = currentDate.value
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
-    const tomorrow = new Date(today)
-    tomorrow.setDate(tomorrow.getDate() + 1)
-
-    let timeMsg = ''
-
-    // 如果选择的是今天的日期
-    if (selectedDate.toDateString() === today.toDateString()) {
-      timeMsg = `今天${startTime.value}之前可以预约该时间段的场地`
-    }
-    // 如果选择的是明天的日期
-    else if (selectedDate.toDateString() === tomorrow.toDateString()) {
-      timeMsg = '今天18:00之后可以预约明天的场地'
-    }
-
-    ElMessage.warning(`${timeMsg}，请在规定时间内预约`)
-    return
-  }
-
-  // 检查选定日期是否开放
-  const availableSlots = getAvailableTimeSlots(currentDate.value)
-  if (availableSlots.length === 0) {
-    ElMessage.warning('选定日期不开放预约')
-    return
-  }
-
-  // 检查选定的时间是否至少为1小时且不超过3小时
-  const hours = calculateHours(startTime.value, endTime.value)
-  if (hours < 1) {
-    ElMessage.warning('预约时间至少为1小时')
-    return
-  }
-  if (hours > 3) {
-    ElMessage.warning('预约时间最长为3小时')
+  // 直接检查场地是否可预约（基于isRecommended字段）
+  if (!court.isRecommended) {
+    ElMessage.warning('该场地当前不可预约')
     return
   }
 
@@ -629,11 +589,21 @@ const isBookingTimeValid = (startTime, endTime) => {
   const hours = calculateHours(startTime, endTime)
   return hours >= 1 && hours <= 3
 }
+
+// 场地使用情况矩阵弹窗控制
+const matrixDialogVisible = ref(false)
+
+// 打开场地使用情况表
+const openMatrixDialog = () => {
+  matrixDialogVisible.value = true
+}
 </script>
 
 <template>
   <div class="booking-container">
-    <h2>场地预约</h2>
+    <div class="page-header">
+      <h2>场地预约</h2>
+    </div>
 
     <!-- 通知公告区域 -->
     <NoticeList />
@@ -662,6 +632,20 @@ const isBookingTimeValid = (startTime, endTime) => {
             format="YYYY年MM月DD日"
             @change="handleDateChange"
           />
+        </div>
+
+        <!-- 查看场地使用情况表按钮 - 新位置 -->
+        <div class="matrix-button-container">
+          <el-button
+            type="primary"
+            :icon="Calendar"
+            @click="openMatrixDialog"
+            class="matrix-button-enhanced"
+            size="large"
+          >
+            <span class="button-text">查看场地使用情况表</span>
+            <span class="button-subtitle">实时查看所有场地状态</span>
+          </el-button>
         </div>
 
         <!-- 日期状态显示 -->
@@ -735,12 +719,23 @@ const isBookingTimeValid = (startTime, endTime) => {
 
     <div class="courts-container">
       <h3>场地状态</h3>
-      <el-row :gutter="20">
+
+      <!-- 加载状态 -->
+      <div v-if="loading" class="loading-container">
+        <el-skeleton :rows="3" animated />
+        <p class="loading-text">正在加载场地信息...</p>
+      </div>
+
+      <!-- 场地列表 -->
+      <el-row v-else :gutter="20">
         <el-col :xs="24" :sm="12" :md="8" v-for="court in courts" :key="court.id">
           <el-card class="court-card" :class="getStatusClass(court)">
             <div class="court-info">
               <div class="court-name">{{ court.name }}</div>
               <div class="court-status">{{ getStatusText(court) }}</div>
+              <div class="court-price" v-if="court.price">
+                {{ court.price }}元/小时
+              </div>
             </div>
             <div class="court-actions">
               <el-button
@@ -754,20 +749,25 @@ const isBookingTimeValid = (startTime, endTime) => {
           </el-card>
         </el-col>
       </el-row>
+
+      <!-- 空状态 -->
+      <div v-if="!loading && courts.length === 0" class="empty-state">
+        <p>暂无可用场地</p>
+      </div>
     </div>
 
     <div class="booking-legend">
       <div class="legend-item">
         <div class="legend-color available"></div>
-        <div class="legend-text">可预约</div>
+        <div class="legend-text">空闲中</div>
       </div>
       <div class="legend-item">
         <div class="legend-color booked"></div>
         <div class="legend-text">已预约</div>
       </div>
       <div class="legend-item">
-        <div class="legend-color maintenance"></div>
-        <div class="legend-text">维护中</div>
+        <div class="legend-color occupied"></div>
+        <div class="legend-text">使用中</div>
       </div>
       <div class="legend-item">
         <div class="legend-color closed"></div>
@@ -792,7 +792,7 @@ const isBookingTimeValid = (startTime, endTime) => {
             <div class="selected-time">时间段：{{ startTime }} - {{ endTime }}</div>
             <div class="booking-price">
               预计费用：<span class="price">{{ bookingPrice }}</span> 元
-              <div class="price-info">（每小时20元，最低1小时起订）</div>
+              <div class="price-info">（每小时{{ selectedCourt?.price || 20 }}元，最低1小时起订）</div>
             </div>
           </div>
         </div>
@@ -908,6 +908,9 @@ const isBookingTimeValid = (startTime, endTime) => {
         </div>
       </template>
     </el-dialog>
+
+    <!-- 场地使用情况矩阵弹窗 -->
+    <VenueStatusMatrix v-model:visible="matrixDialogVisible" />
   </div>
 </template>
 
@@ -916,10 +919,17 @@ const isBookingTimeValid = (startTime, endTime) => {
   padding: 20px;
 }
 
+.page-header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
 h2 {
   text-align: center;
   color: #2b6fc2;
-  margin-bottom: 30px;
+  margin-bottom: 0;
 }
 
 h3,
@@ -1032,6 +1042,13 @@ h4 {
   font-size: 14px;
 }
 
+.court-price {
+  font-size: 12px;
+  color: #f56c6c;
+  font-weight: bold;
+  margin-top: 5px;
+}
+
 .court-actions {
   display: flex;
   justify-content: center;
@@ -1053,11 +1070,11 @@ h4 {
   color: #f56c6c;
 }
 
-.status-maintenance {
+.status-occupied {
   border-left: 4px solid #e6a23c;
 }
 
-.status-maintenance .court-status {
+.status-occupied .court-status {
   color: #e6a23c;
 }
 
@@ -1088,7 +1105,7 @@ h4 {
   background-color: #f56c6c;
 }
 
-.legend-color.maintenance {
+.legend-color.occupied {
   background-color: #e6a23c;
 }
 
@@ -1314,6 +1331,23 @@ h4 {
 }
 
 @media screen and (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    gap: 15px;
+    align-items: center;
+  }
+
+  .matrix-button-container {
+    margin: 15px 0;
+    width: 100%;
+  }
+
+  .matrix-button-enhanced {
+    min-width: 100%;
+    max-width: 320px;
+    margin: 0 auto;
+  }
+
   .date-time-selector {
     flex-direction: column;
     gap: 15px;
@@ -1389,6 +1423,87 @@ h4 {
 }
 
 .status-closed .court-status {
+  color: #909399;
+}
+
+/* 新的增强按钮样式 */
+.matrix-button-container {
+  display: flex;
+  justify-content: center;
+  margin: 0 20px;
+}
+
+.matrix-button-enhanced {
+  background: linear-gradient(135deg, #409eff 0%, #67c23a 100%);
+  border: none;
+  border-radius: 12px;
+  padding: 16px 24px;
+  min-width: 280px;
+  height: auto;
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.matrix-button-enhanced:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(64, 158, 255, 0.4);
+  background: linear-gradient(135deg, #66b1ff 0%, #85ce61 100%);
+}
+
+.matrix-button-enhanced:active {
+  transform: translateY(0);
+}
+
+.matrix-button-enhanced .button-text {
+  display: block;
+  font-size: 16px;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 4px;
+}
+
+.matrix-button-enhanced .button-subtitle {
+  display: block;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 400;
+}
+
+.matrix-button-enhanced::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.matrix-button-enhanced:hover::before {
+  left: 100%;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.loading-text {
+  margin-top: 10px;
+  color: #909399;
+}
+
+.empty-state {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
   color: #909399;
 }
 </style>
