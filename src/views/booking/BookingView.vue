@@ -1,10 +1,17 @@
 <script setup>
 import { ref, computed, reactive, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
 import NoticeList from './components/NoticeList.vue'
 import VenueStatusMatrix from './components/VenueStatusMatrix.vue'
 import { Calendar } from '@element-plus/icons-vue'
 import { getVenueList, getVenueAvailability, VENUE_STATUS } from '@/api/venue'
+
+// 通用日期格式化函数，避免时区问题
+const formatDateToString = (date) => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
 
 // 检查是否为工作日（周一到周五）
 const isWeekday = (date) => {
@@ -190,7 +197,8 @@ const fetchVenueList = async () => {
         description: venue.description,
         price: venue.pricePerHour || 20, // 每小时价格
         status: venue.status,
-        isRecommended: venue.status === 1 ? true : false,
+        bookable: false, // 初始化为不可预约，等待时间选择后再检查
+        availabilityReason: '请选择时间段', // 初始化原因
         maintenance: venue.status === VENUE_STATUS.MAINTENANCE
       }))
     } else {
@@ -211,7 +219,9 @@ const fetchVenueList = async () => {
 // 检查场地可用性
 const checkVenueAvailability = async (date, startTime, endTime) => {
   try {
-    const dateStr = date.toISOString().split('T')[0] // 格式化为 yyyy-MM-dd
+    // 使用通用日期格式化函数
+    const dateStr = formatDateToString(date)
+
     const response = await getVenueAvailability({
       date: dateStr,
       startTime,
@@ -219,17 +229,49 @@ const checkVenueAvailability = async (date, startTime, endTime) => {
     })
 
     if (response.data.code === 0) {
-      // 更新场地的预约状态
-      const availabilityData = response.data.data
+      const { availableVenues, unavailableVenues } = response.data.data
+
+      // 重置所有场地的可预约状态
       courts.value.forEach(court => {
-        const venueData = availabilityData.find(item => item.venueId === court.id)
-        if (venueData) {
-          court.isRecommended = venueData.isRecommended || false
-        }
+        court.bookable = false
+        court.availabilityReason = '未知状态'
       })
+
+      // 设置可预约场地
+      if (availableVenues && availableVenues.length > 0) {
+        availableVenues.forEach(availableVenue => {
+          const court = courts.value.find(c => c.id === availableVenue.id)
+          if (court) {
+            court.bookable = true
+            court.availabilityReason = '可预约'
+            // 更新场地价格信息（如果API返回了新的价格）
+            if (availableVenue.pricePerHour !== undefined) {
+              court.price = availableVenue.pricePerHour
+            }
+          }
+        })
+      }
+
+      // 设置不可预约场地
+      if (unavailableVenues && unavailableVenues.length > 0) {
+        unavailableVenues.forEach(unavailableVenue => {
+          const court = courts.value.find(c => c.id === unavailableVenue.id)
+          if (court) {
+            court.bookable = false
+            court.availabilityReason = unavailableVenue.reason || '不可预约'
+          }
+        })
+      }
+
+      console.log(`场地可用性检查完成: ${availableVenues?.length || 0}/${response.data.data.totalVenues} 场地可预约`)
     }
   } catch (error) {
     console.error('检查场地可用性失败:', error)
+    // 如果API调用失败，将所有场地设置为不可预约
+    courts.value.forEach(court => {
+      court.bookable = false
+      court.availabilityReason = '检查失败'
+    })
   }
 }
 
@@ -338,41 +380,36 @@ const bookingPrice = computed(() => {
 
 // 检查场地在选定时间段是否可用
 const isCourAvailable = (court) => {
-  // 直接使用isRecommended字段判断场地是否可预约
-  return court.isRecommended === true
+  // 使用bookable字段判断场地是否可预约
+  return court.bookable === true
 }
 
 // 获取场地状态类名
 const getStatusClass = (court) => {
-  // 根据场地状态返回对应的样式类
-  switch (court.status) {
-    case 1: // 空闲中
-      return court.isRecommended ? 'status-available' : 'status-booked'
-    case 2: // 使用中
+  // 根据场地的可预约状态返回对应的样式类
+  if (court.bookable === true) {
+    return 'status-available'
+  } else {
+    // 根据不可预约的原因返回不同的样式
+    const reason = court.availabilityReason || ''
+    if (reason.includes('使用中') || court.status === 2) {
       return 'status-occupied'
-    case 3: // 已预约
+    } else if (reason.includes('维护') || court.status === 4) {
+      return 'status-closed'
+    } else {
       return 'status-booked'
-    case 4: // 不开放
-      return 'status-closed'
-    default:
-      return 'status-closed'
+    }
   }
 }
 
 // 获取场地状态文本
 const getStatusText = (court) => {
-  // 根据场地状态返回对应的文本
-  switch (court.status) {
-    case 1: // 空闲中
-      return court.isRecommended ? '可预约' : '已预约'
-    case 2: // 使用中
-      return '使用中'
-    case 3: // 已预约
-      return '已预约'
-    case 4: // 不开放
-      return '不开放'
-    default:
-      return '未知状态'
+  // 根据场地的可预约状态返回对应的文本
+  if (court.bookable === true) {
+    return '可预约'
+  } else {
+    // 返回具体的不可预约原因
+    return court.availabilityReason || '不可预约'
   }
 }
 
@@ -487,9 +524,10 @@ const handleEndTimeChange = async (time) => {
 
 // 打开预约弹窗
 const openBookingDialog = (court) => {
-  // 直接检查场地是否可预约（基于isRecommended字段）
-  if (!court.isRecommended) {
-    ElMessage.warning('该场地当前不可预约')
+  // 检查场地是否可预约（基于bookable字段）
+  if (!court.bookable) {
+    const reason = court.availabilityReason || '该场地当前不可预约'
+    ElMessage.warning(reason)
     return
   }
 
@@ -688,18 +726,6 @@ const openMatrixDialog = () => {
                 ></el-option>
               </el-select>
             </div>
-          </div>
-        </div>
-
-        <div class="selector-group price-info-group" v-if="timeOptions.length > 0">
-          <div class="booking-hours-info">
-            预订时长：<span class="highlight">{{
-              Math.max(1, calculateHours(startTime, endTime))
-            }}</span>
-            小时
-          </div>
-          <div class="booking-price-info">
-            预计费用：<span class="price">{{ bookingPrice }}</span> 元
           </div>
         </div>
       </div>

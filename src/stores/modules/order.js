@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { getOrderList, cancelOrder as cancelOrderApi } from '@/api/pay'
 import { ORDER_STATUS } from '@/api/pay'
 
@@ -8,49 +8,30 @@ export const useOrderStore = defineStore('order', () => {
   const orderList = ref([])
   // 加载状态
   const loading = ref(false)
-
-  // 根据状态过滤订单
-  const getOrdersByStatus = computed(() => {
-    return (status) => {
-      if (status === 'all') {
-        return orderList.value
-      }
-
-      switch (status) {
-        case 'unpaid':
-          return orderList.value.filter(order => order.status === ORDER_STATUS.UNPAID)
-        case 'paid':
-          return orderList.value.filter(order => order.status === ORDER_STATUS.PAID)
-        case 'cancelled':
-          return orderList.value.filter(order => order.status === ORDER_STATUS.CANCELLED)
-        default:
-          return orderList.value
-      }
-    }
-  })
+  // 总订单数
+  const total = ref(0)
 
   // 获取订单列表（从后端）
-  async function fetchOrderList() {
+  async function fetchOrderList(pageNum = 1, pageSize = 5) {
     if (loading.value) return
 
     loading.value = true
     try {
       const response = await getOrderList({
-        pageNum: 1,
-        pageSize: 5 // 获取所有订单
+        pageNum,
+        pageSize
       })
 
       if (response.data.code === 0) {
         // 显示所有订单，包括已取消的订单
         orderList.value = response.data.data.list || []
-        return true
+        total.value = response.data.data.total || 0
       } else {
         throw new Error(response.data.message || '获取订单列表失败')
       }
     } catch (error) {
       console.error('获取订单列表失败:', error)
       ElMessage.error('获取订单列表失败')
-      return false
     } finally {
       loading.value = false
     }
@@ -88,10 +69,10 @@ export const useOrderStore = defineStore('order', () => {
   return {
     orderList,
     loading,
-    getOrdersByStatus,
     fetchOrderList,
     cancelOrder,
-    getOrderByNo
+    getOrderByNo,
+    total
   }
 }, {
   persist: true

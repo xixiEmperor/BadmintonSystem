@@ -16,21 +16,9 @@ const pageSize = ref(5)
 // 从store获取数据
 const { loading, cancelOrder: storeCancelOrder, refreshOrders } = orderStore
 
-// 根据当前标签获取过滤后的订单列表
-const filteredOrders = computed(() => {
-  return orderStore.getOrdersByStatus(activeTab.value)
-})
-
-// 分页后的订单列表
-const paginatedOrders = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value
-  const end = start + pageSize.value
-  return filteredOrders.value.slice(start, end)
-})
-
 // 总数量
 const total = computed(() => {
-  return filteredOrders.value.length
+  return orderStore.total
 })
 
 // 标签切换
@@ -43,11 +31,13 @@ const handleTabChange = (tabName) => {
 const handleSizeChange = (newSize) => {
   pageSize.value = newSize
   currentPage.value = 1
+  orderStore.fetchOrderList(currentPage.value, pageSize.value)
 }
 
 // 当前页改变
 const handleCurrentChange = (newPage) => {
   currentPage.value = newPage
+  orderStore.fetchOrderList(currentPage.value, pageSize.value)
 }
 
 // 查看订单详情
@@ -184,7 +174,7 @@ onMounted(() => {
     </div>
 
     <!-- 空状态 -->
-    <div v-else-if="paginatedOrders.length === 0" class="empty-container">
+    <div v-else-if="orderStore.orderList.length === 0" class="empty-container">
       <el-empty description="暂无订单数据">
         <el-button type="primary" @click="goShopping">去购物</el-button>
       </el-empty>
@@ -192,7 +182,7 @@ onMounted(() => {
 
     <!-- 订单列表 -->
     <div v-else class="order-list">
-      <div v-for="order in paginatedOrders" :key="order.orderNo" class="order-item">
+      <div v-for="order in orderStore.orderList" :key="order.orderNo" class="order-item">
         <div class="order-header-info">
           <div class="order-info">
             <span class="order-no">订单号：{{ order.orderNo }}</span>

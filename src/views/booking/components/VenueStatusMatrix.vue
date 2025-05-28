@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
+import { ElMessage } from 'element-plus'
 import { getVenueStatusMatrix } from '@/api/venue'
 
 const props = defineProps({
@@ -44,13 +45,22 @@ const statusText = {
   4: '不开放',
 }
 
+// 通用日期格式化函数，避免时区问题
+const formatDateToString = (date) => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 // 获取场地状态矩阵数据
 const fetchMatrixData = async () => {
   if (!dialogVisible.value) return
 
   loading.value = true
   try {
-    const dateStr = selectedDate.value.toISOString().split('T')[0]
+    const dateStr = formatDateToString(selectedDate.value)
+
     const response = await getVenueStatusMatrix({ date: dateStr })
 
     if (response.data.code === 0) {
