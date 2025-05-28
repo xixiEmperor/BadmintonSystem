@@ -1,7 +1,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { Search, Refresh, View } from '@element-plus/icons-vue'
-import { getOrdersByAdmin, closeOrderByAdmin, completeOrderByAdmin } from '@/api/order'
+import { getOrdersByAdmin, closeOrderByAdmin, completeOrderByAdmin } from '@/api/shopOrder'
 import OrderDetailDialog from '@/components/OrderDetailDialog.vue'
 
 // 数据定义

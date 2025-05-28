@@ -1,6 +1,5 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import {
   getVenueList, // 获取场地列表
   addVenue, // 新增场地
@@ -25,8 +24,6 @@ import {
   ENABLED_STATUS,
   ENABLED_STATUS_TEXT
 } from '@/api/specialDate'
-
-const router = useRouter()
 
 // 响应式数据
 const venues = ref([])
@@ -300,11 +297,6 @@ const toggleVenueStatus = async (venue) => {
 // 查看场地详情
 const viewVenueDetail = (venue) => {
   fetchVenueDetail(venue.id)
-}
-
-// 管理时段
-const manageSchedule = (venue) => {
-  router.push(`/admin/venue-schedule/${venue.id}`)
 }
 
 // 批量操作
@@ -614,7 +606,6 @@ onMounted(() => {
           <div class="venue-actions">
             <el-button size="small" @click="viewVenueDetail(venue)">查看详情</el-button>
             <el-button size="small" type="primary" @click="handleEditVenue(venue)">编辑</el-button>
-            <el-button size="small" type="warning" @click="manageSchedule(venue)">时段管理</el-button>
             <el-button size="small" type="danger" @click="handleDeleteVenue(venue)">删除</el-button>
           </div>
         </div>

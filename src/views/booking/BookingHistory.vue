@@ -1,19 +1,26 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { useUserStore } from '@/stores'
+// import { useUserStore } from '@/stores'
+import { getMyOrders, getReservationById, cancelReservation, applyRefund, ORDER_STATUS_TEXT, ORDER_STATUS_COLOR } from '@/api/venueOrder'
 
 // 用户信息
-const userStore = useUserStore()
-const userInfo = computed(() => userStore.userinfo)
+// const userStore = useUserStore()
+// const userInfo = computed(() => userStore.userinfo)
 
 // 数据加载状态
 const loading = ref(false)
 
 // 筛选表单
 const filterForm = reactive({
-  status: 'all',
+  status: '',
   dateRange: [],
+})
+
+watch(filterForm, (newVal) => {
+  console.log(newVal.status)
+  fetchMyOrders(newVal.status)
+}, {
+  deep: true,
 })
 
 // 分页参数
@@ -21,80 +28,12 @@ const currentPage = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 
-// 预订记录数据（模拟数据）
-const allBookings = ref([
-  {
-    id: 10001,
-    courtId: 1,
-    courtName: '羽毛球场地1号',
-    date: '2023-11-20',
-    timeSlot: '19:00-20:00',
-    price: 40,
-    status: 'reserved', // reserved, reviewing, cancelled
-    createTime: '2023-11-15 10:30:45',
-    name: '张三',
-    phone: '13812345678',
-    remark: '希望场地干净整洁',
-  },
-  {
-    id: 10002,
-    courtId: 2,
-    courtName: '羽毛球场地2号',
-    date: '2023-11-25',
-    timeSlot: '18:00-19:00',
-    price: 40,
-    status: 'reserved',
-    createTime: '2023-11-15 14:20:30',
-    name: '张三',
-    phone: '13812345678',
-  },
-  {
-    id: 10003,
-    courtId: 3,
-    courtName: '羽毛球场地3号',
-    date: '2023-10-15',
-    timeSlot: '10:00-11:00',
-    price: 30,
-    status: 'cancelled',
-    createTime: '2023-10-10 09:15:22',
-    name: '张三',
-    phone: '13812345678',
-  },
-  {
-    id: 10004,
-    courtId: 1,
-    courtName: '羽毛球场地1号',
-    date: '2023-12-05',
-    timeSlot: '20:00-21:00',
-    price: 40,
-    status: 'reviewing',
-    createTime: '2023-11-18 16:45:00',
-    name: '张三',
-    phone: '13812345678',
-  },
-  {
-    id: 10005,
-    courtId: 4,
-    courtName: '羽毛球场地4号',
-    date: '2025-04-15',
-    timeSlot: '14:00-16:00',
-    price: 80,
-    status: 'reserved',
-    createTime: '2025-03-28 15:20:10',
-    name: '张三',
-    phone: '13812345678',
-    remark: '测试未过期数据',
-  },
-])
+// 预订记录数据
+const allBookings = ref([])
 
 // 过滤后的预订记录
 const filteredBookings = computed(() => {
   let result = [...allBookings.value]
-
-  // 根据状态筛选
-  if (filterForm.status && filterForm.status !== 'all') {
-    result = result.filter((item) => item.status === filterForm.status)
-  }
 
   // 根据日期范围筛选
   if (filterForm.dateRange && filterForm.dateRange.length === 2) {
@@ -105,19 +44,15 @@ const filteredBookings = computed(() => {
     })
   }
 
+  // 只筛选出我的订单
+  // result = result.filter((item) => item.userId === userInfo.value.id)
+
   return result
 })
 
 // 计算总数
 const computedTotal = computed(() => {
   return filteredBookings.value.length
-})
-
-// 分页后的预订记录
-const bookings = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value
-  const end = start + pageSize.value
-  return filteredBookings.value.slice(start, end)
 })
 
 // 更新总数方法
@@ -129,24 +64,37 @@ const updateTotal = () => {
 const detailDialogVisible = ref(false)
 const currentBooking = ref(null)
 
+// 获取我的订单列表
+const fetchMyOrders = async (status) => {
+  try {
+    loading.value = true
+    const response = await getMyOrders(status)
+    if (response.data.code === 0) {
+      allBookings.value = response.data.data || []
+      updateTotal()
+    } else {
+      ElMessage.error(response.message || '获取订单列表失败')
+    }
+  } catch (error) {
+    console.error('获取订单列表失败:', error)
+    ElMessage.error('获取订单列表失败，请稍后重试')
+  } finally {
+    loading.value = false
+  }
+}
+
 // 筛选处理
 const handleFilter = () => {
-  loading.value = true
-  // 更新总数
-  updateTotal()
-  // 使用计算属性，自动过滤
-  setTimeout(() => {
-    loading.value = false
-    currentPage.value = 1
-  }, 300)
+  currentPage.value = 1
+  fetchMyOrders()
 }
 
 // 重置筛选
 const resetFilter = () => {
-  filterForm.status = 'all'
+  filterForm.status = ''
   filterForm.dateRange = []
-  updateTotal()
-  handleFilter()
+  currentPage.value = 1
+  fetchMyOrders()
 }
 
 // 分页处理
@@ -155,9 +103,22 @@ const handlePageChange = (page) => {
 }
 
 // 显示预订详情
-const showDetail = (booking) => {
-  currentBooking.value = booking
-  detailDialogVisible.value = true
+const showDetail = async (booking) => {
+  try {
+    loading.value = true
+    const response = await getReservationById(booking.id)
+    if (response.data.code === 0) {
+      currentBooking.value = response.data.data
+      detailDialogVisible.value = true
+    } else {
+      ElMessage.error(response.message || '获取订单详情失败')
+    }
+  } catch (error) {
+    console.error('获取订单详情失败:', error)
+    ElMessage.error('获取订单详情失败，请稍后重试')
+  } finally {
+    loading.value = false
+  }
 }
 
 // 判断预订是否已过期
@@ -177,87 +138,111 @@ const isBookingExpired = (booking) => {
 // 判断预订是否可以取消
 const canCancel = (booking) => {
   if (!booking) return false
-  return booking.status === 'reserved'
+  return booking.status === 'reserved' || booking.status === 1
 }
 
 // 获取取消按钮文本
 const getCancelButtonText = (booking) => {
   if (!booking) return '取消预订'
-  if (booking.status === 'reviewing') return '审核中'
-  if (booking.status === 'cancelled') return '已取消'
+  if (booking.status === 'cancelled' || booking.status === 4) return '已取消'
   return '取消预订'
 }
 
 // 获取状态文本
 const getStatusText = (status) => {
-  const statusMap = {
-    reserved: '已预约',
-    reviewing: '审核中',
-    cancelled: '已取消',
-  }
-  return statusMap[status] || status
+  return ORDER_STATUS_TEXT[status] || status
 }
 
 // 获取状态标签类型
 const getStatusTagType = (status) => {
-  const typeMap = {
-    reserved: 'success',
-    cancelled: 'info',
-    reviewing: 'primary',
+  return ORDER_STATUS_COLOR[status] || ''
   }
-  return typeMap[status] || ''
-}
 
 // 取消预订
-const cancelBooking = (booking) => {
-  ElMessageBox.confirm(
-    `确定要取消 ${booking.date} ${booking.timeSlot} ${booking.courtName} 的预订吗？取消后需要管理员审核，且无法恢复。`,
-    '取消预订',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '返回',
-      type: 'warning',
-    },
-  )
-    .then(() => {
-      loading.value = true
+const cancelBooking = async (booking) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要取消 ${booking.reservationDate} ${booking.timeSlot} ${booking.venueName} 的预订吗？取消后需要管理员审核，且无法恢复。`,
+      '取消预订',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '返回',
+        type: 'warning',
+      },
+    )
 
-      // 模拟API请求
-      setTimeout(() => {
-        // 更新预订状态为审核中
-        const index = allBookings.value.findIndex((item) => item.id === booking.id)
-        if (index !== -1) {
-          allBookings.value[index].status = 'reviewing'
-          ElMessage({
-            type: 'success',
-            message: '取消请求已提交，等待管理员审核',
-          })
-          // TODO: 向后端发送取消预订请求，并更新到审核系统中
-        }
-        loading.value = false
-      }, 500)
+    loading.value = true
+    const response = await cancelReservation(booking.id, {
+      reason: '用户主动取消'
     })
-    .catch(() => {
-      // 用户取消操作
-      ElMessage({
-        type: 'info',
-        message: '已取消操作',
-      })
-    })
+
+    if (response.data.code === 0) {
+      ElMessage.success(response.data.data)
+      // 刷新订单列表
+      await fetchMyOrders()
+    } else {
+      ElMessage.error(response.message || '取消预订失败')
+    }
+  } catch (error) {
+    if (error === 'cancel') {
+      ElMessage.info('已取消操作')
+    } else {
+      console.error('取消预订失败:', error)
+      ElMessage.error('取消预订失败，请稍后重试')
+    }
+  } finally {
+    loading.value = false
+  }
 }
 
 // 从详情对话框中取消预订
-const cancelBookingFromDetail = () => {
+const cancelBookingFromDetail = async () => {
   if (currentBooking.value) {
-    cancelBooking(currentBooking.value)
+    await cancelBooking(currentBooking.value)
+    detailDialogVisible.value = false
+  }
+}
+
+// 申请退款
+const handleRefund = async (booking) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要申请退款吗？退款申请提交后需要管理员审核。`,
+      '申请退款',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      },
+    )
+
+    loading.value = true
+    const response = await applyRefund(booking.id, {
+      reason: '用户申请退款'
+    })
+
+    if (response.data.code === 0) {
+      ElMessage.success('退款申请已提交，等待管理员审核')
+      // 刷新订单列表
+      await fetchMyOrders()
+    } else {
+      ElMessage.error(response.message || '申请退款失败')
+    }
+  } catch (error) {
+    if (error === 'cancel') {
+      ElMessage.info('已取消操作')
+    } else {
+      console.error('申请退款失败:', error)
+      ElMessage.error('申请退款失败，请稍后重试')
+    }
+  } finally {
+    loading.value = false
   }
 }
 
 // 初始化
 onMounted(() => {
-  // TODO: 调用API获取用户预订记录
-  updateTotal()
-  handleFilter()
+  fetchMyOrders()
 })
 </script>
 
@@ -270,11 +255,14 @@ onMounted(() => {
       <div class="filter-section">
         <el-form :inline="true" :model="filterForm">
           <el-form-item label="预订状态">
-            <el-select v-model="filterForm.status" placeholder="预订状态" clearable style="width: 100px">
-              <el-option label="全部" value="all" />
-              <el-option label="已预约" value="reserved" />
-              <el-option label="审核中" value="reviewing" />
-              <el-option label="已取消" value="cancelled" />
+            <el-select v-model="filterForm.status" placeholder="预订状态" clearable style="width: 120px">
+              <el-option label="全部" value="" />
+              <el-option label="待支付" value="1" />
+              <el-option label="已支付" value="2" />
+              <el-option label="已完成" value="3" />
+              <el-option label="已取消" value="4" />
+              <el-option label="已退款" value="5" />
+              <el-option label="退款中" value="6" />
             </el-select>
           </el-form-item>
           <el-form-item label="日期范围">
@@ -298,13 +286,13 @@ onMounted(() => {
 
       <!-- 数据表格 -->
       <div class="table-container" v-loading="loading">
-        <el-empty v-if="bookings.length === 0" description="暂无预订记录" />
-        <el-table v-else :data="bookings" style="width: 100%" border>
+        <el-empty v-if="filteredBookings.length === 0 && !loading" description="暂无预订记录" />
+        <el-table v-else :data="filteredBookings" style="width: 100%" border>
           <el-table-column prop="id" label="预订号" width="80" />
-          <el-table-column prop="courtName" label="场地名称" width="120" />
-          <el-table-column prop="date" label="预订日期" width="120" />
+          <el-table-column prop="venueName" label="场地名称" width="120" />
+          <el-table-column prop="reservationDate" label="预订日期" width="120" />
           <el-table-column prop="timeSlot" label="时间段" width="120" />
-          <el-table-column prop="price" label="金额(元)" width="100" />
+          <el-table-column prop="totalAmount" label="金额(元)" width="100" />
           <el-table-column prop="status" label="状态" width="120">
             <template #default="scope">
               <el-tag :type="getStatusTagType(scope.row.status)">
@@ -313,25 +301,43 @@ onMounted(() => {
             </template>
           </el-table-column>
           <el-table-column prop="createTime" label="预订时间" width="160" />
-          <el-table-column label="操作" fixed="right" width="180">
+          <el-table-column label="操作" fixed="right" width="300">
             <template #default="scope">
               <el-button type="primary" size="small" @click="showDetail(scope.row)">
                 查看详情
+              </el-button>
+              <el-button
+                type="success"
+                size="small"
+                @click="payBooking(scope.row)"
+                v-if="scope.row.status === 1"
+              >
+                立即支付
               </el-button>
               <el-button
                 type="danger"
                 size="small"
                 @click="cancelBooking(scope.row)"
                 :disabled="isBookingExpired(scope.row) || !canCancel(scope.row)"
+                v-if="scope.row.status === 1"
               >
                 {{ getCancelButtonText(scope.row) }}
+              </el-button>
+              <el-button
+                type="warning"
+                size="small"
+                @click="handleRefund(scope.row)"
+                :disabled="scope.row.status !== 2"
+                v-if="scope.row.status === 2"
+              >
+                申请退款
               </el-button>
             </template>
           </el-table-column>
         </el-table>
 
         <!-- 分页 -->
-        <div class="pagination" v-if="bookings.length > 0">
+        <div class="pagination" v-if="filteredBookings.length > 0">
           <el-pagination
             background
             layout="prev, pager, next, total"
@@ -349,15 +355,16 @@ onMounted(() => {
       <div class="booking-detail" v-if="currentBooking">
         <el-descriptions :column="1" border>
           <el-descriptions-item label="预订编号">{{ currentBooking.id }}</el-descriptions-item>
+          <el-descriptions-item label="订单号" v-if="currentBooking.orderNo">{{ currentBooking.orderNo }}</el-descriptions-item>
           <el-descriptions-item label="场地名称">{{
-            currentBooking.courtName
+            currentBooking.courtName || currentBooking.venueName
           }}</el-descriptions-item>
-          <el-descriptions-item label="预订日期">{{ currentBooking.date }}</el-descriptions-item>
+          <el-descriptions-item label="预订日期">{{ currentBooking.date || currentBooking.reservationDate }}</el-descriptions-item>
           <el-descriptions-item label="预订时段">{{
-            currentBooking.timeSlot
+            currentBooking.timeSlot || `${currentBooking.startTime}-${currentBooking.endTime}`
           }}</el-descriptions-item>
           <el-descriptions-item label="预订价格"
-            >{{ currentBooking.price }} 元</el-descriptions-item
+            >{{ currentBooking.price || currentBooking.totalAmount }} 元</el-descriptions-item
           >
           <el-descriptions-item label="预订状态">
             <el-tag :type="getStatusTagType(currentBooking.status)">
@@ -365,14 +372,14 @@ onMounted(() => {
             </el-tag>
           </el-descriptions-item>
           <el-descriptions-item label="预订人">{{
-            currentBooking.name || userInfo.username
+            currentBooking.username
           }}</el-descriptions-item>
-          <el-descriptions-item label="联系电话">{{ currentBooking.phone }}</el-descriptions-item>
+          <el-descriptions-item label="联系电话">{{ currentBooking.phone || currentBooking.userPhone }}</el-descriptions-item>
           <el-descriptions-item label="预订时间">{{
-            currentBooking.createTime
+            currentBooking.createTime || currentBooking.createdAt
           }}</el-descriptions-item>
-          <el-descriptions-item label="备注" v-if="currentBooking.remark">
-            {{ currentBooking.remark }}
+          <el-descriptions-item label="备注" v-if="currentBooking.remark || currentBooking.note">
+            {{ currentBooking.remark || currentBooking.note }}
           </el-descriptions-item>
         </el-descriptions>
       </div>
@@ -383,9 +390,16 @@ onMounted(() => {
             type="danger"
             @click="cancelBookingFromDetail"
             :disabled="isBookingExpired(currentBooking) || !canCancel(currentBooking)"
-            v-if="currentBooking"
+            v-if="currentBooking && canCancel(currentBooking)"
           >
             {{ getCancelButtonText(currentBooking) }}
+          </el-button>
+          <el-button
+            type="warning"
+            @click="handleRefund(currentBooking)"
+            v-if="currentBooking && (currentBooking.status === 1 || currentBooking.status === 'reserved')"
+          >
+            申请退款
           </el-button>
         </span>
       </template>

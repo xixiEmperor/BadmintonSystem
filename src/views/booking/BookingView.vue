@@ -1,9 +1,12 @@
 <script setup>
-import { ref, computed, reactive, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import NoticeList from './components/NoticeList.vue'
 import VenueStatusMatrix from './components/VenueStatusMatrix.vue'
+import CreateOrderForm from './components/CreateOrderForm.vue'
+import PaymentForm from './components/PaymentForm.vue'
 import { Calendar } from '@element-plus/icons-vue'
 import { getVenueList, getVenueAvailability, VENUE_STATUS } from '@/api/venue'
+import { paymentCallback } from '@/api/venueOrder'
 
 // 通用日期格式化函数，避免时区问题
 const formatDateToString = (date) => {
@@ -312,71 +315,119 @@ onMounted(async () => {
 // 预约弹窗相关
 const bookingDialogVisible = ref(false)
 const selectedCourt = ref(null)
-const currentStep = ref(1) // 预约步骤：1-选择时间和填写信息，2-支付
-const paymentMethod = ref('alipay') // 支付方式：alipay-支付宝，wechat-微信
+const currentStep = ref(1) // 预约步骤：1-创建订单，2-支付
+const currentOrder = ref(null) // 当前订单信息
 
-// 用户信息
-const userForm = reactive({
-  name: '',
-  phone: '',
-})
+// 创建订单表单引用
+const createOrderFormRef = ref(null)
+const paymentFormRef = ref(null)
 
-// 表单验证规则
-const formRules = {
-  name: [
-    { required: true, message: '请输入姓名', trigger: 'blur' },
-    { min: 2, max: 20, message: '长度在 2 到 20 个字符', trigger: 'blur' },
-  ],
-  phone: [
-    { required: true, message: '请输入手机号码', trigger: 'blur' },
-    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号码', trigger: 'blur' },
-  ],
-}
-
-// 用户表单引用
-const userFormRef = ref(null)
-
-// 计算时间间隔（小时）
-const calculateHours = (start, end) => {
-  if (!start || !end) return 0
-
-  // 解析时间
-  const [startHour, startMinute] = start.split(':').map(Number)
-  const [endHour, endMinute] = end.split(':').map(Number)
-
-  // 计算小时差
-  let hours = endHour - startHour
-  if (endMinute < startMinute) {
-    hours -= 0.5
-  } else if (endMinute > startMinute) {
-    hours += 0.5
+// 打开预约弹窗
+const openBookingDialog = (court) => {
+  // 检查场地是否可预约（基于bookable字段）
+  if (!court.bookable) {
+    const reason = court.availabilityReason || '该场地当前不可预约'
+    ElMessage.warning(reason)
+    return
   }
 
-  return hours
+  selectedCourt.value = court
+  bookingDialogVisible.value = true
+  currentStep.value = 1
+  currentOrder.value = null
+
+  // 重置表单
+  if (createOrderFormRef.value) {
+    createOrderFormRef.value.resetForm()
+  }
 }
 
-// 计算价格（使用场地的实际价格）
-const calculatePrice = (start, end, court = null) => {
-  if (!start || !end) return 0
-
-  // 计算小时差
-  const hours = calculateHours(start, end)
-
-  // 小于1小时按1小时计算
-  const effectiveHours = Math.max(1, hours)
-
-  // 获取场地价格，如果没有指定场地则使用默认价格20元/小时
-  const hourlyPrice = court?.price || 20
-
-  const price = Math.ceil(effectiveHours) * hourlyPrice
-
-  return price
+// 关闭预约弹窗
+const closeBookingDialog = () => {
+  bookingDialogVisible.value = false
+  selectedCourt.value = null
+  currentStep.value = 1
+  currentOrder.value = null
 }
 
-// 计算价格（响应式）
-const bookingPrice = computed(() => {
-  return calculatePrice(startTime.value, endTime.value, selectedCourt.value)
-})
+// 处理创建订单
+const handleCreateOrder = async (orderInfo) => {
+  try {
+    // 订单已在CreateOrderForm中创建成功，直接处理订单信息
+    currentOrder.value = orderInfo
+    currentStep.value = 2
+  } catch (error) {
+    console.error('处理订单信息失败:', error)
+    ElMessage.error('处理订单信息失败，请重试')
+  }
+}
+
+// 处理支付成功
+const handlePaymentSuccess = async (paymentData) => {
+  try {
+    // 调用支付回调接口
+    const response = await paymentCallback({
+      orderNo: paymentData.orderNo,
+      payInfoId: paymentData.payInfoId || 'mock_pay_id'
+    })
+
+    if (response.data.code === 0) {
+      ElMessage.success('支付成功！预约已确认')
+
+      // 更新场地可用性
+      await checkVenueAvailability(currentDate.value, startTime.value, endTime.value)
+
+      // 关闭弹窗
+      closeBookingDialog()
+
+      // 显示成功信息
+      ElMessageBox.alert(
+        `您已成功预约${selectedCourt.value?.name}，订单号：${paymentData.orderNo}`,
+        '预约成功',
+        {
+          confirmButtonText: '确定',
+          type: 'success'
+        }
+      )
+    } else {
+      ElMessage.error(response.data.message || '支付确认失败')
+    }
+  } catch (error) {
+    console.error('支付确认失败:', error)
+    ElMessage.error('支付确认失败，请联系客服')
+  }
+}
+
+// 处理支付失败
+const handlePaymentFailed = (paymentData) => {
+  ElMessage.error('支付失败，请重试')
+  console.log('支付失败:', paymentData)
+}
+
+// 处理支付超时
+const handlePaymentTimeout = (paymentData) => {
+  ElMessage.warning('支付超时，订单已取消')
+  console.log('支付超时:', paymentData)
+  closeBookingDialog()
+}
+
+// 返回创建订单步骤
+const backToCreateOrder = () => {
+  currentStep.value = 1
+}
+
+// 取消预约
+const cancelBooking = () => {
+  closeBookingDialog()
+}
+
+// 场地使用情况矩阵弹窗控制
+const matrixDialogVisible = ref(false)
+
+// 打开场地使用情况表
+const openMatrixDialog = () => {
+  matrixDialogVisible.value = true
+}
 
 // 检查场地在选定时间段是否可用
 const isCourAvailable = (court) => {
@@ -447,19 +498,6 @@ const handleStartTimeChange = async (time) => {
     }
   }
 
-  // 检查时间间隔是否超过3小时，如果超过则调整结束时间
-  const hours = calculateHours(time, endTime.value)
-  if (hours > 3) {
-    const [hour, minute] = time.split(':').map(Number)
-    const maxEndHour = hour + 3
-    const maxEndTime = `${maxEndHour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
-
-    const availableEndTimes = options.endOptions.filter(t => t <= maxEndTime)
-    if (availableEndTimes.length > 0) {
-      endTime.value = availableEndTimes[availableEndTimes.length - 1]
-    }
-  }
-
   // 检查场地可用性
   if (endTime.value) {
     await checkVenueAvailability(currentDate.value, time, endTime.value)
@@ -493,147 +531,10 @@ const handleEndTimeChange = async (time) => {
     }
   }
 
-  // 检查时间间隔是否超过3小时，如果超过则调整开始时间
-  const hours = calculateHours(startTime.value, time)
-  if (hours > 3) {
-    const [hour, minute] = time.split(':').map(Number)
-    let startHour = hour - 3
-    let startMinute = minute
-
-    if (startHour < 0) {
-      startHour = 0
-      startMinute = 0
-    }
-
-    const targetStartTime = `${startHour.toString().padStart(2, '0')}:${startMinute.toString().padStart(2, '0')}`
-
-    // 在开始时间选项中找到最接近的时间
-    const availableStartTimes = options.startOptions.filter(t => t >= targetStartTime)
-    if (availableStartTimes.length > 0) {
-      startTime.value = availableStartTimes[0]
-    } else if (options.startOptions.length > 0) {
-      startTime.value = options.startOptions[0]
-    }
-  }
-
   // 检查场地可用性
   if (startTime.value) {
     await checkVenueAvailability(currentDate.value, startTime.value, time)
   }
-}
-
-// 打开预约弹窗
-const openBookingDialog = (court) => {
-  // 检查场地是否可预约（基于bookable字段）
-  if (!court.bookable) {
-    const reason = court.availabilityReason || '该场地当前不可预约'
-    ElMessage.warning(reason)
-    return
-  }
-
-  selectedCourt.value = court
-  bookingDialogVisible.value = true
-  currentStep.value = 1
-
-  // 重置表单
-  userForm.name = ''
-  userForm.phone = ''
-  paymentMethod.value = 'alipay'
-}
-
-// 关闭预约弹窗
-const closeBookingDialog = () => {
-  bookingDialogVisible.value = false
-  selectedCourt.value = null
-  currentStep.value = 1
-}
-
-// 进入支付步骤
-const goToPayment = async () => {
-  // 验证表单
-  if (!userFormRef.value) return
-
-  try {
-    await userFormRef.value.validate()
-
-    // 检查用户当天是否已经预约
-    if (hasUserBookedToday(userForm.phone, currentDate.value)) {
-      ElMessage.warning('您今天已经预约过场地，一人一天只能预约一次')
-      return
-    }
-
-    // 检查预约时间是否有效（1-3小时）
-    if (!isBookingTimeValid(startTime.value, endTime.value)) {
-      ElMessage.warning('预约时间必须在1-3小时之间')
-      return
-    }
-
-    currentStep.value = 2
-  } catch {
-    ElMessage.warning('请完善预约信息')
-  }
-}
-
-// 返回信息填写步骤
-const backToInfo = () => {
-  currentStep.value = 1
-}
-
-// 确认预约
-const confirmBooking = () => {
-  // TODO: 调用API提交预约信息到后端
-
-  // 添加用户预约记录
-  userBookings.value.push({
-    phone: userForm.phone,
-    date: currentDate.value.toLocaleDateString(),
-    courtId: selectedCourt.value.id,
-    startTime: startTime.value,
-    endTime: endTime.value,
-  })
-
-  // 更新场地预约状态
-  const courtIndex = courts.value.findIndex((c) => c.id === selectedCourt.value.id)
-  if (courtIndex !== -1) {
-    // 添加新的预约时间段
-    courts.value[courtIndex].bookedTimes.push({
-      date: currentDate.value.toLocaleDateString(),
-      start: startTime.value,
-      end: endTime.value,
-    })
-  }
-
-  ElMessage.success(
-    `您已成功预约${selectedCourt.value.name}，时间：${currentDate.value.toLocaleDateString()} ${startTime.value}-${endTime.value}，付款金额：${bookingPrice.value}元`,
-  )
-  closeBookingDialog()
-}
-
-// 用户预约记录（模拟数据，实际应该从后端获取）
-const userBookings = ref([
-  // 格式：{ phone: '手机号', date: '日期', courtId: 场地ID, startTime: '开始时间', endTime: '结束时间' }
-])
-
-// 检查用户当天是否已经预约
-const hasUserBookedToday = (phone, date) => {
-  const dateStr = date.toLocaleDateString()
-  return userBookings.value.some(booking =>
-    booking.phone === phone && booking.date === dateStr
-  )
-}
-
-// 检查预约时间是否超过3小时
-const isBookingTimeValid = (startTime, endTime) => {
-  const hours = calculateHours(startTime, endTime)
-  return hours >= 1 && hours <= 3
-}
-
-// 场地使用情况矩阵弹窗控制
-const matrixDialogVisible = ref(false)
-
-// 打开场地使用情况表
-const openMatrixDialog = () => {
-  matrixDialogVisible.value = true
 }
 </script>
 
@@ -804,132 +705,49 @@ const openMatrixDialog = () => {
     <!-- 预约弹窗 -->
     <el-dialog
       v-model="bookingDialogVisible"
-      :title="currentStep === 1 ? '场地预约' : '支付'"
-      width="600px"
+      :title="currentStep === 1 ? '创建预约订单' : '支付订单'"
+      width="700px"
       :close-on-click-modal="false"
+      :before-close="closeBookingDialog"
     >
-      <!-- 第一步：选择时间和填写信息 -->
-      <div v-if="selectedCourt && currentStep === 1" class="booking-dialog-content">
-        <!-- 上层：预约时间显示 -->
-        <div class="booking-time-selection">
-          <h4>预约时间</h4>
-          <div class="selected-time-info">
-            <div class="selected-date">日期：{{ currentDate.toLocaleDateString() }}</div>
-            <div class="selected-time">时间段：{{ startTime }} - {{ endTime }}</div>
-            <div class="booking-price">
-              预计费用：<span class="price">{{ bookingPrice }}</span> 元
-              <div class="price-info">（每小时{{ selectedCourt?.price || 20 }}元，最低1小时起订）</div>
-            </div>
-          </div>
-        </div>
+      <!-- 第一步：创建订单表单 -->
+      <CreateOrderForm
+        v-if="selectedCourt && currentStep === 1"
+        ref="createOrderFormRef"
+        :selected-venue="selectedCourt"
+        :reservation-date="formatDateToString(currentDate)"
+        :start-time="startTime"
+        :end-time="endTime"
+        @submit="handleCreateOrder"
+        @cancel="cancelBooking"
+      />
 
-        <!-- 中间：场地信息 -->
-        <div class="court-detail">
-          <h4>场地信息</h4>
-          <div class="court-detail-content">
-            <div class="court-image-placeholder">
-              <div class="placeholder-text">场地图片</div>
-            </div>
-            <div class="court-detail-info">
-              <h5>{{ selectedCourt.name }}</h5>
-              <p>{{ selectedCourt.description }}</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- 用户信息表单 -->
-        <div class="user-form-container">
-          <h4>预约人信息</h4>
-          <el-form ref="userFormRef" :model="userForm" :rules="formRules" label-width="80px">
-            <el-form-item label="姓名" prop="name">
-              <el-input v-model="userForm.name" placeholder="请输入姓名"></el-input>
-            </el-form-item>
-            <el-form-item label="手机号" prop="phone">
-              <el-input v-model="userForm.phone" placeholder="请输入手机号"></el-input>
-            </el-form-item>
-          </el-form>
-        </div>
-      </div>
-
-      <!-- 第二步：支付 -->
-      <div v-if="selectedCourt && currentStep === 2" class="payment-dialog-content">
-        <div class="payment-summary">
-          <h4>订单信息</h4>
-          <div class="summary-item">
-            <span class="label">预约场地：</span>
-            <span class="value">{{ selectedCourt.name }}</span>
-          </div>
-          <div class="summary-item">
-            <span class="label">预约日期：</span>
-            <span class="value">{{ currentDate.toLocaleDateString() }}</span>
-          </div>
-          <div class="summary-item">
-            <span class="label">预约时间段：</span>
-            <span class="value">{{ startTime }} - {{ endTime }}</span>
-          </div>
-          <div class="summary-item">
-            <span class="label">预约人：</span>
-            <span class="value">{{ userForm.name }}</span>
-          </div>
-          <div class="summary-item">
-            <span class="label">联系电话：</span>
-            <span class="value">{{ userForm.phone }}</span>
-          </div>
-          <div class="summary-item total">
-            <span class="label">应付金额：</span>
-            <span class="value price">{{ bookingPrice }}元</span>
-          </div>
-        </div>
-
-        <div class="payment-method">
-          <h4>选择支付方式</h4>
-          <div class="payment-options">
-            <div
-              class="payment-option"
-              :class="{ active: paymentMethod === 'alipay' }"
-              @click="paymentMethod = 'alipay'"
-            >
-              <div class="payment-icon alipay"></div>
-              <div class="payment-name">支付宝</div>
-            </div>
-            <div
-              class="payment-option"
-              :class="{ active: paymentMethod === 'wechat' }"
-              @click="paymentMethod = 'wechat'"
-            >
-              <div class="payment-icon wechat"></div>
-              <div class="payment-name">微信支付</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="payment-qrcode">
-          <div v-if="paymentMethod === 'alipay'" class="qrcode alipay">
-            <div class="qrcode-placeholder">支付宝付款码</div>
-          </div>
-          <div v-else-if="paymentMethod === 'wechat'" class="qrcode wechat">
-            <div class="qrcode-placeholder">微信付款码</div>
-          </div>
-          <div class="payment-instructions">
-            请使用{{ paymentMethod === 'alipay' ? '支付宝' : '微信' }}扫描二维码完成支付
-          </div>
-        </div>
-      </div>
+      <!-- 第二步：支付表单 -->
+      <PaymentForm
+        v-if="currentOrder && currentStep === 2"
+        ref="paymentFormRef"
+        :order-info="currentOrder"
+        :auto-start-payment="true"
+        @payment-success="handlePaymentSuccess"
+        @payment-failed="handlePaymentFailed"
+        @payment-timeout="handlePaymentTimeout"
+        @cancel="cancelBooking"
+      />
 
       <!-- 弹窗按钮 -->
       <template #footer>
         <div class="dialog-footer">
-          <el-button @click="closeBookingDialog">取消</el-button>
-
-          <!-- 第一步按钮 -->
-          <el-button v-if="currentStep === 1" type="primary" @click="goToPayment">
-            去支付
-          </el-button>
 
           <!-- 第二步按钮 -->
           <template v-if="currentStep === 2">
-            <el-button @click="backToInfo">返回修改</el-button>
-            <el-button type="primary" @click="confirmBooking">完成支付</el-button>
+            <el-button @click="backToCreateOrder">返回修改</el-button>
+            <el-button
+              type="primary"
+              @click="paymentFormRef?.retryPayment()"
+              v-if="paymentFormRef?.paymentStatus === 'failed'"
+            >
+              重新支付
+            </el-button>
           </template>
         </div>
       </template>
@@ -1140,217 +958,6 @@ h4 {
 }
 
 /* 预约弹窗样式 */
-.booking-dialog-content {
-  display: flex;
-  flex-direction: column;
-  gap: 30px;
-}
-
-.booking-time-selection {
-  background-color: #f9f9f9;
-  padding: 20px;
-  border-radius: 8px;
-}
-
-.selected-time-info {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.selected-date,
-.selected-time {
-  font-size: 16px;
-  font-weight: 500;
-}
-
-.booking-price {
-  margin-top: 15px;
-  font-size: 16px;
-  color: #333;
-}
-
-.price {
-  color: #f56c6c;
-  font-weight: bold;
-  font-size: 18px;
-}
-
-.price-info {
-  font-size: 12px;
-  color: #999;
-  margin-top: 5px;
-}
-
-.selected-date {
-  font-size: 14px;
-  color: #666;
-  margin-top: 10px;
-}
-
-.court-detail {
-  background-color: #f9f9f9;
-  padding: 20px;
-  border-radius: 8px;
-}
-
-.court-detail-content {
-  display: flex;
-  gap: 20px;
-}
-
-.court-image-placeholder {
-  width: 150px;
-  height: 150px;
-  background-color: #eee;
-  border: 1px dashed #ccc;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.placeholder-text {
-  color: #999;
-  font-size: 14px;
-}
-
-.court-detail-info {
-  flex: 1;
-}
-
-.court-detail-info h5 {
-  margin-top: 0;
-  margin-bottom: 10px;
-  font-size: 16px;
-}
-
-.court-detail-info p {
-  color: #666;
-  line-height: 1.5;
-  margin: 0;
-}
-
-.user-form-container {
-  background-color: #f9f9f9;
-  padding: 20px;
-  border-radius: 8px;
-}
-
-/* 支付相关样式 */
-.payment-dialog-content {
-  display: flex;
-  flex-direction: column;
-  gap: 30px;
-}
-
-.payment-summary {
-  background-color: #f9f9f9;
-  padding: 20px;
-  border-radius: 8px;
-}
-
-.summary-item {
-  display: flex;
-  margin-bottom: 10px;
-}
-
-.summary-item.total {
-  margin-top: 15px;
-  padding-top: 15px;
-  border-top: 1px dashed #ddd;
-}
-
-.summary-item .label {
-  width: 120px;
-  color: #666;
-}
-
-.summary-item .value {
-  flex: 1;
-  color: #333;
-}
-
-.payment-method {
-  background-color: #f9f9f9;
-  padding: 20px;
-  border-radius: 8px;
-}
-
-.payment-options {
-  display: flex;
-  gap: 20px;
-}
-
-.payment-option {
-  width: 120px;
-  height: 60px;
-  border: 2px solid #e8e8e8;
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.payment-option.active {
-  border-color: #409eff;
-  background-color: #ecf5ff;
-}
-
-.payment-icon {
-  width: 30px;
-  height: 30px;
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center;
-}
-
-.payment-icon.alipay {
-  background-color: #00a0e9;
-  border-radius: 50%;
-}
-
-.payment-icon.wechat {
-  background-color: #09bb07;
-  border-radius: 50%;
-}
-
-.payment-name {
-  margin-top: 5px;
-  font-size: 14px;
-}
-
-.payment-qrcode {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 15px;
-}
-
-.qrcode {
-  width: 200px;
-  height: 200px;
-  background-color: #fff;
-  border: 1px solid #e8e8e8;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.qrcode-placeholder {
-  color: #999;
-  font-size: 14px;
-  text-align: center;
-}
-
-.payment-instructions {
-  font-size: 14px;
-  color: #666;
-}
-
 .dialog-footer {
   text-align: right;
   margin-top: 20px;
@@ -1390,23 +997,6 @@ h4 {
   .price-info-group {
     margin-left: 0;
     align-items: flex-start;
-  }
-
-  .court-detail-content {
-    flex-direction: column;
-  }
-
-  .court-image-placeholder {
-    width: 100%;
-  }
-
-  .payment-options {
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .payment-option {
-    width: 100%;
   }
 }
 
