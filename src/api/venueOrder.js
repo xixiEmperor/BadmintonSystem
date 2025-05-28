@@ -176,11 +176,11 @@ export function completeOrder(id) {
  * @param {string} [data.adminRemark] - 管理员备注
  * @returns {Promise}
  */
-export function approveRefund(id, data) {
+export function approveRefund(id, params) {
   return request({
     url: `/api/reservations/admin/${id}/approve-refund`,
     method: 'post',
-    data
+    params
   })
 }
 

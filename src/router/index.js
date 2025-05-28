@@ -45,7 +45,7 @@ const router = createRouter({
         },
         {
           path: '/payment',
-          component: () => import('@/views/shop/PaymentView.vue'),
+          component: () => import('@/views/pay/PaymentView.vue'),
           meta: { requiresAuth: true, title: '支付 - 武汉理工大学南湖校区羽毛球场预定前台' },
         },
         {
@@ -92,17 +92,7 @@ const router = createRouter({
           path: '/my-history-post',
           component: () => import('@/views/forum/MyHistoryPost.vue'),
           meta: { requiresAuth: true, title: '我的发帖 - 武汉理工大学南湖校区羽毛球场预定前台' },
-        },
-        {
-          path: '/qr-test',
-          component: () => import('@/components/QRCodeTest.vue'),
-          meta: { title: '二维码测试 - 武汉理工大学南湖校区羽毛球场预定前台' },
-        },
-        {
-          path: '/payment-status-test',
-          component: () => import('@/components/PaymentStatusTest.vue'),
-          meta: { title: '支付状态测试 - 武汉理工大学南湖校区羽毛球场预定前台' },
-        },
+        }
       ],
     },
     // 后台管理系统路由

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { createPayment, queryPaymentStatus, cancelOrder } from '@/api/pay'
 import { PAY_PLATFORM, PAYMENT_STATUS } from '@/api/pay'
@@ -27,6 +27,13 @@ const paymentExpireTime = ref(null)
 let countdownTimer = null
 // 自动检查支付状态定时器
 let statusCheckTimer = null
+// 场地预定订单号
+const reservationOrderNo = ref(null)
+
+// 判断是否为场地预定订单
+const isVenueOrder = computed(() => {
+  return reservationOrderNo.value
+})
 
 // 生成二维码
 const generateQRCode = async (text) => {
@@ -49,7 +56,7 @@ const generateQRCode = async (text) => {
 // 保存支付状态到本地存储
 const savePaymentState = () => {
   const paymentState = {
-    orderNo: paymentInfo.value?.orderNo,
+    orderNo: paymentInfo.value?.orderNo || reservationOrderNo.value,
     paymentQrCode: paymentQrCode.value,
     paymentCreateTime: paymentCreateTime.value,
     paymentExpireTime: paymentExpireTime.value,
@@ -65,7 +72,7 @@ const restorePaymentState = () => {
     try {
       const state = JSON.parse(savedState)
       // 只有当前订单号匹配时才恢复状态
-      if (state.orderNo === paymentInfo.value.orderNo) {
+      if (state.orderNo === paymentInfo.value.orderNo || state.orderNo === reservationOrderNo.value) {
         paymentQrCode.value = state.paymentQrCode || ''
         paymentCreateTime.value = state.paymentCreateTime ? new Date(state.paymentCreateTime) : null
         paymentExpireTime.value = state.paymentExpireTime ? new Date(state.paymentExpireTime) : null
@@ -106,16 +113,25 @@ const handleCreatePayment = async () => {
   try {
     loading.value = true
 
-    const paymentData = {
-      orderNo: paymentInfo.value.orderNo,
-      amount: paymentInfo.value.amount,
-      businessType: paymentInfo.value.businessType,
-      payPlatform: selectedPayMethod.value
+    let paymentData = {}
+
+    if (reservationOrderNo.value) {
+      paymentData = {
+        orderNo: reservationOrderNo.value,
+        amount: paymentInfo.value.totalAmount,
+        businessType: 'RESERVATION',
+        payPlatform: selectedPayMethod.value
+      }
+    } else {
+      paymentData = {
+        orderNo: paymentInfo.value.orderNo,
+        amount: paymentInfo.value.amount,
+        businessType: 'MALL',
+        payPlatform: selectedPayMethod.value
+      }
     }
 
-    console.log('创建支付请求数据:', paymentData)
     const response = await createPayment(paymentData)
-    console.log('创建支付响应:', response)
 
     // 修复API响应检查逻辑
     if (response.data && response.data.code === 0) {
@@ -126,6 +142,7 @@ const handleCreatePayment = async () => {
         // 使用真实的支付链接生成二维码
         const qrCodeImage = await generateQRCode(codeUrl)
         paymentQrCode.value = qrCodeImage || codeUrl
+        console.log('paymentQrCode:', paymentQrCode.value)
       } else {
         // 如果没有返回支付链接，使用订单信息生成二维码
         const paymentUrl = `支付订单：${paymentInfo.value.orderNo}，金额：¥${paymentInfo.value.amount}`
@@ -167,7 +184,7 @@ const handleCreatePayment = async () => {
 const checkPaymentStatus = async () => {
   try {
     checkingStatus.value = true
-    const response = await queryPaymentStatus(paymentInfo.value.orderNo)
+    const response = await queryPaymentStatus(paymentInfo.value.orderNo || reservationOrderNo.value)
 
     if (response.data && response.data.code === 0) {
       const paymentStatus = response.data.data.status
@@ -180,8 +197,14 @@ const checkPaymentStatus = async () => {
         clearTimers()
         clearPaymentState()
 
-        // 直接跳转到订单详情页面
-        router.push(`/order-detail/${paymentInfo.value.orderNo}`)
+        // 根据订单类型跳转到不同页面
+        if (isVenueOrder.value) {
+          // 场地预定订单，跳转到场地预定记录界面
+          router.push('/booking-history')
+        } else {
+          // 商品订单，跳转到订单详情页面
+          router.push(`/order-detail/${paymentInfo.value.orderNo}`)
+        }
       } else {
         console.log('支付状态不是已支付状态，当前状态:', paymentStatus)
         ElMessage.info(`支付尚未完成，当前状态: ${paymentStatus}，请继续支付`)
@@ -207,7 +230,7 @@ const cancelPayment = () => {
   }).then(async () => {
     try {
       // 调用取消订单接口
-      const response = await cancelOrder(paymentInfo.value.orderNo)
+      const response = await cancelOrder(reservationOrderNo.value || paymentInfo.value.orderNo)
 
       if (response.data && response.data.code === 0) {
         // 清除定时器和支付状态
@@ -215,13 +238,19 @@ const cancelPayment = () => {
         clearPaymentState()
 
         // 清除支付信息
-        localStorage.removeItem('payment_order')
+        localStorage.removeItem('payment_state')
         localStorage.removeItem('payment_info')
 
         ElMessage.success('订单已取消')
 
-        // 跳转到历史商品订单界面
-        router.push('/orders')
+        // 根据订单类型跳转到不同的订单列表页面
+        if (isVenueOrder.value) {
+          // 场地预定订单，跳转到场地预定记录界面
+          router.push('/booking-history')
+        } else {
+          // 商品订单，跳转到历史商品订单界面
+          router.push('/orders')
+        }
       } else {
         ElMessage.error('取消订单失败')
       }
@@ -279,23 +308,20 @@ const startCountdown = () => {
 const handlePaymentExpired = async () => {
   try {
     // 调用取消订单接口
-    await cancelOrder(paymentInfo.value.orderNo)
+    await cancelOrder(reservationOrderNo.value || paymentInfo.value.orderNo)
 
     ElMessage.warning('支付已过期，订单已自动取消')
 
     // 清除支付状态和本地存储的支付信息
     clearPaymentState()
-    localStorage.removeItem('payment_order')
+    localStorage.removeItem('payment_state')
     localStorage.removeItem('payment_info')
 
-    // 跳转到支付结果页面
-    router.push({
-      path: '/payment-result',
-      query: {
-        orderNo: paymentInfo.value.orderNo,
-        status: 'expired'
-      }
-    })
+    // 根据订单类型跳转到不同页面
+    if (isVenueOrder.value) {
+      // 场地预定订单，跳转到场地预定记录界面
+      router.push('/booking-history')
+    }
   } catch (error) {
     console.error('自动取消订单失败:', error)
     ElMessage.error('支付过期处理失败')
@@ -306,7 +332,7 @@ const handlePaymentExpired = async () => {
 const startStatusCheck = () => {
   statusCheckTimer = setInterval(async () => {
     try {
-      const response = await queryPaymentStatus(paymentInfo.value.orderNo)
+      const response = await queryPaymentStatus(paymentInfo.value.orderNo || reservationOrderNo.value)
 
       if (response.data && response.data.code === 0 && (response.data.data.status === PAYMENT_STATUS.SUCCESS || response.data.data.status === 1)) {
         // 支付成功
@@ -316,8 +342,14 @@ const startStatusCheck = () => {
 
         ElMessage.success('支付成功！')
 
-        // 直接跳转到订单详情页面
-        router.push(`/order-detail/${paymentInfo.value.orderNo}`)
+        // 根据订单类型跳转到不同页面
+        if (isVenueOrder.value) {
+          // 场地预定订单，跳转到场地预定记录界面
+          router.push('/booking-history')
+        } else {
+          // 商品订单，跳转到订单详情页面
+          router.push(`/order-detail/${paymentInfo.value.orderNo}`)
+        }
       } else {
         console.log('自动检查 - 支付仍未完成，状态:', response.data?.data?.status)
       }
@@ -362,35 +394,18 @@ const formatExpireTime = () => {
 
 // 组件挂载时获取支付信息
 onMounted(() => {
-  // 优先从payment_order获取数据（从结算页面传递）
-  let savedPaymentInfo = localStorage.getItem('payment_order')
+  // 从路由中获取订单号
+  reservationOrderNo.value = router.currentRoute.value.query.orderNo
 
-  if (savedPaymentInfo) {
-    try {
-      const orderData = JSON.parse(savedPaymentInfo)
-      // 转换为支付页面需要的格式
-      paymentInfo.value = {
-        orderNo: orderData.orderNo,
-        amount: orderData.totalAmount,
-        businessType: 'SHOP_ORDER', // 商城订单
-        products: orderData.products,
-        paymentMethod: orderData.paymentMethod,
-        remarks: orderData.remarks,
-        createTime: orderData.createTime
-      }
+  // 从payment_order获取数据（从结算页面传递）
+  let savedPaymentInfo
 
-      // 设置默认支付方式
-      selectedPayMethod.value = orderData.paymentMethod || PAY_PLATFORM.ALIPAY
+  if (reservationOrderNo.value) {
+    paymentInfo.value = history.state.orderDetail
+    console.log('paymentInfo:', paymentInfo.value)
 
-      console.log('支付信息:', paymentInfo.value)
-
-      // 尝试恢复支付状态
-      restorePaymentState()
-    } catch (e) {
-      console.error('解析支付信息失败', e)
-      ElMessage.error('获取支付信息失败')
-      router.push('/orders')
-    }
+    // 尝试恢复支付状态
+    restorePaymentState()
   } else {
     // 兼容旧的payment_info格式
     savedPaymentInfo = localStorage.getItem('payment_info')
@@ -404,7 +419,13 @@ onMounted(() => {
       } catch (e) {
         console.error('解析支付信息失败', e)
         ElMessage.error('获取支付信息失败')
-        router.push('/orders')
+        // 根据可能的订单类型跳转
+        const orderData = savedPaymentInfo ? JSON.parse(savedPaymentInfo) : null
+        if (orderData?.orderNo?.startsWith('RO')) {
+          router.push('/booking-history')
+        } else {
+          router.push('/orders')
+        }
       }
     } else {
       ElMessage.warning('没有待支付的订单')
@@ -416,6 +437,8 @@ onMounted(() => {
 // 组件卸载时清除定时器
 onUnmounted(() => {
   clearTimers()
+  localStorage.removeItem('payment_info')
+  localStorage.removeItem('payment_state')
 })
 </script>
 
@@ -424,11 +447,11 @@ onUnmounted(() => {
     <div class="payment-header">
       <h2>支付订单</h2>
       <div class="order-info">
-        <span>订单号：{{ paymentInfo.orderNo }}</span>
-        <span class="amount">应付金额：<span class="price">¥{{ paymentInfo.amount.toFixed(2) }}</span></span>
+        <span>订单号：{{ paymentInfo.orderNo || reservationOrderNo }}</span>
+        <span class="amount">应付金额：<span class="price">¥{{ reservationOrderNo ? paymentInfo.totalAmount.toFixed(2) : paymentInfo.amount.toFixed(2) }}</span></span>
       </div>
       <!-- 取件码提示 -->
-      <div class="pickup-code-notice">
+      <div class="pickup-code-notice" v-if="!isVenueOrder">
         <i class="el-icon-info"></i>
         <span>支付成功后将显示取件码，请妥善保管</span>
       </div>
@@ -479,7 +502,7 @@ onUnmounted(() => {
         </div>
         <div class="qr-tips">
           <p>请使用{{ selectedPayMethod === PAY_PLATFORM.ALIPAY ? '支付宝' : '微信' }}扫描二维码完成支付</p>
-          <p class="amount-tip">支付金额：<span class="price">¥{{ paymentInfo.amount.toFixed(2) }}</span></p>
+          <p class="amount-tip">支付金额：<span class="price">¥{{ reservationOrderNo ? paymentInfo.totalAmount.toFixed(2) : paymentInfo.amount.toFixed(2) }}</span></p>
         </div>
       </div>
 
@@ -496,7 +519,7 @@ onUnmounted(() => {
     <div class="payment-footer" v-if="!paymentQrCode">
       <div class="payment-amount">
         <span>支付金额：</span>
-        <span class="price">¥{{ paymentInfo.amount.toFixed(2) }}</span>
+        <span class="price">¥{{ reservationOrderNo ? paymentInfo.totalAmount.toFixed(2) : paymentInfo.amount.toFixed(2) }}</span>
       </div>
       <div class="payment-buttons">
         <el-button

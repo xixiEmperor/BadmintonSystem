@@ -120,6 +120,8 @@ const getStatusText = (status) => {
       return '已支付'
     case ORDER_STATUS.CANCELLED:
       return '已取消'
+    case ORDER_STATUS.COMPLETED:
+      return '已完成'
     default:
       return '未知状态'
   }

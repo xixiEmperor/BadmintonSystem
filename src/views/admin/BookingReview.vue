@@ -439,9 +439,12 @@ onMounted(() => {
               <span class="create-time">{{ formatDateTime(scope.row.createTime) }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="300" fixed="right" align="center">
+          <el-table-column label="操作" width="300" fixed="right" align="left">
             <template #default="scope">
               <div class="action-buttons">
+                <!-- 详情按钮放在最前面 -->
+                <el-button size="small" type="info" @click="handleDetail(scope.row)">详情</el-button>
+
                 <!-- 已支付状态可以完成订单 -->
                 <el-button
                   v-if="canCompleteOrder(scope.row)"
@@ -461,18 +464,6 @@ onMounted(() => {
                     拒绝退款
                   </el-button>
                 </template>
-
-                <!-- 管理员可以取消已支付的订单 -->
-                <el-button
-                  v-if="canAdminCancelOrder(scope.row)"
-                  size="small"
-                  type="warning"
-                  @click="handleAdminCancel(scope.row)"
-                >
-                  取消订单
-                </el-button>
-
-                <el-button size="small" type="info" @click="handleDetail(scope.row)">详情</el-button>
               </div>
             </template>
           </el-table-column>
@@ -759,7 +750,7 @@ onMounted(() => {
           display: flex;
           gap: 8px;
           flex-wrap: wrap;
-          justify-content: center;
+          justify-content: flex-start;
 
           .el-button {
             margin: 0;

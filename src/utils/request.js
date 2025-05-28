@@ -29,14 +29,11 @@ instance.interceptors.response.use(
     if (response.data.code === 0) {
       return response
     }
-    ElMessage.error(response.data.message || '服务异常')
     return Promise.reject(response.data)
   },
   function (error) {
     // 超出 2xx 范围的状态码都会触发该函数。
     // 对响应错误做点什么
-    console.error(error)
-    ElMessage.error(error.data.msg || '服务异常')
     return Promise.reject(error)
   }
 )

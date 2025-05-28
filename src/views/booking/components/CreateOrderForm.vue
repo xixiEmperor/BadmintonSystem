@@ -2,6 +2,9 @@
 import { ref, computed, watch } from 'vue'
 import { Calendar, Clock, MapLocation, Edit } from '@element-plus/icons-vue'
 import { createReservation } from '@/api/venueOrder'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 // Props
 const props = defineProps({
@@ -123,6 +126,30 @@ const handleSubmit = async () => {
       const response = await createReservation(orderData)
 
       if (response.data.code === 0) {
+        router.push({
+          path: '/payment',
+          query: {
+            orderNo: response.data.data.orderNo,
+          },
+          state: {
+            orderDetail: {
+              id: response.data.data.id,
+              venueName: props.selectedVenue.name,
+              venueId: props.selectedVenue.id,
+              reservationDate: orderData.reservationDate,
+              startTime: orderData.startTime,
+              endTime: orderData.endTime,
+              duration: duration.value,
+              contactName: formData.value.contactName,
+              contactPhone: formData.value.contactPhone,
+              remark: response.data.data.remark,
+              payType: response.data.data.payType,
+              payTypeDesc: response.data.data.payTypeDesc,
+              pricePerHour: response.data.data.pricePerHour || 30,
+              totalAmount: response.data.data.totalAmount
+            }
+          }
+        })
         // 订单创建成功，传递订单信息给父组件
         const orderInfo = {
           orderNo: response.data.data.orderNo,
@@ -322,23 +349,30 @@ defineExpose({
             <el-radio :label="2" class="payment-option wechat">
               <div class="payment-content">
                 <div class="payment-icon wechat-icon">
-                  <div class="icon-bg"></div>
+                  <svg viewBox="0 0 1024 1024" width="24" height="24">
+                    <path d="M331.5 235.5c-13.8 0-25 11.2-25 25s11.2 25 25 25 25-11.2 25-25-11.2-25-25-25zm361 0c-13.8 0-25 11.2-25 25s11.2 25 25 25 25-11.2 25-25-11.2-25-25-25z" fill="#07C160"/>
+                    <path d="M729.5 344.5c-90.1 0-172.8 35.1-235.5 93.1-62.7-58-145.4-93.1-235.5-93.1C129.8 344.5 32 442.3 32 570.9c0 75.2 35.7 142.3 91.4 185.8l-22.9 68.7c-2.5 7.5 5.5 14.1 12.4 10.2l83.1-46.8c26.2 8.8 54.2 13.6 83.5 13.6 90.1 0 172.8-35.1 235.5-93.1 62.7 58 145.4 93.1 235.5 93.1 29.3 0 57.3-4.8 83.5-13.6l83.1 46.8c6.9 3.9 14.9-2.7 12.4-10.2l-22.9-68.7c55.7-43.5 91.4-110.6 91.4-185.8 0-128.6-97.8-226.4-226.5-226.4z" fill="#07C160"/>
+                  </svg>
                 </div>
                 <div class="payment-info">
                   <div class="payment-name">微信支付</div>
-                  <div class="payment-desc">使用微信扫码支付</div>
+                  <div class="payment-desc">推荐使用，安全便捷</div>
                 </div>
+                <div class="payment-badge recommended">推荐</div>
               </div>
             </el-radio>
 
             <el-radio :label="1" class="payment-option alipay">
               <div class="payment-content">
                 <div class="payment-icon alipay-icon">
-                  <div class="icon-bg"></div>
+                  <svg viewBox="0 0 1024 1024" width="24" height="24">
+                    <path d="M1024 561.6c0 256-207.4 462.4-462.4 462.4S99.2 817.6 99.2 561.6 306.6 99.2 561.6 99.2 1024 305.6 1024 561.6z" fill="#1677FF"/>
+                    <path d="M633.6 721.6c-43.2 0-83.2-12.8-118.4-35.2-25.6 22.4-57.6 35.2-92.8 35.2-70.4 0-128-57.6-128-128s57.6-128 128-128c35.2 0 67.2 12.8 92.8 35.2 35.2-22.4 75.2-35.2 118.4-35.2 70.4 0 128 57.6 128 128s-57.6 128-128 128z" fill="#fff"/>
+                  </svg>
                 </div>
                 <div class="payment-info">
                   <div class="payment-name">支付宝</div>
-                  <div class="payment-desc">推荐使用支付宝，安全快捷</div>
+                  <div class="payment-desc">支持花呗分期付款</div>
                 </div>
               </div>
             </el-radio>
@@ -662,8 +696,8 @@ defineExpose({
       gap: 12px;
       padding: 16px;
       background: #fff;
-      border: 1px solid #e8eaec;
-      border-radius: 8px;
+      border: 2px solid #e8eaec;
+      border-radius: 12px;
       transition: all 0.3s ease;
       cursor: pointer;
       width: 100%;
@@ -676,19 +710,19 @@ defineExpose({
 
     &.is-checked .payment-content {
       border-color: #1890ff;
-      background: #e6f7ff;
-      box-shadow: 0 2px 8px rgba(24, 144, 255, 0.15);
+      background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+      box-shadow: 0 4px 12px rgba(24, 144, 255, 0.15);
     }
 
     &:has(.el-radio__input.is-checked) .payment-content {
       border-color: #1890ff;
-      background: #e6f7ff;
-      box-shadow: 0 2px 8px rgba(24, 144, 255, 0.15);
+      background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+      box-shadow: 0 4px 12px rgba(24, 144, 255, 0.15);
     }
 
     .payment-icon {
-      width: 40px;
-      height: 40px;
+      width: 32px;
+      height: 32px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -696,25 +730,16 @@ defineExpose({
       flex-shrink: 0;
 
       &.wechat-icon {
-        background: #07C160;
-
-        .icon-bg {
-          width: 100%;
-          height: 100%;
-          border-radius: 8px;
-          background: #07C160;
-        }
+        background: #f0f9ff;
       }
 
       &.alipay-icon {
-        background: #1677FF;
+        background: #f6ffed;
+      }
 
-        .icon-bg {
-          width: 100%;
-          height: 100%;
-          border-radius: 8px;
-          background: #1677FF;
-        }
+      svg {
+        width: 24px;
+        height: 24px;
       }
     }
 
@@ -733,6 +758,20 @@ defineExpose({
         color: #666;
         font-size: 13px;
         line-height: 1.4;
+      }
+    }
+
+    .payment-badge {
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+      flex-shrink: 0;
+
+      &.recommended {
+        background: linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%);
+        color: #fff;
+        box-shadow: 0 2px 4px rgba(255, 77, 79, 0.3);
       }
     }
   }
@@ -807,15 +846,12 @@ defineExpose({
       }
 
       .payment-icon {
-        width: 32px;
-        height: 32px;
+        width: 28px;
+        height: 28px;
 
-        &.wechat-icon .icon-bg {
-          background: #07C160;
-        }
-
-        &.alipay-icon .icon-bg {
-          background: #1677FF;
+        svg {
+          width: 20px;
+          height: 20px;
         }
       }
 
