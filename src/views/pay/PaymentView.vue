@@ -464,7 +464,7 @@ onUnmounted(() => {
         <el-radio :label="PAY_PLATFORM.WECHAT" class="payment-method-item">
           <div class="payment-method">
             <div class="payment-icon wechat-icon">
-              <i class="el-icon-chat-dot-round"></i>
+              <img src="/wechat-icon.png" alt="微信支付" style="width: 50px; height: 50px;" />
             </div>
             <div class="payment-details">
               <div class="payment-name">微信支付</div>
@@ -475,7 +475,7 @@ onUnmounted(() => {
         <el-radio :label="PAY_PLATFORM.ALIPAY" class="payment-method-item">
           <div class="payment-method">
             <div class="payment-icon alipay-icon">
-              <i class="el-icon-money"></i>
+              <img src="/alipay-icon.png" alt="支付宝" style="width: 50px; height: 50px;" />
             </div>
             <div class="payment-details">
               <div class="payment-name">支付宝</div>

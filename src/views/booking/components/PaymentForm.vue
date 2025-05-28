@@ -293,7 +293,7 @@ defineExpose({
           @click="selectPaymentMethod('alipay')"
         >
           <div class="payment-icon">
-            <img src="https://gw.alipayobjects.com/zos/rmsportal/pdFARIqkrKEGVVEwotXd.svg" alt="支付宝" @error="handleImageError" />
+            <img src="/alipay-icon.png" alt="支付宝" @error="handleImageError" />
           </div>
           <div class="payment-info">
             <div class="payment-name">支付宝</div>
@@ -310,7 +310,7 @@ defineExpose({
           @click="selectPaymentMethod('wechat')"
         >
           <div class="payment-icon">
-            <img src="https://res.wx.qq.com/a/wx_fed/assets/res/OTE0YTAw.png" alt="微信支付" @error="handleImageError" />
+            <img src="/wechat-icon.png" alt="微信支付" @error="handleImageError" />
           </div>
           <div class="payment-info">
             <div class="payment-name">微信支付</div>

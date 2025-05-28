@@ -41,7 +41,6 @@ const formData = ref({
   contactName: '',
   contactPhone: '',
   remark: '',
-  payType: 2
 })
 
 // 表单验证规则
@@ -60,9 +59,6 @@ const formRules = {
   ],
   remark: [
     { max: 200, message: '备注不能超过200个字符', trigger: 'blur' }
-  ],
-  payType: [
-    { required: true, message: '请选择支付方式', trigger: 'change' }
   ]
 }
 
@@ -113,7 +109,6 @@ const handleSubmit = async () => {
       reservationDate: props.reservationDate,
       startTime: props.startTime,
       endTime: props.endTime,
-      payType: formData.value.payType,
       remark: formData.value.contactName + ' ' + formData.value.contactPhone + ' ' + formData.value.remark
     }
 
@@ -143,7 +138,6 @@ const handleSubmit = async () => {
               contactName: formData.value.contactName,
               contactPhone: formData.value.contactPhone,
               remark: response.data.data.remark,
-              payType: response.data.data.payType,
               payTypeDesc: response.data.data.payTypeDesc,
               pricePerHour: response.data.data.pricePerHour || 30,
               totalAmount: response.data.data.totalAmount
@@ -162,7 +156,6 @@ const handleSubmit = async () => {
           contactPhone: orderData.contactPhone,
           totalAmount: orderData.totalAmount,
           remark: orderData.remark,
-          payType: orderData.payType,
           paymentMethodName: paymentMethodName.value
         }
 
@@ -334,49 +327,6 @@ defineExpose({
             show-word-limit
             resize="none"
           />
-        </el-form-item>
-      </div>
-
-      <!-- 支付方式选择 -->
-      <div class="form-section payment-section">
-        <div class="section-header">
-          <el-icon class="section-icon"><Edit /></el-icon>
-          <h4 class="section-title">支付方式</h4>
-        </div>
-
-        <el-form-item label="支付方式" prop="payType">
-          <el-radio-group v-model="formData.payType" :disabled="loading" class="payment-options">
-            <el-radio :label="2" class="payment-option wechat">
-              <div class="payment-content">
-                <div class="payment-icon wechat-icon">
-                  <svg viewBox="0 0 1024 1024" width="24" height="24">
-                    <path d="M331.5 235.5c-13.8 0-25 11.2-25 25s11.2 25 25 25 25-11.2 25-25-11.2-25-25-25zm361 0c-13.8 0-25 11.2-25 25s11.2 25 25 25 25-11.2 25-25-11.2-25-25-25z" fill="#07C160"/>
-                    <path d="M729.5 344.5c-90.1 0-172.8 35.1-235.5 93.1-62.7-58-145.4-93.1-235.5-93.1C129.8 344.5 32 442.3 32 570.9c0 75.2 35.7 142.3 91.4 185.8l-22.9 68.7c-2.5 7.5 5.5 14.1 12.4 10.2l83.1-46.8c26.2 8.8 54.2 13.6 83.5 13.6 90.1 0 172.8-35.1 235.5-93.1 62.7 58 145.4 93.1 235.5 93.1 29.3 0 57.3-4.8 83.5-13.6l83.1 46.8c6.9 3.9 14.9-2.7 12.4-10.2l-22.9-68.7c55.7-43.5 91.4-110.6 91.4-185.8 0-128.6-97.8-226.4-226.5-226.4z" fill="#07C160"/>
-                  </svg>
-                </div>
-                <div class="payment-info">
-                  <div class="payment-name">微信支付</div>
-                  <div class="payment-desc">推荐使用，安全便捷</div>
-                </div>
-                <div class="payment-badge recommended">推荐</div>
-              </div>
-            </el-radio>
-
-            <el-radio :label="1" class="payment-option alipay">
-              <div class="payment-content">
-                <div class="payment-icon alipay-icon">
-                  <svg viewBox="0 0 1024 1024" width="24" height="24">
-                    <path d="M1024 561.6c0 256-207.4 462.4-462.4 462.4S99.2 817.6 99.2 561.6 306.6 99.2 561.6 99.2 1024 305.6 1024 561.6z" fill="#1677FF"/>
-                    <path d="M633.6 721.6c-43.2 0-83.2-12.8-118.4-35.2-25.6 22.4-57.6 35.2-92.8 35.2-70.4 0-128-57.6-128-128s57.6-128 128-128c35.2 0 67.2 12.8 92.8 35.2 35.2-22.4 75.2-35.2 118.4-35.2 70.4 0 128 57.6 128 128s-57.6 128-128 128z" fill="#fff"/>
-                  </svg>
-                </div>
-                <div class="payment-info">
-                  <div class="payment-name">支付宝</div>
-                  <div class="payment-desc">支持花呗分期付款</div>
-                </div>
-              </div>
-            </el-radio>
-          </el-radio-group>
         </el-form-item>
       </div>
 
@@ -737,7 +687,7 @@ defineExpose({
         background: #f6ffed;
       }
 
-      svg {
+      img {
         width: 24px;
         height: 24px;
       }
@@ -849,7 +799,7 @@ defineExpose({
         width: 28px;
         height: 28px;
 
-        svg {
+        img {
           width: 20px;
           height: 20px;
         }

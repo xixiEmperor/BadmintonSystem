@@ -123,7 +123,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <el-container>
+  <el-container class="layout-container">
     <el-header class="header">
       <div class="header__content">
         <div class="container">
@@ -225,10 +225,11 @@ onBeforeUnmount(() => {
       </div>
     </el-header>
 
-    <el-main>
+    <el-main class="main-content">
       <router-view></router-view>
     </el-main>
-    <el-footer>
+
+    <el-footer class="footer-container">
       <!-- 页脚 -->
       <div class="footer">
         <div class="container">
@@ -256,6 +257,71 @@ onBeforeUnmount(() => {
 </template>
 
 <style lang="less" scoped>
+/* 布局容器样式 */
+.layout-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.main-content {
+  flex: 1;
+  padding: 20px;
+
+  // 移动端适配
+  @media (max-width: 768px) {
+    padding: 15px;
+  }
+
+  // 超小屏幕适配
+  @media (max-width: 480px) {
+    padding: 10px;
+  }
+}
+
+.footer-container {
+  margin-top: auto;
+  height: auto;
+  padding: 0;
+
+  /* 确保页脚内容正确显示 */
+  .footer {
+    background-color: #2c3e50;
+    color: white;
+    padding: 20px 0;
+    text-align: center;
+    width: 100%;
+
+    // 移动端适配
+    @media (max-width: 768px) {
+      padding: 15px 0;
+
+      .container {
+        padding: 0 15px;
+
+        p {
+          font-size: 14px;
+          margin: 5px 0;
+        }
+      }
+    }
+
+    // 超小屏幕适配
+    @media (max-width: 480px) {
+      padding: 10px 0;
+
+      .container {
+        padding: 0 10px;
+
+        p {
+          font-size: 12px;
+          margin: 3px 0;
+        }
+      }
+    }
+  }
+}
+
 .header {
   width: 100%;
   height: 200px;
@@ -679,13 +745,6 @@ onBeforeUnmount(() => {
       }
     }
   }
-}
-/* 页脚样式 */
-.footer {
-  background-color: #2c3e50;
-  color: white;
-  padding: 20px 0;
-  text-align: center;
 }
 
 /* AI助手按钮样式 */
