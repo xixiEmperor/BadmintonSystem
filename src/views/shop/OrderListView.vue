@@ -25,19 +25,20 @@ const total = computed(() => {
 const handleTabChange = (tabName) => {
   activeTab.value = tabName
   currentPage.value = 1 // 重置到第一页
+  orderStore.fetchOrderList(currentPage.value, pageSize.value, ORDER_STATUS[tabName])
 }
 
 // 分页大小改变
 const handleSizeChange = (newSize) => {
   pageSize.value = newSize
   currentPage.value = 1
-  orderStore.fetchOrderList(currentPage.value, pageSize.value)
+  orderStore.fetchOrderList(currentPage.value, pageSize.value, ORDER_STATUS[activeTab.value])
 }
 
 // 当前页改变
 const handleCurrentChange = (newPage) => {
   currentPage.value = newPage
-  orderStore.fetchOrderList(currentPage.value, pageSize.value)
+  orderStore.fetchOrderList(currentPage.value, pageSize.value, ORDER_STATUS[activeTab.value])
 }
 
 // 查看订单详情
@@ -163,9 +164,9 @@ onMounted(() => {
       <div class="order-tabs">
         <el-tabs v-model="activeTab" @tab-change="handleTabChange">
           <el-tab-pane label="全部订单" name="all"></el-tab-pane>
-          <el-tab-pane label="待支付" name="unpaid"></el-tab-pane>
-          <el-tab-pane label="已支付" name="paid"></el-tab-pane>
-          <el-tab-pane label="已取消" name="cancelled"></el-tab-pane>
+          <el-tab-pane label="待支付" name="UNPAID"></el-tab-pane>
+          <el-tab-pane label="已支付" name="PAID"></el-tab-pane>
+          <el-tab-pane label="已取消" name="CANCELLED"></el-tab-pane>
         </el-tabs>
       </div>
     </div>

@@ -209,32 +209,6 @@ const tableRowClassName = ({ row }) => {
         />
       </div>
     </div>
-
-    <div class="forum-sidebar">
-      <el-card class="forum-stats-card">
-        <template #header>
-          <div class="card-header">
-            <span>论坛统计</span>
-          </div>
-        </template>
-        <div class="stats-item">
-          <span class="stats-label">今日发帖：</span>
-          <span class="stats-value">28</span>
-        </div>
-        <div class="stats-item">
-          <span class="stats-label">总帖子数：</span>
-          <span class="stats-value">2,568</span>
-        </div>
-        <div class="stats-item">
-          <span class="stats-label">总会员数：</span>
-          <span class="stats-value">1,256</span>
-        </div>
-        <div class="stats-item">
-          <span class="stats-label">在线会员：</span>
-          <span class="stats-value">86</span>
-        </div>
-      </el-card>
-    </div>
   </div>
 </template>
 

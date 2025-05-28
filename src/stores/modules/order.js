@@ -10,16 +10,19 @@ export const useOrderStore = defineStore('order', () => {
   const loading = ref(false)
   // 总订单数
   const total = ref(0)
+  // 订单状态
+  const status = ref(null)
 
   // 获取订单列表（从后端）
-  async function fetchOrderList(pageNum = 1, pageSize = 5) {
+  async function fetchOrderList(pageNum = 1, pageSize = 5, status = null) {
     if (loading.value) return
 
     loading.value = true
     try {
       const response = await getOrderList({
         pageNum,
-        pageSize
+        pageSize,
+        status
       })
 
       if (response.data.code === 0) {
@@ -72,7 +75,8 @@ export const useOrderStore = defineStore('order', () => {
     fetchOrderList,
     cancelOrder,
     getOrderByNo,
-    total
+    total,
+    status
   }
 }, {
   persist: true
