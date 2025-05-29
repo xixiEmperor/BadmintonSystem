@@ -142,6 +142,11 @@ const router = createRouter({
           component: () => import('@/views/admin/VenueManagement.vue'),
           meta: { title: '场地管理 - 预订系统后台' },
         },
+        {
+          path: 'user-management',
+          component: () => import('@/views/admin/UserManagement.vue'),
+          meta: { title: '用户管理 - 预订系统后台' },
+        },
       ],
     },
     {

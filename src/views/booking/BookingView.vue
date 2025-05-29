@@ -3,10 +3,8 @@ import { ref, computed, onMounted } from 'vue'
 import NoticeList from './components/NoticeList.vue'
 import VenueStatusMatrix from './components/VenueStatusMatrix.vue'
 import CreateOrderForm from './components/CreateOrderForm.vue'
-import PaymentForm from './components/PaymentForm.vue'
 import { Calendar } from '@element-plus/icons-vue'
 import { getVenueList, getVenueAvailability, VENUE_STATUS } from '@/api/venue'
-import { paymentCallback } from '@/api/venueOrder'
 
 // 通用日期格式化函数，避免时区问题
 const formatDateToString = (date) => {
@@ -362,55 +360,6 @@ const handleCreateOrder = async (orderInfo) => {
   }
 }
 
-// 处理支付成功
-const handlePaymentSuccess = async (paymentData) => {
-  try {
-    // 调用支付回调接口
-    const response = await paymentCallback({
-      orderNo: paymentData.orderNo,
-      payInfoId: paymentData.payInfoId || 'mock_pay_id'
-    })
-
-    if (response.data.code === 0) {
-      ElMessage.success('支付成功！预约已确认')
-
-      // 更新场地可用性
-      await checkVenueAvailability(currentDate.value, startTime.value, endTime.value)
-
-      // 关闭弹窗
-      closeBookingDialog()
-
-      // 显示成功信息
-      ElMessageBox.alert(
-        `您已成功预约${selectedCourt.value?.name}，订单号：${paymentData.orderNo}`,
-        '预约成功',
-        {
-          confirmButtonText: '确定',
-          type: 'success'
-        }
-      )
-    } else {
-      ElMessage.error(response.data.message || '支付确认失败')
-    }
-  } catch (error) {
-    console.error('支付确认失败:', error)
-    ElMessage.error('支付确认失败，请联系客服')
-  }
-}
-
-// 处理支付失败
-const handlePaymentFailed = (paymentData) => {
-  ElMessage.error('支付失败，请重试')
-  console.log('支付失败:', paymentData)
-}
-
-// 处理支付超时
-const handlePaymentTimeout = (paymentData) => {
-  ElMessage.warning('支付超时，订单已取消')
-  console.log('支付超时:', paymentData)
-  closeBookingDialog()
-}
-
 // 返回创建订单步骤
 const backToCreateOrder = () => {
   currentStep.value = 1
@@ -719,18 +668,6 @@ const handleEndTimeChange = async (time) => {
         :start-time="startTime"
         :end-time="endTime"
         @submit="handleCreateOrder"
-        @cancel="cancelBooking"
-      />
-
-      <!-- 第二步：支付表单 -->
-      <PaymentForm
-        v-if="currentOrder && currentStep === 2"
-        ref="paymentFormRef"
-        :order-info="currentOrder"
-        :auto-start-payment="true"
-        @payment-success="handlePaymentSuccess"
-        @payment-failed="handlePaymentFailed"
-        @payment-timeout="handlePaymentTimeout"
         @cancel="cancelBooking"
       />
 
