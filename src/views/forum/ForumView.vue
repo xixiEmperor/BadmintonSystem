@@ -1,6 +1,5 @@
 <script setup>
 import { ref, watch, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores'
 import { navigate } from '@/utils/router'
 import { getForumList } from '@/api/forum'
@@ -8,7 +7,6 @@ import { useForumStore } from '@/stores/modules/forum'
 import { formatDateTime } from '@/utils/format'
 import { CaretTop } from '@element-plus/icons-vue'
 
-const router = useRouter()
 const userStore = useUserStore()
 const forumStore = useForumStore()
 // 分类选项卡
@@ -86,7 +84,7 @@ const navigateToPublish = () => {
   }
 
   // 已登录，在新标签页跳转到发布页面
-  router.push('/publish-post')
+  navigate('/publish-post')
 }
 
 // 跳转到文章详情

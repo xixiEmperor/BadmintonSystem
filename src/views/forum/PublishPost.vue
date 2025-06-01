@@ -1,10 +1,10 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { QuillEditor } from '@vueup/vue-quill'
 import { createPost } from '@/api/forum'
 import '@vueup/vue-quill/dist/vue-quill.snow.css'
-
+import { sensitiveWordMap, filterSensitiveWord } from '@/utils/filterSensitiveWord'
 const router = useRouter()
 
 // 帖子标题
@@ -52,6 +52,19 @@ const publishPost = async () => {
     return
   }
 
+  // 检查敏感词
+  const titleInfo = await filterSensitiveWord(postTitle.value, sensitiveWordMap)
+  const textInfo = await filterSensitiveWord(plainTextContent.value, sensitiveWordMap)
+  if (titleInfo.flag) {
+    ElMessage.warning(`帖子标题包含敏感词：${titleInfo.sensitiveWord}`)
+    return
+  }
+  if (textInfo.flag) {
+    ElMessage.warning(`帖子内容包含敏感词：${textInfo.sensitiveWord}`)
+    return
+  }
+
+
   // 调用API发布帖子
   const res = await createPost({
     title: postTitle.value,
@@ -95,6 +108,10 @@ const updateCount = () => {
 const onEditorChange = () => {
   updateCount()
 }
+
+onMounted(() => {
+  console.log(sensitiveWordMap)
+})
 </script>
 
 <template>
