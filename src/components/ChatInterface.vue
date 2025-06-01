@@ -14,8 +14,11 @@
     <!-- 消息区域 -->
     <div class="chat-messages" ref="messagesContainer">
       <div v-for="message in messages" :key="message.id" class="message" :class="message.type">
-        <div class="message-avatar">
-          <span v-if="message.type === 'user'">👤</span>
+        <div class="message-avatar" :class="{ 'has-user-avatar': message.type === 'user' && currentUser.avatar }">
+          <span v-if="message.type === 'user'">
+            <img v-if="currentUser.avatar" :src="currentUser.avatar" :alt="currentUser.nickname" class="user-avatar-img" />
+            <span v-else>👤</span>
+          </span>
           <span v-else>🤖</span>
         </div>
         <div class="message-content">
@@ -89,9 +92,10 @@
 </template>
 
 <script setup>
-import { ref, nextTick, onMounted, reactive } from 'vue'
+import { ref, nextTick, onMounted, reactive, computed } from 'vue'
 import { marked } from 'marked'
 import { useDifyChat } from '@/composables/useDifyChat'
+import { useUserStore } from '@/stores'
 import ConfigPanel from '@/components/ConfigPanel.vue'
 
 // 响应式数据
@@ -103,11 +107,41 @@ const messagesContainer = ref(null)
 const showConfigPanel = ref(false)
 const isConnected = ref(false)
 
+// 获取用户store
+const userStore = useUserStore()
+
+// 计算当前用户信息
+const currentUser = computed(() => {
+  const user = userStore.userinfo
+  console.log('ChatInterface - userStore.userinfo:', user) // 调试信息
+  
+  if (user && user.username) {
+    const result = {
+      id: user.username,
+      username: user.username,
+      nickname: user.nickname || user.username,
+      avatar: user.avatar || null
+    }
+    console.log('ChatInterface - currentUser computed result:', result) // 调试信息
+    return result
+  }
+  
+  // 默认游客用户
+  const guestUser = {
+    id: 'guest_' + Date.now(),
+    username: '游客',
+    nickname: '游客',
+    avatar: null
+  }
+  console.log('ChatInterface - using guest user:', guestUser) // 调试信息
+  return guestUser
+})
+
 // 聊天配置
 const chatConfig = reactive({
   apiKey: 'app-zV1H0vnzPlwjUkkexGCmF5Gn',
   baseUrl: '/v1',
-  userId: 'user1'
+  userId: computed(() => currentUser.value.id) // 使用计算属性动态获取用户ID
 })
 
 // 使用Dify聊天API
@@ -130,10 +164,15 @@ const loadSavedConfig = () => {
 onMounted(() => {
   loadSavedConfig()
 
+  // 根据用户登录状态显示个性化欢迎消息
+  const welcomeMessage = currentUser.value.username === '游客' 
+    ? '您好！我是武汉理工大学南湖校区羽毛球馆的智能客服。我可以为您提供场馆信息、预订服务等帮助。请问有什么可以为您效劳的吗？\n\n您可以问我：\n- 有几个羽毛球场？\n- 羽毛球馆的开放时间？\n- 如何预订场地？\n- 场馆位置和交通？'
+    : `您好${currentUser.value.nickname}！欢迎回来！我是武汉理工大学南湖校区羽毛球馆的智能客服。我可以为您提供场馆信息、预订服务等帮助。请问有什么可以为您效劳的吗？\n\n您可以问我：\n- 有几个羽毛球场？\n- 羽毛球馆的开放时间？\n- 如何预订场地？\n- 场馆位置和交通？\n- 查看我的预订记录`;
+
   messages.value.push({
     id: Date.now(),
     type: 'assistant',
-    content: '您好！我是武汉理工大学南湖校区羽毛球馆的智能客服。我可以为您提供场馆信息、预订服务等帮助。请问有什么可以为您效劳的吗？\n\n您可以问我：\n- 有几个羽毛球场？\n- 羽毛球馆的开放时间？\n- 如何预订场地？\n- 场馆位置和交通？',
+    content: welcomeMessage,
     timestamp: new Date()
   })
 })
@@ -165,7 +204,18 @@ const sendMessage = async () => {
     }
     messages.value.push(assistantMessage)
 
-    // 发送到Dify API并处理流式响应
+    // 准备用户选项，使用真实的用户信息
+    const userOptions = {
+      user: currentUser.value.id,
+      // 可以在这里添加更多用户相关的元数据
+      meta: {
+        username: currentUser.value.username,
+        nickname: currentUser.value.nickname,
+        avatar: currentUser.value.avatar
+      }
+    }
+
+    // 发送到Dify API并处理流式响应，传递真实用户信息
     await sendChatMessage(query, (chunk) => {
       // 处理流式数据块
       if (chunk.event === 'message') {
@@ -178,7 +228,7 @@ const sendMessage = async () => {
       } else if (chunk.event === 'workflow_started') {
         isConnected.value = true
       }
-    })
+    }, userOptions)
   } catch (error) {
     console.error('发送消息失败:', error)
     errorMessage.value = `发送消息失败：${error.message}`
@@ -214,10 +264,14 @@ const handleTestConnection = async (config) => {
 // 清空对话
 const clearChat = () => {
   if (confirm('确定要清空所有对话记录吗？')) {
+    const clearMessage = currentUser.value.username === '游客' 
+      ? '对话已清空。请问有什么可以帮助您的？'
+      : `对话已清空，${currentUser.value.nickname}。请问有什么可以帮助您的？`;
+
     messages.value = [{
       id: Date.now(),
       type: 'assistant',
-      content: '对话已清空。请问有什么可以帮助您的？',
+      content: clearMessage,
       timestamp: new Date()
     }]
   }
@@ -227,10 +281,15 @@ const clearChat = () => {
 const resetConversation = () => {
   if (confirm('确定要开始新的会话吗？当前对话上下文将丢失。')) {
     resetChatConversation()
+    
+    const resetMessage = currentUser.value.username === '游客' 
+      ? '新会话已开始。请问有什么可以帮助您的？'
+      : `新会话已开始，${currentUser.value.nickname}。请问有什么可以帮助您的？`;
+
     messages.value = [{
       id: Date.now(),
       type: 'assistant',
-      content: '新会话已开始。请问有什么可以帮助您的？',
+      content: resetMessage,
       timestamp: new Date()
     }]
   }
@@ -348,8 +407,21 @@ const scrollToBottom = () => {
   flex-shrink: 0;
 }
 
+.user-avatar-img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
 .message.user .message-avatar {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.message.user .message-avatar.has-user-avatar {
+  background: transparent; /* 有头像时移除背景 */
 }
 
 .message.assistant .message-avatar {

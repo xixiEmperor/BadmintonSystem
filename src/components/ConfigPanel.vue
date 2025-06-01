@@ -36,12 +36,12 @@
           <label for="userId">用户标识:</label>
           <input
             id="userId"
-            v-model="localConfig.userId"
+            :value="props.config.userId"
             type="text"
-            placeholder="user1"
-            class="config-input"
+            readonly
+            class="config-input readonly"
           />
-          <small>用于标识用户身份，便于统计和管理</small>
+          <small>当前登录用户的标识，用于个性化服务</small>
         </div>
 
         <div class="config-status">
@@ -124,7 +124,8 @@ const resetConfig = () => {
   if (confirm('确定要重置为默认配置吗？')) {
     localConfig.apiKey = 'app-zV1H0vnzPlwjUkkexGCmF5Gn'
     localConfig.baseUrl = '/v1'
-    localConfig.userId = 'user1'
+    // 不重置userId，因为它应该基于当前登录用户
+    // localConfig.userId = 'user1'
   }
 }
 
@@ -251,17 +252,26 @@ loadSavedConfig()
 
 .config-input {
   width: 100%;
-  padding: 12px;
-  border: 2px solid #e9ecef;
+  padding: 10px;
+  border: 1px solid #ddd;
   border-radius: 8px;
-  font-size: 1rem;
+  font-size: 14px;
   transition: border-color 0.3s;
 }
 
 .config-input:focus {
   outline: none;
   border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.config-input.readonly {
+  background-color: #f5f5f5;
+  color: #666;
+  cursor: not-allowed;
+}
+
+.config-input.readonly:focus {
+  border-color: #ddd;
 }
 
 .config-group small {
