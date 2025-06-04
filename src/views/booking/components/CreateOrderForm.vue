@@ -40,8 +40,7 @@ const formData = ref({
   venueId: '',
   contactName: '',
   contactPhone: '',
-  remark: '',
-  payType: 2, // 默认微信支付
+  remark: ''
 })
 
 // 表单验证规则
@@ -57,9 +56,6 @@ const formRules = {
   contactPhone: [
     { required: true, message: '请输入手机号码', trigger: 'blur' },
     { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号码', trigger: 'blur' }
-  ],
-  payType: [
-    { required: true, message: '请选择支付方式', trigger: 'change' }
   ],
   remark: [
     { max: 200, message: '备注不能超过200个字符', trigger: 'blur' }
@@ -102,7 +98,6 @@ const handleSubmit = async () => {
       reservationDate: props.reservationDate,
       startTime: props.startTime,
       endTime: props.endTime,
-      payType: formData.value.payType,
       remark: formData.value.contactName + ' ' + formData.value.contactPhone + ' ' + formData.value.remark
     }
 
@@ -292,52 +287,6 @@ const handleCancel = () => {
             show-word-limit
             resize="none"
           />
-        </el-form-item>
-      </div>
-
-      <!-- 支付方式选择 -->
-      <div class="form-section payment-section">
-        <div class="section-header">
-          <el-icon class="section-icon"><Edit /></el-icon>
-          <h4 class="section-title">支付方式</h4>
-        </div>
-
-        <el-form-item label="支付方式" prop="payType">
-          <el-radio-group v-model="formData.payType" class="payment-options" :disabled="loading">
-            <!-- 微信支付 -->
-            <el-radio :label="2" class="payment-option">
-              <div class="payment-content">
-                <div class="payment-icon wechat-icon">
-                  <svg viewBox="0 0 1024 1024" width="24" height="24">
-                    <path fill="#07C160" d="M331.5 298.7c-111.5 0-201.9 76.4-201.9 170.7 0 55.2 29.5 105.4 78.2 142.1l-19.6 58.9 68.6-34.3c24.4 4.9 44.1 9.8 68.6 9.8 6.4 0 12.7-0.3 19.1-0.9-4-13.6-6.3-27.8-6.3-42.5 0-85.5 72.9-154.8 162.8-154.8 6.2 0 12.3 0.4 18.4 1.1-16.2-91.1-101.3-159.1-188.9-159.1z m-119.4 108.6c-14.5 0-26.2-11.8-26.2-26.2s11.8-26.2 26.2-26.2 26.2 11.8 26.2 26.2-11.7 26.2-26.2 26.2z m119.4 0c-14.5 0-26.2-11.8-26.2-26.2s11.8-26.2 26.2-26.2 26.2 11.8 26.2 26.2-11.7 26.2-26.2 26.2z"/>
-                    <path fill="#07C160" d="M751.1 447.6c-85.5 0-154.8 69.3-154.8 154.8s69.3 154.8 154.8 154.8c19.6 0 39.2-4.9 58.9-9.8l53.9 29.5-14.7-48.9c34.3-24.4 58.9-63.7 58.9-107.8 0-85.5-69.3-154.8-154.8-154.8h-2z m-78.2 98.1c-9.8 0-19.6-9.8-19.6-19.6s9.8-19.6 19.6-19.6 19.6 9.8 19.6 19.6-9.8 19.6-19.6 19.6z m78.2 0c-9.8 0-19.6-9.8-19.6-19.6s9.8-19.6 19.6-19.6 19.6 9.8 19.6 19.6-9.8 19.6-19.6 19.6z"/>
-                  </svg>
-                </div>
-                <div class="payment-info">
-                  <h6 class="payment-name">微信支付</h6>
-                  <p class="payment-desc">安全便捷，支持微信钱包、银行卡支付</p>
-                </div>
-                <div class="payment-badge recommended">推荐</div>
-              </div>
-            </el-radio>
-
-            <!-- 支付宝 -->
-            <el-radio :label="1" class="payment-option">
-              <div class="payment-content">
-                <div class="payment-icon alipay-icon">
-                  <svg viewBox="0 0 1024 1024" width="24" height="24">
-                    <path fill="#1677FF" d="M256 85.333h512c94.293 0 170.667 76.373 170.667 170.667v512c0 94.293-76.374 170.667-170.667 170.667H256c-94.293 0-170.667-76.374-170.667-170.667V256c0-94.294 76.374-170.667 170.667-170.667z"/>
-                    <path fill="#FFFFFF" d="M729.6 341.333H294.4c-23.573 0-42.667 19.094-42.667 42.667v256c0 23.573 19.094 42.667 42.667 42.667h435.2c23.573 0 42.667-19.094 42.667-42.667V384c0-23.573-19.094-42.667-42.667-42.667z"/>
-                    <path fill="#1677FF" d="M320 469.333h128v42.667H320v-42.667z m0 85.334h85.333V597.333H320v-42.666z m170.667-85.334h213.333v42.667H490.667v-42.667z m0 85.334h170.667V597.333H490.667v-42.666z"/>
-                  </svg>
-                </div>
-                <div class="payment-info">
-                  <h6 class="payment-name">支付宝</h6>
-                  <p class="payment-desc">快速支付，支持花呗、余额宝等多种方式</p>
-                </div>
-              </div>
-            </el-radio>
-          </el-radio-group>
         </el-form-item>
       </div>
 

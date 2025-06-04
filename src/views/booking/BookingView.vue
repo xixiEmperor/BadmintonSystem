@@ -102,49 +102,49 @@ const getTimeOptionsForDate = (date) => {
   const startOptions = []
   const endOptions = []
 
-  timeSlots.forEach(slot => {
-    const [startTime, endTime] = slot.split('-')
-    const [startHour, startMinute] = startTime.split(':').map(Number)
-    const [endHour, endMinute] = endTime.split(':').map(Number)
+  // 直接处理第一个（也是唯一的）时间段
+  const slot = timeSlots[0]
+  const [startTime, endTime] = slot.split('-')
+  const [startHour, startMinute] = startTime.split(':').map(Number)
+  const [endHour, endMinute] = endTime.split(':').map(Number)
 
-    // 生成起始时间选项（最后一个选项是结束时间前1小时）
-    let currentHour = startHour // 18
-    let currentMinute = startMinute // 0
+  // 生成起始时间选项（最后一个选项是结束时间前1小时）
+  let currentHour = startHour // 18
+  let currentMinute = startMinute // 0
 
-    // 计算最晚的起始时间（结束时间前1小时）
-    let maxStartHour = endHour - 1 // 20
-    let maxStartMinute = endMinute // 0
+  // 计算最晚的起始时间（结束时间前1小时）
+  let maxStartHour = endHour - 1 // 20
+  let maxStartMinute = endMinute // 0
 
-    // 如果结束时间的分钟数小于起始分钟数，需要调整
-    if (maxStartMinute < currentMinute) {
-      maxStartHour -= 1
-      maxStartMinute += 60
+  // 如果结束时间的分钟数小于起始分钟数，需要调整
+  if (maxStartMinute < currentMinute) {
+    maxStartHour -= 1
+    maxStartMinute += 60
+  }
+
+  while (currentHour < maxStartHour || (currentHour === maxStartHour && currentMinute <= maxStartMinute)) {
+    const timeStr = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`
+
+    // 检查时间限制：只有在可预约时间范围内的时间才添加到选项中
+    if (isBookingTimeValid(date, timeStr)) {
+      startOptions.push(timeStr)
     }
 
-    while (currentHour < maxStartHour || (currentHour === maxStartHour && currentMinute <= maxStartMinute)) {
-      const timeStr = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`
+    // 改为1小时步长
+    currentHour += 1
+  }
 
-      // 检查时间限制：只有在可预约时间范围内的时间才添加到选项中
-      if (isBookingTimeValid(date, timeStr)) {
-        startOptions.push(timeStr)
-      }
+  // 生成结束时间选项（从起始时间+1小时开始，到结束时间，最多3小时）
+  let endCurrentHour = startHour + 1
+  let endCurrentMinute = startMinute
 
-      // 改为1小时步长
-      currentHour += 1
-    }
+  while (endCurrentHour < endHour || (endCurrentHour === endHour && endCurrentMinute <= endMinute)) {
+    const timeStr = `${endCurrentHour.toString().padStart(2, '0')}:${endCurrentMinute.toString().padStart(2, '0')}`
+    endOptions.push(timeStr)
 
-    // 生成结束时间选项（从起始时间+1小时开始，到结束时间，最多3小时）
-    let endCurrentHour = startHour + 1
-    let endCurrentMinute = startMinute
-
-    while (endCurrentHour < endHour || (endCurrentHour === endHour && endCurrentMinute <= endMinute)) {
-      const timeStr = `${endCurrentHour.toString().padStart(2, '0')}:${endCurrentMinute.toString().padStart(2, '0')}`
-      endOptions.push(timeStr)
-
-      // 改为1小时步长
-      endCurrentHour += 1
-    }
-  })
+    // 改为1小时步长
+    endCurrentHour += 1
+  }
 
   // 去重并排序
   const uniqueStartOptions = [...new Set(startOptions)].sort()

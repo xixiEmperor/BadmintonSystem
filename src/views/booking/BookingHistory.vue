@@ -1,12 +1,7 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-// import { useUserStore } from '@/stores'
 import { getMyOrders, getReservationById, cancelReservation, applyRefund, ORDER_STATUS_TEXT, ORDER_STATUS_COLOR } from '@/api/venueOrder'
-
-// 用户信息
-// const userStore = useUserStore()
-// const userInfo = computed(() => userStore.userinfo)
 
 const router = useRouter()
 
@@ -14,9 +9,11 @@ const router = useRouter()
 const loading = ref(false)
 
 // 筛选表单
-const status = ref('')
+const filterForm = ref({
+  status: ''
+})
 
-watch(status, (newVal) => {
+watch(() => filterForm.value.status, (newVal) => {
   fetchMyOrders(newVal)
 })
 
@@ -38,8 +35,8 @@ const fetchMyOrders = async (status) => {
     loading.value = true
     const response = await getMyOrders(status)
     if (response.data.code === 0) {
-      allBookings.value = response.data.data || []
-      total.value = allBookings.value.length
+      allBookings.value = response.data.data.list || []
+      total.value = response.data.data.total
     } else {
       ElMessage.error(response.message || '获取订单列表失败')
     }
@@ -50,7 +47,6 @@ const fetchMyOrders = async (status) => {
     loading.value = false
   }
 }
-
 
 // 分页处理
 const handlePageChange = (page) => {
@@ -241,7 +237,7 @@ onMounted(() => {
       <div class="filter-section">
         <el-form :inline="true" :model="filterForm">
           <el-form-item label="预订状态">
-            <el-select v-model="status" placeholder="预订状态" clearable style="width: 120px">
+            <el-select v-model="filterForm.status" placeholder="预订状态" clearable style="width: 120px">
               <el-option label="全部" value="" />
               <el-option label="待支付" value="1" />
               <el-option label="已支付" value="2" />

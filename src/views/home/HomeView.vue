@@ -7,8 +7,17 @@ import {
   ShoppingBag,
   ChatDotRound,
 } from '@element-plus/icons-vue'
+import { ref } from 'vue'
 import imgUrl from '@/assets/index_img.png'
 import { navigate } from '@/utils/router'
+import ChatInterface from '@/components/ChatInterface.vue'
+
+// AI助手对话框控制
+const showAIChat = ref(false)
+
+const toggleAIChat = () => {
+  showAIChat.value = !showAIChat.value
+}
 
 const goToBooking = () => {
   navigate('/booking')
@@ -110,6 +119,28 @@ const goToForum = () => {
           </div>
         </el-col>
       </el-row>
+    </div>
+
+    <!-- AI助手悬浮按钮 -->
+    <div class="ai-assistant">
+      <el-button
+        type="primary"
+        circle
+        :icon="ChatDotRound"
+        class="ai-btn"
+        :class="{ 'ai-btn-active': showAIChat }"
+        @click="toggleAIChat"
+        title="AI智能客服"
+      ></el-button>
+    </div>
+
+    <!-- AI助手对话框 -->
+    <div v-if="showAIChat" class="ai-chat-dialog">
+      <div class="ai-chat-overlay" @click="showAIChat = false"></div>
+      <div class="ai-chat-container">
+        <ChatInterface />
+        <button @click="showAIChat = false" class="ai-chat-close">×</button>
+      </div>
     </div>
   </div>
 </template>
@@ -390,6 +421,157 @@ h2 {
 @media (max-width: 768px) {
   .action-card {
     width: 100%;
+  }
+}
+
+/* AI助手按钮样式 */
+.ai-assistant {
+  position: fixed;
+  right: 50px;
+  bottom: 50px;
+  z-index: 1000;
+
+  // 移动端适配
+  @media (max-width: 768px) {
+    right: 20px;
+    bottom: 20px;
+  }
+}
+
+.ai-btn {
+  width: 60px;
+  height: 60px;
+  font-size: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+
+  // 移动端适配
+  @media (max-width: 768px) {
+    width: 50px;
+    height: 50px;
+    font-size: 20px;
+  }
+
+  // 超小屏幕适配
+  @media (max-width: 480px) {
+    width: 45px;
+    height: 45px;
+    font-size: 18px;
+  }
+
+  &:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+  }
+
+  &.ai-btn-active {
+    background-color: #67c23a;
+    transform: rotate(45deg);
+  }
+}
+
+.ai-chat-dialog {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1001;
+  animation: fadeIn 0.3s ease-out;
+
+  .ai-chat-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+  }
+
+  .ai-chat-container {
+    position: relative;
+    width: 90%;
+    max-width: 900px;
+    height: 85vh;
+    max-height: 800px;
+    background-color: transparent;
+    padding: 0;
+    border-radius: 20px;
+    overflow: hidden;
+    animation: slideUp 0.3s ease-out;
+
+    // 移动端适配
+    @media (max-width: 768px) {
+      width: 95%;
+      height: 90vh;
+      max-height: none;
+    }
+
+    // 超小屏幕适配
+    @media (max-width: 480px) {
+      width: 100%;
+      height: 100vh;
+      border-radius: 0;
+    }
+
+    .ai-chat-close {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      background: rgba(255, 255, 255, 0.9);
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      transition: all 0.3s ease;
+      color: #666;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+      &:hover {
+        background: rgba(255, 255, 255, 1);
+        color: #333;
+        transform: scale(1.1);
+      }
+
+      // 移动端适配
+      @media (max-width: 768px) {
+        top: 10px;
+        right: 10px;
+        width: 35px;
+        height: 35px;
+        font-size: 20px;
+      }
+    }
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 </style>
