@@ -1,5 +1,5 @@
 /**
- * 格式化日期时间
+ * 格式化日期时间(主要是为了格式化后端返回的日期时间)
  * @param {string|Date} dateTime - 需要格式化的日期时间
  * @param {string} format - 格式化模式，默认为'YYYY-MM-DD HH:mm:ss'
  * @returns {string} - 格式化后的日期时间字符串

@@ -4,7 +4,7 @@ import NoticeList from './components/NoticeList.vue'
 import VenueStatusMatrix from './components/VenueStatusMatrix.vue'
 import CreateOrderForm from './components/CreateOrderForm.vue'
 import { Calendar } from '@element-plus/icons-vue'
-import { getVenueList, getVenueAvailability, VENUE_STATUS } from '@/api/venue'
+import { getVenueList, getVenueAvailability} from '@/api/venue'
 
 // 通用日期格式化函数，避免时区问题
 const formatDateToString = (date) => {
@@ -24,6 +24,59 @@ const isWeekday = (date) => {
 const isWeekend = (date) => {
   const day = date.getDay()
   return day === 0 || day === 6
+}
+
+// 检查指定日期和时间是否在可预约时间范围内
+const isBookingTimeValid = (date, startTime) => {
+  const now = new Date()
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const tomorrow = new Date(today)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+
+  const selectedDate = new Date(date)
+  selectedDate.setHours(0, 0, 0, 0)
+
+  // 如果选择的是今天
+  if (selectedDate.getTime() === today.getTime()) {
+    // 今天场地：只要在开始时间之前都可以预约
+    const [startHour, startMinute] = startTime.split(':').map(Number)
+    const startDateTime = new Date()
+    startDateTime.setHours(startHour, startMinute, 0, 0)
+
+    return now < startDateTime
+  }
+
+  // 如果选择的是明天
+  if (selectedDate.getTime() === tomorrow.getTime()) {
+    // 明天场地：今天18:00之后才能开始预约
+    const currentHour = now.getHours()
+    return currentHour >= 18
+  }
+
+  // 其他日期不允许预约
+  return false
+}
+
+// 获取时间限制状态文本
+const getTimeRestrictionText = (date) => {
+  const now = new Date()
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const tomorrow = new Date(today)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+
+  const selectedDate = new Date(date)
+  selectedDate.setHours(0, 0, 0, 0)
+
+  // 如果选择的是明天且当前时间还没到18:00
+  if (selectedDate.getTime() === tomorrow.getTime() && now.getHours() < 18) {
+    return '不在可预约时间（明天场地需今天18:00后预约）'
+  }
+
+  return null
 }
 
 // 获取指定日期的开放时间段
@@ -55,12 +108,12 @@ const getTimeOptionsForDate = (date) => {
     const [endHour, endMinute] = endTime.split(':').map(Number)
 
     // 生成起始时间选项（最后一个选项是结束时间前1小时）
-    let currentHour = startHour
-    let currentMinute = startMinute
+    let currentHour = startHour // 18
+    let currentMinute = startMinute // 0
 
     // 计算最晚的起始时间（结束时间前1小时）
-    let maxStartHour = endHour - 1
-    let maxStartMinute = endMinute
+    let maxStartHour = endHour - 1 // 20
+    let maxStartMinute = endMinute // 0
 
     // 如果结束时间的分钟数小于起始分钟数，需要调整
     if (maxStartMinute < currentMinute) {
@@ -70,20 +123,19 @@ const getTimeOptionsForDate = (date) => {
 
     while (currentHour < maxStartHour || (currentHour === maxStartHour && currentMinute <= maxStartMinute)) {
       const timeStr = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`
-      startOptions.push(timeStr)
+
+      // 检查时间限制：只有在可预约时间范围内的时间才添加到选项中
+      if (isBookingTimeValid(date, timeStr)) {
+        startOptions.push(timeStr)
+      }
 
       // 改为1小时步长
       currentHour += 1
     }
 
     // 生成结束时间选项（从起始时间+1小时开始，到结束时间，最多3小时）
-    let endCurrentHour = startHour
-    let endCurrentMinute = startMinute + 60 // 最少1小时
-
-    if (endCurrentMinute >= 60) {
-      endCurrentMinute -= 60
-      endCurrentHour++
-    }
+    let endCurrentHour = startHour + 1
+    let endCurrentMinute = startMinute
 
     while (endCurrentHour < endHour || (endCurrentHour === endHour && endCurrentMinute <= endMinute)) {
       const timeStr = `${endCurrentHour.toString().padStart(2, '0')}:${endCurrentMinute.toString().padStart(2, '0')}`
@@ -137,26 +189,7 @@ const handleDateChange = async (date) => {
   if (options.startOptions.length > 0) {
     startTime.value = options.startOptions[0]
     // 设置结束时间为开始时间后1小时
-    const [hour, minute] = startTime.value.split(':').map(Number)
-    let endHour = hour + 1
-    let endMinute = minute
-
-    if (endHour > 23) {
-      endHour = 23
-      endMinute = 30
-    }
-
-    const targetEndTime = `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`
-
-    // 在结束时间选项中找到最接近的时间
-    const availableEndTime = options.endOptions.find(t => t >= targetEndTime)
-    if (availableEndTime) {
-      endTime.value = availableEndTime
-    } else if (options.endOptions.length > 0) {
-      endTime.value = options.endOptions[0]
-    } else {
-      endTime.value = startTime.value
-    }
+    endTime.value = options.endOptions[0]
   } else {
     startTime.value = ''
     endTime.value = ''
@@ -170,18 +203,23 @@ const handleDateChange = async (date) => {
 
 // 获取日期状态文本
 const getDateStatusText = (date) => {
+  let statusText = ''
+
   if (isWeekday(date)) {
-    return '工作日（仅晚上18:00-21:00开放）'
+    statusText = '工作日（仅晚上18:00-21:00开放）'
+  } else if (isWeekend(date)) {
+    statusText = '周末（全天开放8:00-21:00）'
   }
 
-  if (isWeekend(date)) {
-    return '周末（全天开放8:00-21:00）'
+  // 添加时间限制提示
+  const timeRestrictionText = getTimeRestrictionText(date)
+  if (timeRestrictionText) {
+    statusText += ` - ${timeRestrictionText}`
   }
 
-  return ''
+  return statusText
 }
 
-// 修改场地数据结构，添加bookedTimes数组表示已预约时间段
 const courts = ref([])
 const loading = ref(false)
 
@@ -200,18 +238,14 @@ const fetchVenueList = async () => {
         status: venue.status,
         bookable: false, // 初始化为不可预约，等待时间选择后再检查
         availabilityReason: '请选择时间段', // 初始化原因
-        maintenance: venue.status === VENUE_STATUS.MAINTENANCE
+        location: venue.location,
       }))
     } else {
       ElMessage.error(response.message || '获取场地列表失败')
-      // 如果API失败，使用默认数据
-      setDefaultVenues()
     }
   } catch (error) {
     console.error('获取场地列表失败:', error)
     ElMessage.error('获取场地列表失败，请稍后重试')
-    // 如果API失败，使用默认数据
-    setDefaultVenues()
   } finally {
     loading.value = false
   }
@@ -220,6 +254,17 @@ const fetchVenueList = async () => {
 // 检查场地可用性
 const checkVenueAvailability = async (date, startTime, endTime) => {
   try {
+    // 首先检查时间限制
+    const timeRestrictionText = getTimeRestrictionText(date)
+    if (timeRestrictionText || !isBookingTimeValid(date, startTime)) {
+      // 如果不在可预约时间，将所有场地设置为不可预约
+      courts.value.forEach(court => {
+        court.bookable = false
+        court.availabilityReason = timeRestrictionText || '不在可预约时间'
+      })
+      return
+    }
+
     // 使用通用日期格式化函数
     const dateStr = formatDateToString(date)
 
@@ -263,8 +308,6 @@ const checkVenueAvailability = async (date, startTime, endTime) => {
           }
         })
       }
-
-      console.log(`场地可用性检查完成: ${availableVenues?.length || 0}/${response.data.data.totalVenues} 场地可预约`)
     }
   } catch (error) {
     console.error('检查场地可用性失败:', error)
@@ -280,89 +323,27 @@ const checkVenueAvailability = async (date, startTime, endTime) => {
 onMounted(async () => {
   await fetchVenueList()
 
-  // 初始化时间选择
-  const options = getTimeOptionsForDate(currentDate.value)
-  if (options.startOptions.length > 0) {
-    startTime.value = options.startOptions[0]
-
-    // 设置结束时间为开始时间后1小时
-    const [hour, minute] = startTime.value.split(':').map(Number)
-    let endHour = hour + 1
-    let endMinute = minute
-
-    if (endHour > 23) {
-      endHour = 23
-      endMinute = 0
-    }
-
-    const targetEndTime = `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`
-    const availableEndTime = options.endOptions.find(t => t >= targetEndTime)
-    if (availableEndTime) {
-      endTime.value = availableEndTime
-    } else if (options.endOptions.length > 0) {
-      endTime.value = options.endOptions[0]
-    }
-
-    // 检查场地可用性
-    if (startTime.value && endTime.value) {
-      await checkVenueAvailability(currentDate.value, startTime.value, endTime.value)
-    }
-  }
+  // 直接调用handleDateChange来初始化时间选择，避免重复代码
+  await handleDateChange(currentDate.value)
 })
 
 // 预约弹窗相关
 const bookingDialogVisible = ref(false)
 const selectedCourt = ref(null)
-const currentStep = ref(1) // 预约步骤：1-创建订单，2-支付
-const currentOrder = ref(null) // 当前订单信息
 
 // 创建订单表单引用
 const createOrderFormRef = ref(null)
-const paymentFormRef = ref(null)
 
 // 打开预约弹窗
 const openBookingDialog = (court) => {
-  // 检查场地是否可预约（基于bookable字段）
-  if (!court.bookable) {
-    const reason = court.availabilityReason || '该场地当前不可预约'
-    ElMessage.warning(reason)
-    return
-  }
-
   selectedCourt.value = court
   bookingDialogVisible.value = true
-  currentStep.value = 1
-  currentOrder.value = null
-
-  // 重置表单
-  if (createOrderFormRef.value) {
-    createOrderFormRef.value.resetForm()
-  }
 }
 
 // 关闭预约弹窗
 const closeBookingDialog = () => {
   bookingDialogVisible.value = false
   selectedCourt.value = null
-  currentStep.value = 1
-  currentOrder.value = null
-}
-
-// 处理创建订单
-const handleCreateOrder = async (orderInfo) => {
-  try {
-    // 订单已在CreateOrderForm中创建成功，直接处理订单信息
-    currentOrder.value = orderInfo
-    currentStep.value = 2
-  } catch (error) {
-    console.error('处理订单信息失败:', error)
-    ElMessage.error('处理订单信息失败，请重试')
-  }
-}
-
-// 返回创建订单步骤
-const backToCreateOrder = () => {
-  currentStep.value = 1
 }
 
 // 取消预约
@@ -373,15 +354,30 @@ const cancelBooking = () => {
 // 场地使用情况矩阵弹窗控制
 const matrixDialogVisible = ref(false)
 
+// 关闭场地使用情况矩阵弹窗
+const closeMatrixDialog = () => {
+  matrixDialogVisible.value = false
+}
+
 // 打开场地使用情况表
 const openMatrixDialog = () => {
   matrixDialogVisible.value = true
 }
 
-// 检查场地在选定时间段是否可用
-const isCourAvailable = (court) => {
-  // 使用bookable字段判断场地是否可预约
-  return court.bookable === true
+// 检查场地是否可以预约（综合检查场地状态和时间限制）
+const isCourtBookable = (court) => {
+  // 首先检查场地本身是否可用
+  if (!court.bookable) {
+    return false
+  }
+
+  // 然后检查时间限制
+  if (!startTime.value || !endTime.value) {
+    return false
+  }
+
+  // 检查当前选择的时间是否符合预约规则
+  return isBookingTimeValid(currentDate.value, startTime.value)
 }
 
 // 获取场地状态类名
@@ -616,7 +612,7 @@ const handleEndTimeChange = async (time) => {
             <div class="court-actions">
               <el-button
                 type="primary"
-                :disabled="!isCourAvailable(court)"
+                :disabled="!isCourtBookable(court)"
                 @click="openBookingDialog(court)"
               >
                 预约
@@ -654,44 +650,28 @@ const handleEndTimeChange = async (time) => {
     <!-- 预约弹窗 -->
     <el-dialog
       v-model="bookingDialogVisible"
-      :title="currentStep === 1 ? '创建预约订单' : '支付订单'"
+      title="创建预约订单"
       width="700px"
       :close-on-click-modal="false"
       :before-close="closeBookingDialog"
     >
-      <!-- 第一步：创建订单表单 -->
+      <!-- 创建订单表单 -->
       <CreateOrderForm
-        v-if="selectedCourt && currentStep === 1"
+        v-if="selectedCourt"
         ref="createOrderFormRef"
         :selected-venue="selectedCourt"
         :reservation-date="formatDateToString(currentDate)"
         :start-time="startTime"
         :end-time="endTime"
-        @submit="handleCreateOrder"
         @cancel="cancelBooking"
       />
-
-      <!-- 弹窗按钮 -->
-      <template #footer>
-        <div class="dialog-footer">
-
-          <!-- 第二步按钮 -->
-          <template v-if="currentStep === 2">
-            <el-button @click="backToCreateOrder">返回修改</el-button>
-            <el-button
-              type="primary"
-              @click="paymentFormRef?.retryPayment()"
-              v-if="paymentFormRef?.paymentStatus === 'failed'"
-            >
-              重新支付
-            </el-button>
-          </template>
-        </div>
-      </template>
     </el-dialog>
 
     <!-- 场地使用情况矩阵弹窗 -->
-    <VenueStatusMatrix v-model:visible="matrixDialogVisible" />
+    <VenueStatusMatrix
+    :visible="matrixDialogVisible"
+    @close="closeMatrixDialog"
+    />
   </div>
 </template>
 
@@ -900,7 +880,7 @@ h4 {
   margin-top: 20px;
 }
 
-@media screen and (max-width: 768px) {
+@media screen and (max-width: 768px) { //当在任何屏幕设备上，且屏幕宽度不超过768像素时，应用这些样式
   .page-header {
     flex-direction: column;
     gap: 15px;
@@ -1025,14 +1005,17 @@ h4 {
 }
 
 .matrix-button-enhanced::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
+  /* 创建一个伪元素，用于实现按钮的光泽扫过动画效果 */
+  // 视觉效果：用户看到一道白色光泽从左到右快速扫过按钮表面
+  content: '';                    /* 必须设置content才能显示伪元素 */
+  position: absolute;             /* 绝对定位，相对于父元素（按钮）定位 */
+  top: 0;                        /* 从按钮顶部开始 */
+  left: -100%;                   /* 初始位置在按钮左侧外部（完全隐藏） */
+  width: 100%;                   /* 宽度与按钮相同 */
+  height: 100%;                  /* 高度与按钮相同 */
+  /* 创建从透明到半透明白色再到透明的水平渐变，形成光泽条效果 */
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.5s;
+  transition: left 0.5s;         /* 设置left属性的过渡动画，持续0.5秒 */
 }
 
 .matrix-button-enhanced:hover::before {

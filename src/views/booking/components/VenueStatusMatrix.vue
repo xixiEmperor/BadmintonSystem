@@ -1,6 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ref, computed, onMounted } from 'vue'
 import { getVenueStatusMatrix } from '@/api/venue'
 
 const props = defineProps({
@@ -10,13 +9,17 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['update:visible'])
+const emit = defineEmits(['close'])
 
 // 控制弹窗显示
 const dialogVisible = computed({
   get: () => props.visible,
-  set: (value) => emit('update:visible', value)
 })
+
+// 关闭弹窗
+const closeDialog = () => {
+  emit('close')
+}
 
 // 数据状态
 const loading = ref(false)
@@ -150,13 +153,6 @@ const handleDateChange = () => {
   fetchMatrixData()
 }
 
-// 监听弹窗显示状态
-watch(dialogVisible, (newVal) => {
-  if (newVal) {
-    fetchMatrixData()
-  }
-})
-
 // 组件挂载时获取数据
 onMounted(() => {
   if (dialogVisible.value) {
@@ -171,6 +167,7 @@ onMounted(() => {
     title="场地使用情况表"
     width="90%"
     :close-on-click-modal="false"
+    @close="closeDialog"
     class="venue-matrix-dialog"
   >
     <div class="matrix-container">
@@ -245,7 +242,7 @@ onMounted(() => {
 
     <template #footer>
       <div class="dialog-footer">
-        <el-button @click="dialogVisible = false">关闭</el-button>
+        <el-button @click="closeDialog">关闭</el-button>
         <el-button type="primary" @click="fetchMatrixData">刷新数据</el-button>
       </div>
     </template>

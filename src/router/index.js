@@ -173,25 +173,51 @@ router.beforeEach((to, from, next) => {
 
   // 判断路由是否需要登录
   const userStore = useUserStore()
+
   if (to.meta.requiresAuth) {
-    // 从 userStore 获取用户信息
-    if (userStore.token) {
-      // 已登录，允许访问
+    // 检查是否有token且未过期
+    if (userStore.token && !userStore.isTokenExpired()) {
+      // 已登录且token有效，允许访问
       next()
     } else {
-      // 未登录，跳转到登录页
-      next('/login')
+      // 未登录或token已过期，清除过期数据并跳转到登录页
+      if (userStore.token && userStore.isTokenExpired()) {
+        userStore.logout()
+        ElMessage.warning('登录已过期，请重新登录')
+      }
+      next({
+        path: '/login',
+        query: { redirect: to.fullPath }
+      })
     }
   } else if (to.meta.requiresAdmin) {
-    // 判断是否为管理员
-    if (userStore.userinfo.role === 'ROLE_ADMIN') {
-      next()
+    // 检查是否有token且未过期
+    if (userStore.token && !userStore.isTokenExpired()) {
+      // 判断是否为管理员
+      if (userStore.userinfo?.role === 'ROLE_ADMIN') {
+        next()
+      } else {
+        // 非管理员，跳转到首页
+        ElMessage.error('您没有访问管理后台的权限')
+        next('/')
+      }
     } else {
-      // 非管理员，跳转到首页
-      next('/')
+      // 未登录或token已过期
+      if (userStore.token && userStore.isTokenExpired()) {
+        userStore.logout()
+        ElMessage.warning('登录已过期，请重新登录')
+      }
+      next({
+        path: '/login',
+        query: { redirect: to.fullPath }
+      })
     }
   } else {
     // 不需要登录，直接放行
+    // 但如果有token且已过期，也要清除
+    if (userStore.token && userStore.isTokenExpired()) {
+      userStore.logout()
+    }
     next()
   }
 })

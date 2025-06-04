@@ -401,7 +401,17 @@ onMounted(() => {
   let savedPaymentInfo
 
   if (reservationOrderNo.value) {
-    paymentInfo.value = history.state.orderDetail
+
+    // 添加详细的调试信息
+    console.log('=== PaymentView 调试信息 ===')
+    console.log('reservationOrderNo:', reservationOrderNo.value)
+    console.log('history.state:', history.state)
+    console.log('history.state.orderDetail:', history.state.orderDetail)
+    console.log('history.state.booking:', history.state.booking)
+    console.log('router.currentRoute.value:', router.currentRoute.value)
+    console.log('window.history.state:', window.history.state)
+
+    paymentInfo.value = history.state.orderDetail || history.state.booking
     console.log('paymentInfo:', paymentInfo.value)
 
     // 尝试恢复支付状态

@@ -1,5 +1,6 @@
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 // import { useUserStore } from '@/stores'
 import { getMyOrders, getReservationById, cancelReservation, applyRefund, ORDER_STATUS_TEXT, ORDER_STATUS_COLOR } from '@/api/venueOrder'
 
@@ -7,20 +8,16 @@ import { getMyOrders, getReservationById, cancelReservation, applyRefund, ORDER_
 // const userStore = useUserStore()
 // const userInfo = computed(() => userStore.userinfo)
 
+const router = useRouter()
+
 // 数据加载状态
 const loading = ref(false)
 
 // 筛选表单
-const filterForm = reactive({
-  status: '',
-  dateRange: [],
-})
+const status = ref('')
 
-watch(filterForm, (newVal) => {
-  console.log(newVal.status)
-  fetchMyOrders(newVal.status)
-}, {
-  deep: true,
+watch(status, (newVal) => {
+  fetchMyOrders(newVal)
 })
 
 // 分页参数
@@ -30,35 +27,6 @@ const total = ref(0)
 
 // 预订记录数据
 const allBookings = ref([])
-
-// 过滤后的预订记录
-const filteredBookings = computed(() => {
-  let result = [...allBookings.value]
-
-  // 根据日期范围筛选
-  if (filterForm.dateRange && filterForm.dateRange.length === 2) {
-    const [startDate, endDate] = filterForm.dateRange
-    result = result.filter((item) => {
-      const bookingDate = new Date(item.date)
-      return bookingDate >= new Date(startDate) && bookingDate <= new Date(endDate)
-    })
-  }
-
-  // 只筛选出我的订单
-  // result = result.filter((item) => item.userId === userInfo.value.id)
-
-  return result
-})
-
-// 计算总数
-const computedTotal = computed(() => {
-  return filteredBookings.value.length
-})
-
-// 更新总数方法
-const updateTotal = () => {
-  total.value = computedTotal.value
-}
 
 // 详情对话框相关
 const detailDialogVisible = ref(false)
@@ -71,7 +39,7 @@ const fetchMyOrders = async (status) => {
     const response = await getMyOrders(status)
     if (response.data.code === 0) {
       allBookings.value = response.data.data || []
-      updateTotal()
+      total.value = allBookings.value.length
     } else {
       ElMessage.error(response.message || '获取订单列表失败')
     }
@@ -83,19 +51,6 @@ const fetchMyOrders = async (status) => {
   }
 }
 
-// 筛选处理
-const handleFilter = () => {
-  currentPage.value = 1
-  fetchMyOrders()
-}
-
-// 重置筛选
-const resetFilter = () => {
-  filterForm.status = ''
-  filterForm.dateRange = []
-  currentPage.value = 1
-  fetchMyOrders()
-}
 
 // 分页处理
 const handlePageChange = (page) => {
@@ -109,6 +64,8 @@ const showDetail = async (booking) => {
     const response = await getReservationById(booking.id)
     if (response.data.code === 0) {
       currentBooking.value = response.data.data
+      currentBooking.value.contactName = response.data.data.remark.split(' ')[0]
+      currentBooking.value.contactPhone = response.data.data.remark.split(' ')[1]
       detailDialogVisible.value = true
     } else {
       ElMessage.error(response.message || '获取订单详情失败')
@@ -158,11 +115,40 @@ const getStatusTagType = (status) => {
   return ORDER_STATUS_COLOR[status] || ''
   }
 
+// 立即支付
+const payBooking = async (booking) => {
+  const remark = booking.remark
+  const [contactName, contactPhone, remarkMessage] = remark.split(' ')
+  router.push({
+    path: '/payment',
+    query: {
+      orderNo: booking.orderNo,
+    },
+    state: {
+      booking: {
+        id: booking.id,
+        venueName: booking.venueName,
+        venueId: booking.venueId,
+        reservationDate: booking.reservationDate,
+        startTime: booking.startTime,
+        endTime: booking.endTime,
+        duration: booking.duration,
+        contactName,
+        contactPhone,
+        remarkMessage,
+        pricePerHour: booking.pricePerHour,
+        totalAmount: booking.totalAmount,
+        createTime: booking.createTime,
+      }
+    },
+  })
+}
+
 // 取消预订
 const cancelBooking = async (booking) => {
   try {
     await ElMessageBox.confirm(
-      `确定要取消 ${booking.reservationDate} ${booking.timeSlot} ${booking.venueName} 的预订吗？取消后需要管理员审核，且无法恢复。`,
+      `确定要取消 ${booking.reservationDate} ${booking.timeSlot} ${booking.venueName} 的预订吗？取消后无法恢复。`,
       '取消预订',
       {
         confirmButtonText: '确定',
@@ -207,7 +193,7 @@ const cancelBookingFromDetail = async () => {
 const handleRefund = async (booking) => {
   try {
     await ElMessageBox.confirm(
-      `确定要申请退款吗？退款申请提交后需要管理员审核。`,
+      `确定要申请退款吗？退款申请提交后需要管理员审核,并需要到线下退款。`,
       '申请退款',
       {
         confirmButtonText: '确定',
@@ -255,7 +241,7 @@ onMounted(() => {
       <div class="filter-section">
         <el-form :inline="true" :model="filterForm">
           <el-form-item label="预订状态">
-            <el-select v-model="filterForm.status" placeholder="预订状态" clearable style="width: 120px">
+            <el-select v-model="status" placeholder="预订状态" clearable style="width: 120px">
               <el-option label="全部" value="" />
               <el-option label="待支付" value="1" />
               <el-option label="已支付" value="2" />
@@ -265,29 +251,13 @@ onMounted(() => {
               <el-option label="退款中" value="6" />
             </el-select>
           </el-form-item>
-          <el-form-item label="日期范围">
-            <el-date-picker
-              v-model="filterForm.dateRange"
-              type="daterange"
-              range-separator="至"
-              start-placeholder="开始日期"
-              end-placeholder="结束日期"
-              format="YYYY-MM-DD"
-              value-format="YYYY-MM-DD"
-              :disabledDate="() => false"
-            />
-          </el-form-item>
-          <el-form-item>
-            <el-button type="primary" @click="handleFilter">查询</el-button>
-            <el-button @click="resetFilter">重置</el-button>
-          </el-form-item>
         </el-form>
       </div>
 
       <!-- 数据表格 -->
       <div class="table-container" v-loading="loading">
-        <el-empty v-if="filteredBookings.length === 0 && !loading" description="暂无预订记录" />
-        <el-table v-else :data="filteredBookings" style="width: 100%" border>
+        <el-empty v-if="allBookings.length === 0 && !loading" description="暂无预订记录" />
+        <el-table v-else :data="allBookings" style="width: 100%" border>
           <el-table-column prop="id" label="预订号" width="80" />
           <el-table-column prop="venueName" label="场地名称" width="120" />
           <el-table-column prop="reservationDate" label="预订日期" width="120" />
@@ -337,7 +307,7 @@ onMounted(() => {
         </el-table>
 
         <!-- 分页 -->
-        <div class="pagination" v-if="filteredBookings.length > 0">
+        <div class="pagination" v-if="allBookings.length > 0">
           <el-pagination
             background
             layout="prev, pager, next, total"
@@ -353,7 +323,7 @@ onMounted(() => {
     <!-- 预订详情对话框 -->
     <el-dialog title="预订详情" v-model="detailDialogVisible" width="500px" center>
       <div class="booking-detail" v-if="currentBooking">
-        <el-descriptions :column="1" border>
+        <el-descriptions :column="1" :border="true">
           <el-descriptions-item label="预订编号">{{ currentBooking.id }}</el-descriptions-item>
           <el-descriptions-item label="订单号" v-if="currentBooking.orderNo">{{ currentBooking.orderNo }}</el-descriptions-item>
           <el-descriptions-item label="场地名称">{{
@@ -372,14 +342,14 @@ onMounted(() => {
             </el-tag>
           </el-descriptions-item>
           <el-descriptions-item label="预订人">{{
-            currentBooking.username
+            currentBooking.contactName
           }}</el-descriptions-item>
-          <el-descriptions-item label="联系电话">{{ currentBooking.phone || currentBooking.userPhone }}</el-descriptions-item>
+          <el-descriptions-item label="联系电话">{{ currentBooking.contactPhone }}</el-descriptions-item>
           <el-descriptions-item label="预订时间">{{
             currentBooking.createTime || currentBooking.createdAt
           }}</el-descriptions-item>
           <el-descriptions-item label="备注" v-if="currentBooking.remark || currentBooking.note">
-            {{ currentBooking.remark || currentBooking.note }}
+            {{ currentBooking.remark.split(' ')[2] }}
           </el-descriptions-item>
         </el-descriptions>
       </div>

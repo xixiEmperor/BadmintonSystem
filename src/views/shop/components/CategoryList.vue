@@ -77,9 +77,50 @@ onMounted(() => {
   margin-bottom: 20px;
 }
 
+.category-list h2 {
+  font-size: 18px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #409eff;
+  position: relative;
+}
+
+.category-list h2::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 30px;
+  height: 2px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
 /* 桌面端菜单样式 */
 .desktop-menu {
-  border-radius: 4px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+}
+
+:deep(.el-menu-item) {
+  border-radius: 8px;
+  margin-bottom: 4px;
+  transition: all 0.3s ease;
+  border: 1px solid transparent;
+}
+
+:deep(.el-menu-item:hover) {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  border-color: rgba(102, 126, 234, 0.2);
+  transform: translateX(4px);
+}
+
+:deep(.el-menu-item.is-active) {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  border-color: transparent;
 }
 
 /* 移动端标签样式 */
@@ -100,12 +141,12 @@ onMounted(() => {
 }
 
 .category-tags::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: rgba(241, 241, 241, 0.5);
   border-radius: 2px;
 }
 
 .category-tags::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
+  background: rgba(193, 193, 193, 0.8);
   border-radius: 2px;
 }
 
@@ -114,25 +155,33 @@ onMounted(() => {
   flex-shrink: 0;
   transition: all 0.3s ease;
   border: 1px solid #dcdfe6;
-  background-color: #fff;
+  background-color: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .category-tag:hover {
   border-color: #409eff;
   color: #409eff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.2);
 }
 
 .category-tag.active {
-  background-color: #409eff;
-  border-color: #409eff;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: transparent;
   color: #fff;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
 /* 响应式布局 */
 @media (max-width: 768px) {
   .category-list h2 {
-    font-size: 18px;
-    margin-bottom: 15px;
+    font-size: 16px;
+    margin-bottom: 12px;
   }
 
   /* 隐藏桌面端菜单 */
@@ -148,7 +197,7 @@ onMounted(() => {
 
 @media (max-width: 480px) {
   .category-list h2 {
-    font-size: 16px;
+    font-size: 14px;
     margin-bottom: 10px;
   }
 
@@ -159,7 +208,7 @@ onMounted(() => {
 
   .category-tag {
     font-size: 12px;
-    padding: 4px 8px;
+    padding: 6px 12px;
   }
 }
 </style>

@@ -4,33 +4,28 @@ export default {
 }
 </script>
 <script setup>
-import { User, Lock, Message, WarningFilled } from '@element-plus/icons-vue'
+import { Lock, Message } from '@element-plus/icons-vue'
 import { ref } from 'vue'
-import { ElMessage } from 'element-plus'
-import { authForgetPasswordService, authResetPasswordService } from '@/api/auth'
+import { authSendCodeService, authResetPasswordService } from '@/api/auth'
 import { useRouter } from 'vue-router'
+import VerificationCodeInput from '@/components/VerificationCodeInput.vue'
 
 const router = useRouter()
 const formModel = ref({
-  username: '',
   email: '',
-  verifyCode: '',
+  verificationCode: '',
   newPassword: '',
-  confirmPassword: '', // 看后端接口，可能不用传
+  confirmPassword: '',
 })
 
 const rules = {
-  username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 5, max: 10, message: '请输入5-10位用户名', trigger: 'blur' },
-  ],
   email: [
     { required: true, message: '请输入邮箱', trigger: 'blur' },
     { type: 'email', message: '请输入有效的邮箱地址', trigger: 'blur' },
   ],
-  verifyCode: [
+  verificationCode: [
     { required: true, message: '请输入验证码', trigger: 'blur' },
-    { min: 4, max: 6, message: '请输入4-6位验证码', trigger: 'blur' },
+    { len: 6, message: '请输入6位验证码', trigger: 'blur' },
   ],
   newPassword: [
     { required: true, message: '请输入新密码', trigger: 'blur' },
@@ -60,17 +55,17 @@ let timer = null
 // 发送验证码
 const sendVerifyCode = async () => {
   try {
-    // 验证用户名和邮箱
-    await form.value.validateField(['username', 'email'])
+    // 验证邮箱
+    await form.value.validateField(['email'])
 
     isSendingCode.value = true
     // 调用发送验证码接口
-    const res = await authForgetPasswordService({
-      username: formModel.value.username,
+    const res = await authSendCodeService({
       email: formModel.value.email,
+      type: 'reset'
     })
 
-    if (res.code === 0) {
+    if (res.data.code === 0) {
       ElMessage.success('验证码已发送至您的邮箱')
       // 启动倒计时
       countdown.value = 60
@@ -78,16 +73,17 @@ const sendVerifyCode = async () => {
         countdown.value--
         if (countdown.value <= 0) {
           clearInterval(timer)
+          timer = null
           isSendingCode.value = false
         }
       }, 1000)
     } else {
-      ElMessage.error(res.message || '发送验证码失败')
+      ElMessage.error(res.data.msg || '发送验证码失败')
       isSendingCode.value = false
     }
   } catch (error) {
     console.error('发送验证码错误:', error)
-    ElMessage.error(error.message || '发送验证码失败')
+    ElMessage.error('发送验证码失败，请检查邮箱格式')
     isSendingCode.value = false
   }
 }
@@ -99,21 +95,20 @@ const resetPassword = async () => {
     loading.value = true
 
     const res = await authResetPasswordService({
-      username: formModel.value.username,
       email: formModel.value.email,
-      verifyCode: formModel.value.verifyCode,
+      verificationCode: formModel.value.verificationCode,
       newPassword: formModel.value.newPassword,
     })
 
-    if (res.code === 0) {
+    if (res.data.code === 0) {
       ElMessage.success('密码重置成功')
       router.push('/login')
     } else {
-      ElMessage.error(res.message || '密码重置失败')
+      ElMessage.error(res.data.msg || '密码重置失败')
     }
   } catch (error) {
     console.error('重置密码错误:', error)
-    ElMessage.error(error.message || '密码重置失败')
+    ElMessage.error('密码重置失败')
   } finally {
     loading.value = false
   }
@@ -121,6 +116,11 @@ const resetPassword = async () => {
 
 // 返回登录页
 const goBack = () => {
+  // 清除倒计时
+  if (timer) {
+    clearInterval(timer)
+    timer = null
+  }
   router.push('/login')
 }
 </script>
@@ -133,13 +133,6 @@ const goBack = () => {
         <el-form-item>
           <h1>找回密码</h1>
         </el-form-item>
-        <el-form-item prop="username">
-          <el-input
-            v-model="formModel.username"
-            :prefix-icon="User"
-            placeholder="请输入账号"
-          ></el-input>
-        </el-form-item>
         <el-form-item prop="email">
           <el-input
             v-model="formModel.email"
@@ -148,20 +141,19 @@ const goBack = () => {
             placeholder="请输入邮箱"
           ></el-input>
         </el-form-item>
-        <el-form-item prop="verifyCode">
-          <div class="verify-code-container">
-            <el-input
-              v-model="formModel.verifyCode"
-              :prefix-icon="WarningFilled"
-              placeholder="请输入验证码"
-            ></el-input>
+        <el-form-item prop="verificationCode">
+          <div class="verify-code-section">
+            <VerificationCodeInput
+              v-model="formModel.verificationCode"
+              :length="6"
+            />
             <el-button
               type="primary"
-              :disabled="isSendingCode"
+              :disabled="isSendingCode || countdown > 0"
               @click="sendVerifyCode"
               class="verify-code-btn"
             >
-              {{ isSendingCode ? `${countdown}秒后重新获取` : '获取验证码' }}
+              {{ countdown > 0 ? `${countdown}秒后重新获取` : '获取验证码' }}
             </el-button>
           </div>
         </el-form-item>
@@ -230,6 +222,17 @@ const goBack = () => {
       .verify-code-btn {
         flex-shrink: 0;
         min-width: 110px;
+      }
+    }
+    .verify-code-section {
+      display: flex;
+      flex-direction: row;
+      gap: 12px;
+      align-items: center;
+      .verify-code-btn {
+        min-width: 120px;
+        height: 40px;
+        flex-shrink: 0;
       }
     }
   }

@@ -1,5 +1,4 @@
 <script setup>
-import { useRouter } from 'vue-router'
 import {
   Calendar,
   User,
@@ -9,22 +8,18 @@ import {
   ChatDotRound,
 } from '@element-plus/icons-vue'
 import imgUrl from '@/assets/index_img.png'
-
-const router = useRouter()
+import { navigate } from '@/utils/router'
 
 const goToBooking = () => {
-  const routeUrl = router.resolve('/booking')
-  window.open(routeUrl.href, '_blank')
+  navigate('/booking')
 }
 
 const goToShop = () => {
-  const routeUrl = router.resolve('/shop')
-  window.open(routeUrl.href, '_blank')
+  navigate('/shop')
 }
 
 const goToForum = () => {
-  const routeUrl = router.resolve('/forum')
-  window.open(routeUrl.href, '_blank')
+  navigate('/forum')
 }
 </script>
 

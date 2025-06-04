@@ -6,11 +6,18 @@ import { useRouter } from 'vue-router'
 import { navigate } from '@/utils/router'
 import logoImg from '@/assets/whlg_logo.png'
 import ChatInterface from '@/components/ChatInterface.vue'
+import { useTokenCheck } from '@/composables/useTokenCheck'
 
 // 路由
 const userStore = useUserStore()
 const cartStore = useCartStore()
 const router = useRouter()
+
+// Token过期检查
+const { startTokenCheck, stopTokenCheck } = useTokenCheck({
+  warningTime: 30 * 60 * 1000, // 30分钟前警告
+  checkInterval: 5 * 60 * 1000, // 每5分钟检查一次
+})
 
 // 获取购物车商品数量
 const cartItemCount = computed(() => {
@@ -22,7 +29,6 @@ const showAIChat = ref(false)
 
 const toggleAIChat = () => {
   showAIChat.value = !showAIChat.value
-  console.log('toggleAIChat 被调用，showAIChat.value:', showAIChat.value)
 }
 
 // 用户相关
@@ -47,13 +53,19 @@ const handleUserAvatarUpdated = (event) => {
 // 检查登录状态
 const checkLogin = () => {
   // TODO: 调用API验证用户登录状态
-  if (userStore.token) {
+  if (userStore.token && !userStore.isTokenExpired()) {
     try {
       isLogin.value = true
+      // 启动token检查
+      startTokenCheck()
     } catch (e) {
       console.error('解析用户信息失败', e)
       isLogin.value = false
     }
+  } else {
+    isLogin.value = false
+    // 停止token检查
+    stopTokenCheck()
   }
 }
 
@@ -331,7 +343,7 @@ onBeforeUnmount(() => {
 
 .header {
   width: 100%;
-  height: 200px;
+  height: auto;
   background-color: rgb(50, 114, 185);
   box-sizing: border-box;
   overflow: hidden;
@@ -575,6 +587,7 @@ onBeforeUnmount(() => {
       }
 
       .user-info {
+        // 垂直居中
         display: flex;
         align-items: center;
       }
@@ -595,7 +608,7 @@ onBeforeUnmount(() => {
       .user-avatar {
         width: 40px;
         height: 40px;
-        border-radius: 50%;
+        border-radius: 50%; // 圆形头像
         overflow: hidden;
         margin-right: 10px;
         transition: transform 0.3s ease;
@@ -615,17 +628,6 @@ onBeforeUnmount(() => {
         color: #fff;
         font-size: 16px;
         margin-right: 5px;
-      }
-
-      .el-dropdown-link {
-        cursor: pointer;
-        color: #fff;
-        display: flex;
-        align-items: center;
-
-        &:hover {
-          color: #ffd04b;
-        }
       }
 
       .login {

@@ -8,7 +8,6 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
-    AiChatDialog: typeof import('./components/AiChatDialog.vue')['default']
     ChartCard: typeof import('./components/ChartCard.vue')['default']
     ChatInterface: typeof import('./components/ChatInterface.vue')['default']
     ConfigPanel: typeof import('./components/ConfigPanel.vue')['default']
@@ -65,7 +64,6 @@ declare module 'vue' {
     ElTabPane: typeof import('element-plus/es')['ElTabPane']
     ElTabs: typeof import('element-plus/es')['ElTabs']
     ElTag: typeof import('element-plus/es')['ElTag']
-    ElText: typeof import('element-plus/es')['ElText']
     ElTimeline: typeof import('element-plus/es')['ElTimeline']
     ElTimelineItem: typeof import('element-plus/es')['ElTimelineItem']
     ElTimePicker: typeof import('element-plus/es')['ElTimePicker']
@@ -73,11 +71,10 @@ declare module 'vue' {
     ElUpload: typeof import('element-plus/es')['ElUpload']
     OrderDetailDialog: typeof import('./components/OrderDetailDialog.vue')['default']
     PaymentStatusTest: typeof import('./components/PaymentStatusTest.vue')['default']
-    PickupCodeDemo: typeof import('./components/PickupCodeDemo.vue')['default']
-    PickupCodeStyleDemo: typeof import('./components/PickupCodeStyleDemo.vue')['default']
     QRCodeTest: typeof import('./components/QRCodeTest.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    VerificationCodeInput: typeof import('./components/VerificationCodeInput.vue')['default']
   }
   export interface ComponentCustomProperties {
     vLoading: typeof import('element-plus/es')['ElLoadingDirective']

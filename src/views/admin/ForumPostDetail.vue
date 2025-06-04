@@ -76,7 +76,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
 import { getForumDetail, getForumCommentsService, deleteCommentService, setPostTopStatus } from '@/api/forum'
 
 const route = useRoute()

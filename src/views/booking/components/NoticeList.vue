@@ -1,3 +1,128 @@
+<script setup>
+import { ref, reactive, onMounted } from 'vue'
+import { getNoticeList, getNoticeDetail } from '@/api/booking'
+import { formatDateTime } from '@/utils/format'
+
+// 筛选条件
+const filterType = ref(null)
+
+// 加载状态
+const loading = ref(false)
+
+// 分页相关
+const currentPage = ref(1)
+const pageSize = ref(5)
+const total = ref(0)
+
+// 通知列表数据
+const noticeList = ref([])
+
+// 通知详情对话框
+const detailDialogVisible = ref(false)
+const currentNotice = reactive({
+  id: '',
+  title: '',
+  content: '',
+  type: 1,
+  publishTime: '',
+})
+
+// 获取通知类型标签
+const getTypeTag = (type) => {
+  const typeMap = {
+    1: '', // 普通通知
+    2: 'warning', // 重要通知
+  }
+  return typeMap[type] || ''
+}
+
+// 获取通知类型文本
+const getTypeText = (type) => {
+  const typeMap = {
+    1: '普通通知',
+    2: '重要通知',
+  }
+  return typeMap[type] || '未知'
+}
+
+// 格式化时间
+const formatTime = (timeStr) => {
+  return formatDateTime(timeStr, 'YYYY-MM-DD HH:mm')
+}
+
+// 截断内容
+const truncateContent = (content, maxLength = 100) => {
+  if (!content) return ''
+  return content.length > maxLength ? content.substring(0, maxLength) + '...' : content
+}
+
+// 获取通知列表
+const fetchNoticeList = async () => {
+  try {
+    loading.value = true
+    const response = await getNoticeList({
+      pageNum: currentPage.value,
+      pageSize: pageSize.value,
+      type: filterType.value,
+    })
+
+    if (response.data.code === 0) {
+      noticeList.value = response.data.data.list
+      total.value = response.data.data.total
+    } else {
+      ElMessage.error(response.data.msg || '获取通知列表失败')
+    }
+  } catch (error) {
+    console.error('获取通知列表失败:', error)
+    ElMessage.error('获取通知列表失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 处理筛选变化
+const handleFilterChange = () => {
+  currentPage.value = 1
+  fetchNoticeList()
+}
+
+// 分页处理
+const handleCurrentChange = (page) => {
+  currentPage.value = page
+  fetchNoticeList()
+}
+
+// 处理分页大小变化
+const handlePageSizeChange = (size) => {
+  pageSize.value = size
+  currentPage.value = 1
+  fetchNoticeList()
+}
+
+// 点击通知项
+const handleNoticeClick = async (notice) => {
+  try {
+    const response = await getNoticeDetail(notice.id)
+
+    if (response.data.code === 0) {
+      const detail = response.data.data
+      Object.assign(currentNotice, detail)
+      detailDialogVisible.value = true
+    } else {
+      ElMessage.error(response.data.msg || '获取通知详情失败')
+    }
+  } catch (error) {
+    console.error('获取通知详情失败:', error)
+    ElMessage.error('获取通知详情失败')
+  }
+}
+
+// 初始化
+onMounted(() => {
+  fetchNoticeList()
+})
+</script>
+
 <template>
   <div class="notice-list-page">
     <h2 class="page-title">通知公告</h2>
@@ -81,11 +206,14 @@
     <div class="pagination-container" v-if="total > 0">
       <el-pagination
         background
-        layout="total, prev, pager, next"
+        :hide-on-single-page="false"
+        layout="total, sizes, prev, pager, next"
         :total="total"
         :page-size="pageSize"
+        :page-sizes="[5, 8, 10]"
         :current-page="currentPage"
         @current-change="handleCurrentChange"
+        @size-change="handlePageSizeChange"
       ></el-pagination>
     </div>
 
@@ -105,125 +233,6 @@
     </el-dialog>
   </div>
 </template>
-
-<script setup>
-import { ref, reactive, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
-import { getNoticeList, getNoticeDetail } from '@/api/booking'
-import { formatDateTime } from '@/utils/format'
-
-// 筛选条件
-const filterType = ref(null)
-
-// 加载状态
-const loading = ref(false)
-
-// 分页相关
-const currentPage = ref(1)
-const pageSize = ref(10)
-const total = ref(0)
-
-// 通知列表数据
-const noticeList = ref([])
-
-// 通知详情对话框
-const detailDialogVisible = ref(false)
-const currentNotice = reactive({
-  id: '',
-  title: '',
-  content: '',
-  type: 1,
-  publishTime: '',
-})
-
-// 获取通知类型标签
-const getTypeTag = (type) => {
-  const typeMap = {
-    1: '', // 普通通知
-    2: 'warning', // 重要通知
-  }
-  return typeMap[type] || ''
-}
-
-// 获取通知类型文本
-const getTypeText = (type) => {
-  const typeMap = {
-    1: '普通通知',
-    2: '重要通知',
-  }
-  return typeMap[type] || '未知'
-}
-
-// 格式化时间
-const formatTime = (timeStr) => {
-  return formatDateTime(timeStr, 'YYYY-MM-DD HH:mm')
-}
-
-// 截断内容
-const truncateContent = (content, maxLength = 100) => {
-  if (!content) return ''
-  return content.length > maxLength ? content.substring(0, maxLength) + '...' : content
-}
-
-// 获取通知列表
-const fetchNoticeList = async () => {
-  try {
-    loading.value = true
-    const response = await getNoticeList({
-      pageNum: currentPage.value,
-      pageSize: pageSize.value,
-      type: filterType.value,
-    })
-
-    if (response.data.code === 0) {
-      noticeList.value = response.data.data.list
-      total.value = response.data.data.total
-    } else {
-      ElMessage.error(response.data.msg || '获取通知列表失败')
-    }
-  } catch (error) {
-    console.error('获取通知列表失败:', error)
-    ElMessage.error('获取通知列表失败')
-  } finally {
-    loading.value = false
-  }
-}
-
-// 处理筛选变化
-const handleFilterChange = () => {
-  currentPage.value = 1
-  fetchNoticeList()
-}
-
-// 分页处理
-const handleCurrentChange = (page) => {
-  currentPage.value = page
-  fetchNoticeList()
-}
-
-// 点击通知项
-const handleNoticeClick = async (notice) => {
-  try {
-    const response = await getNoticeDetail(notice.id)
-
-    if (response.data.code === 0) {
-      const detail = response.data.data
-      Object.assign(currentNotice, detail)
-      detailDialogVisible.value = true
-    } else {
-      ElMessage.error(response.data.msg || '获取通知详情失败')
-    }
-  } catch (error) {
-    console.error('获取通知详情失败:', error)
-    ElMessage.error('获取通知详情失败')
-  }
-}
-
-// 初始化
-onMounted(() => {
-  fetchNoticeList()
-})
-</script>
 
 <style lang="less" scoped>
 .notice-list-page {

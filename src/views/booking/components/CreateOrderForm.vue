@@ -27,7 +27,7 @@ const props = defineProps({
 })
 
 // Emits
-const emit = defineEmits(['submit', 'cancel'])
+const emit = defineEmits(['cancel'])
 
 // 表单引用
 const formRef = ref(null)
@@ -70,17 +70,10 @@ const formRules = {
 const duration = computed(() => {
   if (!props.startTime || !props.endTime) return 0
 
-  const [startHour, startMinute] = props.startTime.split(':').map(Number)
-  const [endHour, endMinute] = props.endTime.split(':').map(Number)
+  const [startHour] = props.startTime.split(':').map(Number)
+  const [endHour] = props.endTime.split(':').map(Number)
 
-  let hours = endHour - startHour
-  if (endMinute > startMinute) {
-    hours += 0.5
-  } else if (endMinute < startMinute) {
-    hours -= 0.5
-  }
-
-  return Math.max(1, hours) // 最少1小时
+  return endHour - startHour
 })
 
 // 计算总价格
@@ -89,14 +82,10 @@ const totalPrice = computed(() => {
   return Math.ceil(duration.value) * pricePerHour
 })
 
-// 获取支付方式显示名称
-const paymentMethodName = computed(() => {
-  return formData.value.payType === 1 ? '支付宝' : '微信支付'
-})
-
 // 监听props变化，更新表单数据
 watch(() => props.selectedVenue, (newVenue) => {
   if (newVenue?.id) {
+    console.log(newVenue)
     formData.value.venueId = newVenue.id
   }
 }, { immediate: true })
@@ -149,25 +138,6 @@ const handleSubmit = async () => {
             }
           }
         })
-        // 订单创建成功，传递订单信息给父组件
-        const orderInfo = {
-          orderNo: response.data.data.orderNo,
-          id: response.data.data.id,
-          venueName: props.selectedVenue.name,
-          reservationDate: orderData.reservationDate,
-          startTime: orderData.startTime,
-          endTime: orderData.endTime,
-          contactName: formData.value.contactName,
-          contactPhone: formData.value.contactPhone,
-          totalAmount: orderData.totalAmount,
-          remark: orderData.remark,
-          payType: formData.value.payType,
-          paymentMethodName: paymentMethodName.value
-        }
-
-        ElMessage.success('订单创建成功，请完成支付')
-        emit('submit', orderInfo)
-        return true
       } else {
         ElMessage.error(response.data.message || '创建订单失败')
         return false
@@ -190,12 +160,6 @@ const handleCancel = () => {
   emit('cancel')
 }
 
-// 暴露方法给父组件
-defineExpose({
-  handleSubmit,
-  handleCancel,
-  loading
-})
 </script>
 
 <template>
@@ -229,11 +193,6 @@ defineExpose({
           <div class="venue-info">
             <h5 class="venue-name">{{ props.selectedVenue.name }}</h5>
             <p class="venue-description">{{ props.selectedVenue.description || '标准羽毛球场地，配备专业羽毛球网和照明设备' }}</p>
-            <div class="venue-features" v-if="props.selectedVenue.features">
-              <el-tag v-for="feature in props.selectedVenue.features" :key="feature" size="small" type="success">
-                {{ feature }}
-              </el-tag>
-            </div>
             <div class="venue-price">
               <span class="price-label">价格：</span>
               <span class="price-value">{{ props.selectedVenue.price || 30 }}元/小时</span>

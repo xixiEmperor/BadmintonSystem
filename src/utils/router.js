@@ -24,7 +24,7 @@ export const navigate = (path, query = {}) => {
 
     // 添加查询参数
     Object.keys(query).forEach((key) => {
-      url.searchParams.append(key, query[key])
+      url.searchParams.set(key, query[key])
     })
 
     // 在新标签页中打开

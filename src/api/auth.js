@@ -1,5 +1,14 @@
 import request from '@/utils/request'
 
+// 发送验证码
+export const authSendCodeService = (data) => {
+  return request({
+    url: '/api/auth/send-code',
+    method: 'post',
+    data,
+  })
+}
+
 // 用户注册
 export const authRegisterService = (data) => {
   return request({
@@ -19,7 +28,7 @@ export const authLoginService = (data) => {
   })
 }
 
-// 忘记密码
+// 忘记密码（已废弃，使用发送验证码接口）
 export const authForgetPasswordService = (data) => {
   return request({
     url: '/user/forget-password',
@@ -31,7 +40,7 @@ export const authForgetPasswordService = (data) => {
 // 重置密码
 export const authResetPasswordService = (data) => {
   return request({
-    url: '/user/reset-password',
+    url: '/api/auth/reset-password',
     method: 'post',
     data,
   })
