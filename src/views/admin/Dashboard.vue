@@ -1,11 +1,11 @@
 <script setup>
 import { ref, onMounted, onUnmounted, reactive, nextTick } from 'vue'
-import { useRouter } from 'vue-router'
+// import { useRouter } from 'vue-router'
 import * as echarts from 'echarts'
 import { User, Calendar, Money, ShoppingBag } from '@element-plus/icons-vue'
 import { getDashboardOverview, getUserRegistrationTrend, getUserRoleDistribution, getReservationTrend, getVenueUsageRanking, getRevenueTrend, getMallOrderTrend, getPopularProducts, getPostTrend } from '@/api/analytics'
 
-const router = useRouter()
+// const router = useRouter()
 
 // 仪表板概览数据
 const dashboardData = reactive({
@@ -48,9 +48,9 @@ let popularProductsChart = null
 let postTrendChart = null
 
 // 跳转到审核页面
-const goToReview = () => {
-  router.push('/admin/booking-review')
-}
+// const goToReview = () => {
+//   router.push('/admin/booking-review')
+// }
 
 // 获取仪表板概览数据
 const fetchDashboardData = async () => {
@@ -531,7 +531,7 @@ onUnmounted(() => {
     </div>
 
     <!-- 待办事项 -->
-    <div class="todo-section">
+    <!-- <div class="todo-section">
       <el-card>
         <template #header>
           <div class="card-header">
@@ -552,7 +552,7 @@ onUnmounted(() => {
           <el-button type="primary" @click="goToReview">去审核</el-button>
         </div>
       </el-card>
-    </div>
+    </div> -->
 
     <!-- 图表区域 -->
     <div class="charts-section">
@@ -564,11 +564,11 @@ onUnmounted(() => {
           </el-card>
         </el-col>
 
-        <el-col :span="12">
+        <!-- <el-col :span="12">
           <el-card class="chart-card">
             <div id="userRoleChart" class="chart"></div>
           </el-card>
-        </el-col>
+        </el-col> -->
 
         <!-- 预约相关图表 -->
         <el-col :span="12">

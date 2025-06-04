@@ -1,8 +1,5 @@
 <script setup>
 import {
-  Calendar,
-  User,
-  ChatLineRound,
   Ticket,
   ShoppingBag,
   ChatDotRound,
@@ -81,44 +78,6 @@ const goToForum = () => {
           <el-button type="warning" @click="goToForum">进入论坛</el-button>
         </div>
       </el-card>
-    </div>
-
-    <div class="statistics-section">
-      <el-row :gutter="20">
-        <el-col :span="8">
-          <div class="statistic-card">
-            <div class="statistic-icon">
-              <el-icon><Calendar /></el-icon>
-            </div>
-            <div class="statistic-info">
-              <div class="statistic-value">120+</div>
-              <div class="statistic-label">每日场地预约</div>
-            </div>
-          </div>
-        </el-col>
-        <el-col :span="8">
-          <div class="statistic-card">
-            <div class="statistic-icon">
-              <el-icon><User /></el-icon>
-            </div>
-            <div class="statistic-info">
-              <div class="statistic-value">5000+</div>
-              <div class="statistic-label">注册用户</div>
-            </div>
-          </div>
-        </el-col>
-        <el-col :span="8">
-          <div class="statistic-card">
-            <div class="statistic-icon">
-              <el-icon><ChatLineRound /></el-icon>
-            </div>
-            <div class="statistic-info">
-              <div class="statistic-value">200+</div>
-              <div class="statistic-label">每日论坛互动</div>
-            </div>
-          </div>
-        </el-col>
-      </el-row>
     </div>
 
     <!-- AI助手悬浮按钮 -->

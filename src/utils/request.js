@@ -34,12 +34,8 @@ instance.interceptors.response.use(
     // 对响应数据做点什么
     if (response.data.code === 0) {
       return response
-    }
-
-    // 处理业务层面的token过期（后端返回特定code）
-    if (response.data.code === 4011 || response.data.code === 401) {
-      handleTokenExpired()
-      return Promise.reject(new Error('Token已过期'))
+    } else {
+      ElMessage.error(response.data.message || response.data.msg || '请求失败')
     }
 
     return Promise.reject(response.data)

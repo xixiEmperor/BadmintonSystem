@@ -1,53 +1,35 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { getRecommendProducts } from '@/api/shop'
 
 const router = useRouter()
 
 // 轮播图数据
-const carouselItems = ref([
-  {
-    id: 1,
-    title: 'YONEX 弓箭11羽毛球拍',
-    subtitle: '专业级碳纤维球拍，轻量化设计，提升击球速度',
-    image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=800&h=400&fit=crop',
-    buttonText: '立即购买',
-    link: '/product/1',
-    bgColor: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-  },
-  {
-    id: 2,
-    title: 'Victor 胜利羽毛球',
-    subtitle: '比赛级羽毛球，优质鹅毛制作，飞行稳定耐打',
-    image: 'https://images.unsplash.com/photo-1544551763-77ef2d0cfc6c?w=800&h=400&fit=crop',
-    buttonText: '查看详情',
-    link: '/product/2',
-    bgColor: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
-  },
-  {
-    id: 3,
-    title: 'ASICS 专业羽毛球鞋',
-    subtitle: '防滑耐磨，缓震舒适，专为羽毛球运动设计',
-    image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&h=400&fit=crop',
-    buttonText: '查看详情',
-    link: '/product/3',
-    bgColor: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)'
-  },
-  {
-    id: 4,
-    title: 'Li-Ning 羽毛球服套装',
-    subtitle: '透气速干面料，专业剪裁，运动更自在',
-    image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&h=400&fit=crop',
-    buttonText: '立即选购',
-    link: '/product/4',
-    bgColor: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)'
-  }
-])
+const carouselItems = ref([])
 
 // 跳转到商品详情
-const goToProduct = (link) => {
-  router.push(link)
+const goToProduct = (id) => {
+  router.push(`/product/${id}`)
 }
+
+// 获取轮播图数据
+const fetchCarouselItems = async () => {
+  try {
+    const res = await getRecommendProducts()
+    if (res.data.code === 0) {
+      carouselItems.value = res.data.data
+    } else {
+      ElMessage.error(res.data.message)
+    }
+  } catch (error) {
+    console.error('获取轮播图数据失败', error)
+  }
+}
+
+onMounted(async () => {
+  await fetchCarouselItems()
+})
 </script>
 
 <template>
@@ -65,18 +47,18 @@ const goToProduct = (link) => {
           class="carousel-content"
           :style="{ background: item.bgColor }">
           <div class="content-left">
-            <h3 class="carousel-title">{{ item.title }}</h3>
+            <h3 class="carousel-title">{{ item.productName }}</h3>
             <p class="carousel-subtitle">{{ item.subtitle }}</p>
             <el-button
               type="primary"
               size="large"
               class="carousel-button"
-              @click="goToProduct(item.link)">
-              {{ item.buttonText }}
+              @click="goToProduct(item.productId)">
+              立即购买
             </el-button>
           </div>
           <div class="content-right">
-            <img :src="item.image" :alt="item.title" class="carousel-image">
+            <img :src="item.mainImage" :alt="item.title" class="carousel-image">
           </div>
         </div>
       </el-carousel-item>
@@ -155,21 +137,20 @@ const goToProduct = (link) => {
 }
 
 .carousel-button {
-  background: rgba(255, 255, 255, 0.2);
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.25);
+  border: 2px solid rgba(255, 255, 255, 0.4);
   color: #fff;
   font-weight: bold;
   padding: 12px 24px;
   border-radius: 25px;
-  backdrop-filter: blur(10px);
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
 }
 
 .carousel-button:hover {
-  background: rgba(255, 255, 255, 0.3);
-  border-color: rgba(255, 255, 255, 0.5);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+  background: rgba(255, 255, 255, 0.35);
+  border-color: rgba(255, 255, 255, 0.6);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .carousel-image {
@@ -177,12 +158,12 @@ const goToProduct = (link) => {
   height: 200px;
   object-fit: cover;
   border-radius: 12px;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
-  transition: transform 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s ease;
 }
 
 .carousel-image:hover {
-  transform: scale(1.05);
+  transform: scale(1.02);
 }
 
 /* 移动端适配 */

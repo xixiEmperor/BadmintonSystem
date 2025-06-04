@@ -185,3 +185,13 @@ export function deleteSpecification(specificationId) {
 export function updateSpecificationStock(specificationId, stock) {
   return request.put(`/api/mall/specifications/${specificationId}/stock`, { stock })
 }
+
+/**
+ * 获取首页推荐商品
+ * @returns {Promise} 返回推荐商品轮播图图片
+ */
+export function getRecommendProducts() {
+  return request.get('/mall/recommend/products')
+}
+
+

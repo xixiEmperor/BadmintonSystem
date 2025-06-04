@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { getVenueStatusMatrix } from '@/api/venue'
 
 const props = defineProps({
@@ -9,12 +9,19 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['close'])
-
-// 控制弹窗显示
+// 使用 computed 来创建响应式的 visible 引用
 const dialogVisible = computed({
   get: () => props.visible,
 })
+
+// 监听 props.visible 的变化
+watch(() => props.visible, (newVal) => {
+  if (newVal) {
+    fetchMatrixData()
+  }
+}, { immediate: true })
+
+const emit = defineEmits(['close'])
 
 // 关闭弹窗
 const closeDialog = () => {
@@ -58,7 +65,7 @@ const formatDateToString = (date) => {
 
 // 获取场地状态矩阵数据
 const fetchMatrixData = async () => {
-  if (!dialogVisible.value) return
+  if (!props.visible) return
 
   loading.value = true
   try {
@@ -153,12 +160,6 @@ const handleDateChange = () => {
   fetchMatrixData()
 }
 
-// 组件挂载时获取数据
-onMounted(() => {
-  if (dialogVisible.value) {
-    fetchMatrixData()
-  }
-})
 </script>
 
 <template>

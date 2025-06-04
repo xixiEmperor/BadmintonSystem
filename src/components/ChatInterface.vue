@@ -1,96 +1,3 @@
-<template>
-  <div class="chat-container">
-    <!-- 标题栏 -->
-    <div class="chat-header">
-      <div class="header-content">
-        <h1>🏸 武汉理工大学南湖校区羽毛球馆智能客服</h1>
-        <p>您好！我是羽毛球馆智能助手，有什么可以帮助您的？</p>
-      </div>
-      <button @click="showConfigPanel = true" class="config-btn" title="系统配置">
-        ⚙️
-      </button>
-    </div>
-
-    <!-- 消息区域 -->
-    <div class="chat-messages" ref="messagesContainer">
-      <div v-for="message in messages" :key="message.id" class="message" :class="message.type">
-        <div class="message-avatar" :class="{ 'has-user-avatar': message.type === 'user' && currentUser.avatar }">
-          <span v-if="message.type === 'user'">
-            <img v-if="currentUser.avatar" :src="currentUser.avatar" :alt="currentUser.nickname" class="user-avatar-img" />
-            <span v-else>👤</span>
-          </span>
-          <span v-else>🤖</span>
-        </div>
-        <div class="message-content">
-          <div class="message-text" v-html="formatMessage(message.content)"></div>
-          <div class="message-time">{{ formatTime(message.timestamp) }}</div>
-        </div>
-      </div>
-
-      <!-- 正在输入指示器 -->
-      <div v-if="isLoading" class="message assistant">
-        <div class="message-avatar">
-          <span>🤖</span>
-        </div>
-        <div class="message-content">
-          <div class="typing-indicator">
-            <span></span>
-            <span></span>
-            <span></span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 输入区域 -->
-    <div class="chat-input">
-      <div class="input-container">
-        <input
-          v-model="inputMessage"
-          @keyup.enter="sendMessage"
-          :disabled="isLoading"
-          placeholder="请输入您的问题..."
-          class="message-input"
-        />
-        <button
-          @click="sendMessage"
-          :disabled="isLoading || !inputMessage.trim()"
-          class="send-button"
-        >
-          {{ isLoading ? '发送中...' : '发送' }}
-        </button>
-      </div>
-
-      <!-- 快捷操作 -->
-      <div class="chat-shortcuts">
-        <el-button @click="clearChat" type="info" size="small" title="清空对话">
-          🗑️ 清空
-        </el-button>
-        <el-button @click="resetConversation" type="primary" size="small" title="新建会话">
-          🆕 新会话
-        </el-button>
-        <span class="connection-status" :class="{ connected: isConnected }">
-          {{ isConnected ? '已连接' : '未连接' }}
-        </span>
-      </div>
-    </div>
-
-    <!-- 错误提示 -->
-    <div v-if="errorMessage" class="error-message">
-      {{ errorMessage }}
-      <button @click="errorMessage = ''" class="close-error">×</button>
-    </div>
-
-    <!-- 配置面板 -->
-    <ConfigPanel
-      v-model="showConfigPanel"
-      :config="chatConfig"
-      @config-change="handleConfigChange"
-      @test-connection="handleTestConnection"
-    />
-  </div>
-</template>
-
 <script setup>
 import { ref, nextTick, onMounted, reactive, computed } from 'vue'
 import { marked } from 'marked'
@@ -99,6 +6,7 @@ import { useUserStore } from '@/stores'
 import ConfigPanel from '@/components/ConfigPanel.vue'
 
 // 响应式数据
+const configPanel = ref(null)
 const messages = ref([])
 const inputMessage = ref('')
 const isLoading = ref(false)
@@ -114,7 +22,7 @@ const userStore = useUserStore()
 const currentUser = computed(() => {
   const user = userStore.userinfo
   console.log('ChatInterface - userStore.userinfo:', user) // 调试信息
-  
+
   if (user && user.username) {
     const result = {
       id: user.username,
@@ -125,7 +33,7 @@ const currentUser = computed(() => {
     console.log('ChatInterface - currentUser computed result:', result) // 调试信息
     return result
   }
-  
+
   // 默认游客用户
   const guestUser = {
     id: 'guest_' + Date.now(),
@@ -165,7 +73,7 @@ onMounted(() => {
   loadSavedConfig()
 
   // 根据用户登录状态显示个性化欢迎消息
-  const welcomeMessage = currentUser.value.username === '游客' 
+  const welcomeMessage = currentUser.value.username === '游客'
     ? '您好！我是武汉理工大学南湖校区羽毛球馆的智能客服。我可以为您提供场馆信息、预订服务等帮助。请问有什么可以为您效劳的吗？\n\n您可以问我：\n- 有几个羽毛球场？\n- 羽毛球馆的开放时间？\n- 如何预订场地？\n- 场馆位置和交通？'
     : `您好${currentUser.value.nickname}！欢迎回来！我是武汉理工大学南湖校区羽毛球馆的智能客服。我可以为您提供场馆信息、预订服务等帮助。请问有什么可以为您效劳的吗？\n\n您可以问我：\n- 有几个羽毛球场？\n- 羽毛球馆的开放时间？\n- 如何预订场地？\n- 场馆位置和交通？\n- 查看我的预订记录`;
 
@@ -175,6 +83,8 @@ onMounted(() => {
     content: welcomeMessage,
     timestamp: new Date()
   })
+
+  configPanel.value.testConnection()
 })
 
 // 发送消息
@@ -264,7 +174,7 @@ const handleTestConnection = async (config) => {
 // 清空对话
 const clearChat = () => {
   if (confirm('确定要清空所有对话记录吗？')) {
-    const clearMessage = currentUser.value.username === '游客' 
+    const clearMessage = currentUser.value.username === '游客'
       ? '对话已清空。请问有什么可以帮助您的？'
       : `对话已清空，${currentUser.value.nickname}。请问有什么可以帮助您的？`;
 
@@ -281,8 +191,8 @@ const clearChat = () => {
 const resetConversation = () => {
   if (confirm('确定要开始新的会话吗？当前对话上下文将丢失。')) {
     resetChatConversation()
-    
-    const resetMessage = currentUser.value.username === '游客' 
+
+    const resetMessage = currentUser.value.username === '游客'
       ? '新会话已开始。请问有什么可以帮助您的？'
       : `新会话已开始，${currentUser.value.nickname}。请问有什么可以帮助您的？`;
 
@@ -319,6 +229,100 @@ const scrollToBottom = () => {
 }
 </script>
 
+<template>
+  <div class="chat-container">
+    <!-- 标题栏 -->
+    <div class="chat-header">
+      <div class="header-content">
+        <h1>🏸 武汉理工大学南湖校区羽毛球馆智能客服</h1>
+        <p>您好！我是羽毛球馆智能助手，有什么可以帮助您的？</p>
+      </div>
+      <!-- <button @click="showConfigPanel = true" class="config-btn" title="系统配置">
+        ⚙️
+      </button> -->
+    </div>
+
+    <!-- 消息区域 -->
+    <div class="chat-messages" ref="messagesContainer">
+      <div v-for="message in messages" :key="message.id" class="message" :class="message.type">
+        <div class="message-avatar" :class="{ 'has-user-avatar': message.type === 'user' && currentUser.avatar }">
+          <span v-if="message.type === 'user'">
+            <img v-if="currentUser.avatar" :src="currentUser.avatar" :alt="currentUser.nickname" class="user-avatar-img" />
+            <span v-else>👤</span>
+          </span>
+          <span v-else>🤖</span>
+        </div>
+        <div class="message-content">
+          <div class="message-text" v-html="formatMessage(message.content)"></div>
+          <div class="message-time">{{ formatTime(message.timestamp) }}</div>
+        </div>
+      </div>
+
+      <!-- 正在输入指示器 -->
+      <div v-if="isLoading" class="message assistant">
+        <div class="message-avatar">
+          <span>🤖</span>
+        </div>
+        <div class="message-content">
+          <div class="typing-indicator">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 输入区域 -->
+    <div class="chat-input">
+      <div class="input-container">
+        <input
+          v-model="inputMessage"
+          @keyup.enter="sendMessage"
+          :disabled="isLoading || !currentUser"
+          placeholder="请输入您的问题..."
+          class="message-input"
+        />
+        <button
+          @click="sendMessage"
+          :disabled="isLoading || !inputMessage.trim()"
+          class="send-button"
+        >
+          {{ isLoading ? '发送中...' : '发送' }}
+        </button>
+      </div>
+
+      <!-- 快捷操作 -->
+      <div class="chat-shortcuts">
+        <el-button @click="clearChat" type="info" size="small" title="清空对话">
+          🗑️ 清空
+        </el-button>
+        <el-button @click="resetConversation" type="primary" size="small" title="新建会话">
+          🆕 新会话
+        </el-button>
+        <span class="connection-status" :class="{ connected: isConnected }">
+          {{ isConnected ? '已连接' : '未连接' }}
+        </span>
+      </div>
+    </div>
+
+    <!-- 错误提示 -->
+    <div v-if="errorMessage" class="error-message">
+      {{ errorMessage }}
+      <button @click="errorMessage = ''" class="close-error">×</button>
+    </div>
+
+    <!-- 配置面板 -->
+    <ConfigPanel
+      ref="configPanel"
+      v-model="showConfigPanel"
+      :config="chatConfig"
+      @config-change="handleConfigChange"
+      @test-connection="handleTestConnection"
+    />
+  </div>
+</template>
+
 <style scoped>
 .chat-container {
   width: 100%;
@@ -334,7 +338,7 @@ const scrollToBottom = () => {
 }
 
 .chat-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #59adf7 0%, #2e5ce6 100%);
   color: white;
   padding: 20px;
   display: flex;

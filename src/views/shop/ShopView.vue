@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import CategoryList from './components/CategoryList.vue'
 import ProductList from './components/ProductList.vue'
 import ProductCarousel from './components/ProductCarousel.vue'
@@ -7,10 +7,45 @@ import ProductCarousel from './components/ProductCarousel.vue'
 // 选中的分类
 const selectedCategory = ref('all')
 
+// 响应式检测
+const isMobile = ref(false)
+
+// 检测屏幕尺寸
+const checkScreenSize = () => {
+  isMobile.value = window.innerWidth <= 768
+}
+
+// 防抖函数
+const debounce = (func, wait) => {
+  let timeout
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout)
+      func(...args)
+    }
+    clearTimeout(timeout)
+    timeout = setTimeout(later, wait)
+  }
+}
+
+// 防抖处理的resize检查
+const debouncedCheckScreenSize = debounce(checkScreenSize, 150)
+
 // 处理分类选择
 const handleCategoryChange = (categoryId) => {
   selectedCategory.value = categoryId
 }
+
+// 组件挂载时检测屏幕尺寸并添加监听器
+onMounted(() => {
+  checkScreenSize()
+  window.addEventListener('resize', debouncedCheckScreenSize)
+})
+
+// 组件卸载时移除监听器
+onUnmounted(() => {
+  window.removeEventListener('resize', debouncedCheckScreenSize)
+})
 </script>
 
 <template>
@@ -25,7 +60,7 @@ const handleCategoryChange = (categoryId) => {
     <ProductCarousel />
 
     <!-- 桌面端布局 -->
-    <el-container class="desktop-layout">
+    <el-container class="desktop-layout" v-if="!isMobile">
       <el-aside width="240px" class="sidebar">
         <!-- 商品分类导航 -->
         <div class="category-section">
@@ -39,7 +74,7 @@ const handleCategoryChange = (categoryId) => {
     </el-container>
 
     <!-- 移动端布局 -->
-    <div class="mobile-layout">
+    <div class="mobile-layout" v-if="isMobile">
       <!-- 移动端分类导航 -->
       <div class="mobile-category">
         <CategoryList @category-selected="handleCategoryChange" />
@@ -59,6 +94,9 @@ const handleCategoryChange = (categoryId) => {
   padding: 20px;
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   min-height: 100vh;
+  /* 启用硬件加速 */
+  transform: translateZ(0);
+  will-change: auto;
 }
 
 /* 页面头部 */
@@ -94,12 +132,11 @@ const handleCategoryChange = (categoryId) => {
 }
 
 .sidebar {
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.95);
   border-radius: 16px;
   padding: 24px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   height: fit-content;
   position: sticky;
   top: 20px;
@@ -108,12 +145,11 @@ const handleCategoryChange = (categoryId) => {
 .main-content {
   padding: 0;
   flex: 1;
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.95);
   border-radius: 16px;
   padding: 24px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .category-section {
@@ -122,27 +158,25 @@ const handleCategoryChange = (categoryId) => {
 
 /* 移动端布局 */
 .mobile-layout {
-  display: none;
+  display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
 .mobile-category {
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.95);
   border-radius: 12px;
   padding: 16px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .mobile-products {
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.95);
   border-radius: 12px;
   padding: 16px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 /* 响应式媒体查询 */
@@ -167,14 +201,10 @@ const handleCategoryChange = (categoryId) => {
     font-size: 14px;
   }
 
-  /* 隐藏桌面端布局 */
-  .desktop-layout {
-    display: none;
-  }
-
-  /* 显示移动端布局 */
-  .mobile-layout {
-    display: flex;
+  .mobile-category,
+  .mobile-products {
+    padding: 12px;
+    border-radius: 8px;
   }
 }
 
@@ -213,19 +243,22 @@ const handleCategoryChange = (categoryId) => {
   background: transparent !important;
 }
 
-/* 添加一些动画效果 */
+/* 优化动画效果 */
 .sidebar,
 .main-content,
 .mobile-category,
 .mobile-products {
-  transition: all 0.3s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  /* 启用硬件加速 */
+  transform: translateZ(0);
+  will-change: transform, box-shadow;
 }
 
 .sidebar:hover,
 .main-content:hover,
 .mobile-category:hover,
 .mobile-products:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
 }
 </style>

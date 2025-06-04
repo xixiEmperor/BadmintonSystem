@@ -165,6 +165,11 @@ const loadSavedConfig = () => {
 
 // 组件挂载时加载配置
 loadSavedConfig()
+
+defineExpose({
+  testConnection
+})
+
 </script>
 
 <style scoped>

@@ -57,8 +57,7 @@ export const checkSensitiveWord = (sensitiveWordMap, txt, index) => {
   }
 }
 
-
-  // 判断文本中是否存在敏感词
+// 判断文本中是否存在敏感词
 export const filterSensitiveWord = (txt, sensitiveMap) => {
   let matchResult = {
     flag: false,

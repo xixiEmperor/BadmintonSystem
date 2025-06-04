@@ -174,14 +174,22 @@ const endTimeOptions = computed(() => {
   const maxEndHour = startHour + 3
   const maxEndTime = `${maxEndHour.toString().padStart(2, '0')}:${startMinute.toString().padStart(2, '0')}`
 
-  return options.endOptions.filter(time => time <= maxEndTime)
+  return options.endOptions.filter(time => time <= maxEndTime && time > timeOptions.value[0])
 })
 
 const currentDate = ref(new Date()) // 默认选择今天
 
-// 添加时间选择
 const startTime = ref('18:00')
 const endTime = ref('19:00')
+
+// 添加时间选择
+if(isWeekday(currentDate.value)) {
+  startTime.value = '18:00'
+  endTime.value = '21:00'
+} else {
+  startTime.value = '8:00'
+  endTime.value = '21:00'
+}
 
 // 当日期改变时，重置时间选择并检查场地可用性
 const handleDateChange = async (date) => {
@@ -196,7 +204,7 @@ const handleDateChange = async (date) => {
   }
 
   // 检查场地可用性
-  if (startTime.value && endTime.value) {
+  if (startTime.value && endTime.value && startTime.value < endTime.value) {
     await checkVenueAvailability(date, startTime.value, endTime.value)
   }
 }
@@ -264,7 +272,6 @@ const checkVenueAvailability = async (date, startTime, endTime) => {
       })
       return
     }
-
     // 使用通用日期格式化函数
     const dateStr = formatDateToString(date)
 
@@ -273,7 +280,6 @@ const checkVenueAvailability = async (date, startTime, endTime) => {
       startTime,
       endTime
     })
-
     if (response.data.code === 0) {
       const { availableVenues, unavailableVenues } = response.data.data
 
@@ -322,9 +328,9 @@ const checkVenueAvailability = async (date, startTime, endTime) => {
 // 组件挂载时获取场地列表
 onMounted(async () => {
   await fetchVenueList()
-
   // 直接调用handleDateChange来初始化时间选择，避免重复代码
   await handleDateChange(currentDate.value)
+  await handleStartTimeChange(startTime.value)
 })
 
 // 预约弹窗相关
@@ -420,11 +426,6 @@ const handleStartTimeChange = async (time) => {
     let endHour = hour + 1
     let endMinute = minute
 
-    if (endHour > 23) {
-      endHour = 23
-      endMinute = 0
-    }
-
     const targetEndTime = `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`
 
     // 在结束时间选项中找到最接近的时间，但不超过3小时
@@ -451,28 +452,13 @@ const handleStartTimeChange = async (time) => {
 
 // 监听结束时间变化，确保结束时间始终大于开始时间且不超过3小时
 const handleEndTimeChange = async (time) => {
-  const options = getTimeOptionsForDate(currentDate.value)
-  if (options.endOptions.length === 0) return
-
-  // 如果结束时间小于等于开始时间，自动调整开始时间
+  // 如果结束时间小于开始时间，则自动调整开始时间
   if (time <= startTime.value) {
-    const [hour, minute] = time.split(':').map(Number)
-    let startHour = hour - 1
-    let startMinute = minute
-
-    if (startHour < 0) {
-      startHour = 0
-      startMinute = 0
-    }
-
-    const targetStartTime = `${startHour.toString().padStart(2, '0')}:${startMinute.toString().padStart(2, '0')}`
-
-    // 在开始时间选项中找到最接近的时间
-    const availableStartTimes = options.startOptions.filter(t => t <= targetStartTime)
-    if (availableStartTimes.length > 0) {
-      startTime.value = availableStartTimes[availableStartTimes.length - 1]
-    } else if (options.startOptions.length > 0) {
-      startTime.value = options.startOptions[0]
+    if (isWeekday(currentDate.value)) {
+      const endTimeIndex = endTimeOptions.value.indexOf(time)
+      startTime.value = timeOptions.value[endTimeIndex]
+    } else {
+      startTime.value = '18:00'
     }
   }
 
