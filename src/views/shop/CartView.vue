@@ -92,9 +92,38 @@ const checkoutFromCart = () => {
   router.push('/checkout')
 }
 
+// 从购物车直接购买单个商品
+const buyNowFromCart = (item) => {
+  // 计算实际价格（包含价格调整）
+  const actualPrice = item.productPrice + (item.priceAdjustment || 0)
+  const totalAmount = actualPrice * item.quantity
+
+  // 创建单商品订单对象
+  const orderInfo = {
+    product: {
+      ...item,
+      actualPrice: actualPrice
+    },
+    totalAmount: totalAmount,
+  }
+
+  // 存储到localStorage以便结算页面使用
+  localStorage.setItem('checkout_order', JSON.stringify(orderInfo))
+
+  // 跳转到结算页面
+  router.push('/checkout')
+}
+
 // 页面加载时初始化购物车数据
 onMounted(async () => {
-  await cartStore.fetchCartList()
+  // 重置loading状态，确保能正常加载
+  cartStore.resetLoadingState()
+  
+  try {
+    await cartStore.fetchCartList()
+  } catch (error) {
+    console.error('获取购物车数据失败:', error)
+  }
 })
 </script>
 
@@ -182,15 +211,27 @@ onMounted(async () => {
           </template>
         </el-table-column>
 
-        <el-table-column label="操作" width="120" align="center">
+        <el-table-column label="操作" width="180" align="center">
           <template #default="scope">
-            <el-button
-              type="danger"
-              :icon="Delete"
-              circle
-              @click="removeItem(scope.row)"
-              v-if="isEditMode"
-            ></el-button>
+            <div class="action-buttons">
+              <el-button
+                type="danger"
+                :icon="Delete"
+                size="small"
+                @click="removeItem(scope.row)"
+                v-if="isEditMode"
+              >
+                删除
+              </el-button>
+              <el-button
+                type="primary"
+                size="small"
+                @click="buyNowFromCart(scope.row)"
+                v-if="!isEditMode"
+              >
+                立即购买
+              </el-button>
+            </div>
           </template>
         </el-table-column>
       </el-table>
@@ -284,6 +325,12 @@ onMounted(async () => {
 .subtotal {
   color: #f56c6c;
   font-weight: bold;
+}
+
+.action-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
 }
 
 .cart-footer {

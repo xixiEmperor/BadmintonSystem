@@ -30,154 +30,151 @@ const fetchCarouselItems = async () => {
 
 const imgUrlList = ref([])
 
-// 获取主题色
+// 预设的漂亮颜色方案
+const colorPalettes = [
+  { primary: '#FF6B6B', secondary: '#4ECDC4' }, // 珊瑚红 + 薄荷绿
+  { primary: '#845EC2', secondary: '#FF8066' }, // 紫色 + 橘色
+  { primary: '#FFD93D', secondary: '#6BCF7F' }, // 金黄 + 翠绿
+  { primary: '#FF8E9B', secondary: '#C7CEEA' }, // 粉红 + 淡紫
+  { primary: '#A8E6CF', secondary: '#FFEAA7' }, // 薄荷 + 淡黄
+  { primary: '#74B9FF', secondary: '#FD79A8' }, // 天蓝 + 粉色
+  { primary: '#FDCB6E', secondary: '#6C5CE7' }, // 橙黄 + 紫色
+  { primary: '#55A3FF', secondary: '#FEA47F' }, // 蓝色 + 橙粉
+  { primary: '#26DE81', secondary: '#FC7C7C' }, // 翠绿 + 红粉
+  { primary: '#A29BFE', secondary: '#FDA085' }, // 淡紫 + 橙色
+]
+
+// 根据字符串生成一个稳定的颜色索引
+const getColorIndexFromString = (str) => {
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i)
+    hash = ((hash << 5) - hash) + char
+    hash = hash & hash // 转换为32位整数
+  }
+  return Math.abs(hash) % colorPalettes.length
+}
+
+// 获取主题色（使用预设颜色方案）
 const getThemeColor = async () => {
-  // 清空之前的数据
-  imgUrlList.value = []
+  console.log('🎨 开始设置主题色，使用预设颜色方案')
+  console.log('轮播图数据:', carouselItems.value)
 
-  carouselItems.value.forEach(item => {
-    imgUrlList.value.push(item.mainImage)
-  })
-
-  const bgColorList = ref([])
-
-  // 使用Promise.all并行处理所有请求
   try {
-    const promises = imgUrlList.value.map(async (url, index) => {
-      try {
-        // 尝试不同的阿里云OSS参数格式
-        const possibleUrls = [
-          url + '?x-oss-process=image/average-hue',
-          url + '@imageAve',
-          url + '?imageView2/1/w/1/h/1/q/1', // 缩略图方式
-        ]
-
-        let color = '#6366f1' // 默认颜色
-        let success = false
-
-        // 尝试阿里云OSS参数
-        for (const testUrl of possibleUrls) {
-          try {
-            console.log('尝试请求URL:', testUrl)
-            const response = await axios.get(testUrl, {
-              timeout: 5000,
-              responseType: 'text' // 确保以文本形式接收
-            })
-
-            console.log('响应数据类型:', typeof response.data)
-            console.log('响应数据长度:', response.data?.length)
-            console.log('响应数据前100字符:', response.data?.substring(0, 100))
-
-            // 检查是否是有效的颜色数据
-            if (typeof response.data === 'string' && response.data.length < 50) {
-              if (response.data.startsWith('#') || response.data.match(/^[0-9A-Fa-f]{6}$/)) {
-                color = response.data.startsWith('#') ? response.data : '#' + response.data
-                success = true
-                console.log(`通过OSS获取到图片${index + 1}的主题色:`, color)
-                break
-              }
-            }
-          } catch (error) {
-            console.log(`URL ${testUrl} 请求失败:`, error.message)
-            continue
-          }
-        }
-
-        // 如果OSS方式都失败，使用Canvas提取主色调
-        if (!success) {
-          console.log('OSS方式失败，使用Canvas提取主色调')
-          color = await extractColorFromImage(url)
-          console.log(`通过Canvas获取到图片${index + 1}的主题色:`, color)
-        }
-
-        // 直接更新对应的轮播项背景色
-        if (carouselItems.value[index]) {
-          carouselItems.value[index].bgColor = `linear-gradient(135deg, ${color}88, ${color}CC)`
-        }
-
-        return color
-      } catch (error) {
-        console.error('获取图片主题色失败:', error)
-
-        // 返回默认颜色并应用到轮播项
-        const defaultColor = '#6366f1'
-        if (carouselItems.value[index]) {
-          carouselItems.value[index].bgColor = `linear-gradient(135deg, ${defaultColor}88, ${defaultColor}CC)`
-        }
-        return defaultColor
-      }
+    carouselItems.value.forEach((item, index) => {
+      // 基于商品名称或ID生成稳定的颜色
+      const colorIndex = getColorIndexFromString(item.productName + item.productId)
+      const palette = colorPalettes[colorIndex]
+      
+      // 创建渐变背景
+      const gradient = `linear-gradient(135deg, ${palette.primary}CC, ${palette.secondary}AA)`
+      
+      // 应用背景色
+      item.bgColor = gradient
+      
+      console.log(`🎨 商品"${item.productName}"应用颜色方案${colorIndex + 1}: ${palette.primary} → ${palette.secondary}`)
+      console.log(`   渐变效果: ${gradient}`)
     })
-
-    const results = await Promise.all(promises)
-    bgColorList.value = results
-    console.log('所有主题色:', bgColorList.value)
+    
+    console.log('🎉 所有主题色设置完成')
+    
   } catch (error) {
-    console.error('批量获取主题色失败:', error)
+    console.error('❌ 设置主题色失败:', error)
   }
 }
 
-// 使用Canvas提取图片主色调
-const extractColorFromImage = (imageUrl) => {
-  return new Promise((resolve) => {
-    const img = new Image()
-    img.crossOrigin = 'anonymous' // 处理跨域
-
-    img.onload = () => {
+// 备用方案：如果需要后端代理OSS颜色提取
+const getThemeColorViaProxy = async () => {
+  console.log('🌐 通过后端代理获取主题色')
+  console.log('图片列表:', carouselItems.value.map(item => ({ name: item.productName, url: item.mainImage })))
+  
+  try {
+    const promises = carouselItems.value.map(async (item, index) => {
       try {
-        const canvas = document.createElement('canvas')
-        const ctx = canvas.getContext('2d')
-
-        // 设置小尺寸以提高性能
-        canvas.width = 50
-        canvas.height = 50
-
-        // 绘制图片
-        ctx.drawImage(img, 0, 0, 50, 50)
-
-        // 获取图像数据
-        const imageData = ctx.getImageData(0, 0, 50, 50)
-        const data = imageData.data
-
-        let r = 0, g = 0, b = 0
-        let pixelCount = 0
-
-        // 计算平均颜色
-        for (let i = 0; i < data.length; i += 4) {
-          r += data[i]
-          g += data[i + 1]
-          b += data[i + 2]
-          pixelCount++
+        console.log(`📡 开始请求图片${index + 1}: ${item.productName}`)
+        console.log(`   图片URL: ${item.mainImage}`)
+        
+        // 调用后端代理接口
+        const response = await axios.post('/api/image/extract-color', {
+          imageUrl: item.mainImage
+        })
+        
+        console.log(`📡 图片${index + 1}响应:`, response.data)
+        
+        if (response.data.code === 0) {
+          const color = response.data.data.color
+          const source = response.data.data.source
+          const gradient = `linear-gradient(135deg, ${color}CC, ${adjustColorBrightness(color, -30)}DD)`
+          
+          item.bgColor = gradient
+          item.colorSource = source === 'oss' ? '阿里云OSS' : source === 'java' ? 'Java处理' : source
+          console.log(`✅ 通过${source}获取到图片${index + 1}的主题色: ${color}`)
+          console.log(`   渐变效果: ${gradient}`)
+          
+          return { color, source, success: true }
+        } else {
+          throw new Error(response.data.msg || '后端返回错误')
         }
-
-        r = Math.round(r / pixelCount)
-        g = Math.round(g / pixelCount)
-        b = Math.round(b / pixelCount)
-
-        // 转换为十六进制
-        const hex = '#' + [r, g, b].map(x => {
-          const hex = x.toString(16)
-          return hex.length === 1 ? '0' + hex : hex
-        }).join('')
-
-        resolve(hex)
       } catch (error) {
-        console.error('Canvas提取颜色失败:', error)
-        resolve('#6366f1') // 默认颜色
+        console.error(`❌ 图片${index + 1}(${item.productName})颜色获取失败:`, error.message)
+        
+        // 回退到预设颜色
+        const colorIndex = getColorIndexFromString(item.productName + item.productId)
+        const palette = colorPalettes[colorIndex]
+        const gradient = `linear-gradient(135deg, ${palette.primary}CC, ${palette.secondary}AA)`
+        
+        item.bgColor = gradient
+        item.colorSource = '预设方案'
+        console.log(`🔄 图片${index + 1}回退到预设颜色方案${colorIndex + 1}: ${palette.primary} → ${palette.secondary}`)
+        
+        return { color: palette.primary, source: 'fallback', success: false, error: error.message }
       }
+    })
+    
+    const results = await Promise.all(promises)
+    
+    // 统计结果
+    const successCount = results.filter(r => r.success).length
+    const fallbackCount = results.filter(r => !r.success).length
+    
+    console.log('🎉 代理方式主题色获取完成!')
+    console.log(`   成功: ${successCount}/${results.length}`)
+    console.log(`   回退: ${fallbackCount}/${results.length}`)
+    console.log('   详细结果:', results)
+    
+    if (successCount === 0) {
+      console.warn('⚠️ 所有图片都获取颜色失败，可能需要检查后端服务')
     }
+    
+  } catch (error) {
+    console.error('❌ 代理方式获取主题色完全失败:', error)
+    console.log('🔄 完全回退到预设方案')
+    // 完全回退到预设方案
+    await getThemeColor()
+  }
+}
 
-    img.onerror = () => {
-      console.error('图片加载失败:', imageUrl)
-      resolve('#6366f1') // 默认颜色
-    }
-
-    img.src = imageUrl
-  })
+// 调整颜色亮度的辅助函数
+const adjustColorBrightness = (hex, amount) => {
+  // 移除#号
+  const color = hex.replace('#', '')
+  
+  // 转换为RGB
+  const num = parseInt(color, 16)
+  const r = Math.max(0, Math.min(255, (num >> 16) + amount))
+  const g = Math.max(0, Math.min(255, (num >> 8 & 0x00FF) + amount))
+  const b = Math.max(0, Math.min(255, (num & 0x0000FF) + amount))
+  
+  // 转换回16进制
+  return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)
 }
 
 onMounted(async () => {
   await fetchCarouselItems()
-  await getThemeColor()
+  console.log('📦 轮播图数据加载完成，开始获取真实图片颜色')
+  
+  // 使用后端代理获取真实的图片颜色
+  await getThemeColorViaProxy()
 })
 </script>
 
@@ -187,14 +184,16 @@ onMounted(async () => {
       :interval="4000"
       type="card"
       height="280px"
+      indicator-position="outside"
+      arrow="never"
       class="carousel-container">
       <el-carousel-item
         v-for="item in carouselItems"
-        :key="item.id"
+        :key="item.productId"
         class="carousel-item">
         <div
           class="carousel-content"
-          :style="{ background: item.bgColor }">
+          :style="{ background: item.bgColor || 'linear-gradient(135deg, #6366f1AA, #4f46e5DD)' }">
           <div class="content-left">
             <h3 class="carousel-title">{{ item.productName }}</h3>
             <p class="carousel-subtitle">{{ item.subtitle }}</p>
@@ -207,7 +206,7 @@ onMounted(async () => {
             </el-button>
           </div>
           <div class="content-right">
-            <img :src="item.mainImage" :alt="item.title" class="carousel-image">
+            <img :src="item.mainImage" :alt="item.productName" class="carousel-image">
           </div>
         </div>
       </el-carousel-item>
@@ -217,14 +216,15 @@ onMounted(async () => {
 
 <style scoped>
 .product-carousel {
-  margin: 20px 0 30px 0;
+  margin: 20px 0 50px 0;
   border-radius: 12px;
-  overflow: hidden;
+  overflow: visible;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
 .carousel-container {
   border-radius: 12px;
+  overflow: hidden;
 }
 
 .carousel-item {
@@ -374,21 +374,30 @@ onMounted(async () => {
 }
 
 /* 自定义轮播图指示器样式 */
+:deep(.el-carousel__indicators--outside) {
+  margin-top: 20px;
+  text-align: center;
+}
+
 :deep(.el-carousel__indicator) {
-  background-color: rgba(255, 255, 255, 0.3);
+  padding: 8px 4px;
 }
 
-:deep(.el-carousel__indicator.is-active) {
-  background-color: rgba(255, 255, 255, 0.8);
-}
-
-:deep(.el-carousel__arrow) {
-  background-color: rgba(255, 255, 255, 0.2);
+:deep(.el-carousel__button) {
+  width: 40px;
+  height: 6px;
+  border-radius: 3px;
+  background-color: rgba(0, 0, 0, 0.15);
   border: none;
-  color: #fff;
+  transition: all 0.3s ease;
 }
 
-:deep(.el-carousel__arrow:hover) {
-  background-color: rgba(255, 255, 255, 0.3);
+:deep(.el-carousel__indicator.is-active .el-carousel__button) {
+  background-color: #4f80ff;
+  transform: scaleX(1.5);
+}
+
+:deep(.el-carousel__indicator:hover .el-carousel__button) {
+  background-color: rgba(79, 128, 255, 0.6);
 }
 </style>

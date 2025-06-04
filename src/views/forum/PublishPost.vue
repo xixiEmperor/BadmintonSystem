@@ -32,7 +32,7 @@ const categoryOptions = [
 
 // 字数统计
 const textCount = ref(0)
-const maxTextCount = ref(100)
+const maxTextCount = ref(1000)
 
 // 发布帖子
 const publishPost = async () => {
@@ -44,6 +44,11 @@ const publishPost = async () => {
 
   if (!plainTextContent.value || plainTextContent.value === '') {
     ElMessage.warning('请输入帖子内容')
+    return
+  }
+
+  if (plainTextContent.value.length > maxTextCount.value) {
+    ElMessage.warning(`帖子内容不能超过${maxTextCount.value}字`)
     return
   }
 

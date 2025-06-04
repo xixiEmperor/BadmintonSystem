@@ -43,6 +43,7 @@ export const useCartStore = defineStore('cart', () => {
     loading.value = true
     try {
       const response = await getCartList()
+      
       if (response.data.code === 0) {
         cartItems.value = response.data.data.cartItems || []
         isAllSelected.value = response.data.data.allSelected || false
@@ -61,8 +62,6 @@ export const useCartStore = defineStore('cart', () => {
 
   // 添加商品到购物车
   async function addToCart(item) {
-    console.log('添加到购物车:', item)
-
     // 检查是否有规格
     const isSpecItem = item.specificationId !== undefined
 
@@ -270,7 +269,6 @@ export const useCartStore = defineStore('cart', () => {
       }
 
       if (itemsToRemove.length === 0) {
-        console.log('没有需要删除的商品')
         return true
       }
 
@@ -299,9 +297,7 @@ export const useCartStore = defineStore('cart', () => {
             }
             await removeCartItem(item.productId, data)
             successCount++
-            console.log(`成功删除商品: ${item.productName}`)
           } else {
-            console.log(`商品不在购物车中: ${item.productName}`)
             successCount++ // 商品不在购物车中也算成功
           }
         } catch (error) {
@@ -314,10 +310,8 @@ export const useCartStore = defineStore('cart', () => {
       updateAllSelectedState()
 
       if (failCount === 0) {
-        console.log(`所有已结算商品已从购物车中移除 (${successCount}/${itemsToRemove.length})`)
         return true
       } else {
-        console.warn(`部分商品删除失败 (成功: ${successCount}, 失败: ${failCount})`)
         // 即使部分失败，也重新获取购物车数据以保持同步
         await fetchCartList()
         return false
@@ -328,6 +322,11 @@ export const useCartStore = defineStore('cart', () => {
       await fetchCartList()
       return false
     }
+  }
+
+  // 重置loading状态
+  function resetLoadingState() {
+    loading.value = false
   }
 
   return {
@@ -352,11 +351,17 @@ export const useCartStore = defineStore('cart', () => {
     toggleSelectAll,
     clearCart,
     getSelectedItems,
-    removeOrderedItems
+    removeOrderedItems,
+    resetLoadingState
   }
 }, {
   persist: {
     // 只持久化基本数据，不持久化加载状态
-    paths: ['cartItems', 'isAllSelected']
+    paths: ['cartItems', 'isAllSelected'],
+    // 添加afterRestore钩子确保loading状态正确
+    afterRestore: (context) => {
+      // 确保loading状态为false
+      context.store.loading = false
+    }
   }
 })

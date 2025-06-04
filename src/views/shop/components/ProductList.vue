@@ -20,14 +20,14 @@ const searchParams = reactive({
   keyword: '',
   orderBy: '',
   pageNum: 1,
-  pageSize: 10,
+  pageSize: 8,
   categoryId: props.categoryId
 })
 
 // 分页信息
 const pagination = reactive({
   pageNum: 1,
-  pageSize: 4,
+  pageSize: 8,
   total: 0
 })
 
@@ -156,7 +156,7 @@ const goToDetail = (productId) => {
         @size-change="handleSizeChange"
         @current-change="handleCurrentChange"
         :current-page="pagination.pageNum"
-        :page-sizes="[4, 6, 8, 10]"
+        :page-sizes="[8, 4, 6, 10, 12]"
         :page-size="pagination.pageSize"
         :layout="paginationLayout"
         :total="pagination.total">
@@ -207,7 +207,7 @@ const goToDetail = (productId) => {
 }
 
 :deep(.el-button--primary) {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #4f80ff 0%, #1e40af 100%);
   border: none;
   border-radius: 8px;
   padding: 10px 20px;
@@ -215,9 +215,9 @@ const goToDetail = (productId) => {
 }
 
 :deep(.el-button--primary:hover) {
-  background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+  background: linear-gradient(135deg, #3d71ff 0%, #1d3aa3 100%);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 12px rgba(79, 128, 255, 0.3);
 }
 
 :deep(.el-button) {
@@ -313,7 +313,7 @@ const goToDetail = (productId) => {
 .product-sales {
   font-size: 12px;
   color: #999;
-  background: rgba(102, 126, 234, 0.1);
+  background: rgba(79, 128, 255, 0.1);
   padding: 4px 8px;
   border-radius: 12px;
   font-weight: 500;
@@ -340,7 +340,7 @@ const goToDetail = (productId) => {
 }
 
 :deep(.el-pagination .el-pager li.is-active) {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #4f80ff 0%, #1e40af 100%);
   color: #fff;
 }
 

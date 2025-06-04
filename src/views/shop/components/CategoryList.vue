@@ -94,7 +94,7 @@ onMounted(() => {
   left: 0;
   width: 30px;
   height: 2px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #4f80ff 0%, #1e40af 100%);
 }
 
 /* 桌面端菜单样式 */
@@ -112,13 +112,13 @@ onMounted(() => {
 }
 
 :deep(.el-menu-item:hover) {
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
-  border-color: rgba(102, 126, 234, 0.2);
+  background: linear-gradient(135deg, rgba(79, 128, 255, 0.1) 0%, rgba(30, 64, 175, 0.1) 100%);
+  border-color: rgba(79, 128, 255, 0.2);
   transform: translateX(4px);
 }
 
 :deep(.el-menu-item.is-active) {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #4f80ff 0%, #1e40af 100%);
   color: #fff;
   border-color: transparent;
 }
@@ -171,10 +171,10 @@ onMounted(() => {
 }
 
 .category-tag.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #4f80ff 0%, #1e40af 100%);
   border-color: transparent;
   color: #fff;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 12px rgba(79, 128, 255, 0.3);
 }
 
 /* 响应式布局 */

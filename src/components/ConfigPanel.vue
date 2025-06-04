@@ -67,6 +67,7 @@
 
 <script setup>
 import { ref, reactive, watch } from 'vue'
+import { ElMessage } from 'element-plus'
 
 const props = defineProps({
   modelValue: {
@@ -115,8 +116,8 @@ const saveConfig = () => {
   // 通知父组件配置变化
   emit('config-change', { ...localConfig })
 
-  // 显示保存成功提示
-  alert('配置已保存！')
+  // 显示保存成功提示，使用更友好的提示方式
+  ElMessage.success('配置已保存！')
   closeConfig()
 }
 
@@ -140,13 +141,15 @@ const testConnection = async () => {
     setTimeout(() => {
       isConnected.value = true
       testing.value = false
-      alert('连接测试成功！')
+      // 移除alert，改为控制台日志
+      console.log('连接测试成功！')
     }, 2000)
 
   } catch (error) {
     isConnected.value = false
     testing.value = false
-    alert('连接测试失败：' + error.message)
+    // 使用更友好的错误提示
+    ElMessage.error('连接测试失败：' + error.message)
   }
 }
 

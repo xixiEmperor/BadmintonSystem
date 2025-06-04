@@ -4,6 +4,8 @@ import { marked } from 'marked'
 import { useDifyChat } from '@/composables/useDifyChat'
 import { useUserStore } from '@/stores'
 import ConfigPanel from '@/components/ConfigPanel.vue'
+import { ElMessage } from 'element-plus'
+import { Warning } from '@element-plus/icons-vue'
 
 // 响应式数据
 const configPanel = ref(null)
@@ -34,22 +36,31 @@ const currentUser = computed(() => {
     return result
   }
 
-  // 默认游客用户
-  const guestUser = {
+  // 如果未登录返回null
+  console.log('ChatInterface - user not logged in') // 调试信息
+  return null
+})
+
+// 计算是否已登录
+const isLoggedIn = computed(() => {
+  return currentUser.value !== null
+})
+
+// 获取游客用户信息（仅用于显示）
+const getGuestUser = () => {
+  return {
     id: 'guest_' + Date.now(),
     username: '游客',
     nickname: '游客',
     avatar: null
   }
-  console.log('ChatInterface - using guest user:', guestUser) // 调试信息
-  return guestUser
-})
+}
 
 // 聊天配置
 const chatConfig = reactive({
   apiKey: 'app-zV1H0vnzPlwjUkkexGCmF5Gn',
   baseUrl: '/v1',
-  userId: computed(() => currentUser.value.id) // 使用计算属性动态获取用户ID
+  userId: computed(() => currentUser.value?.id || 'guest_' + Date.now()) // 使用可选链操作符
 })
 
 // 使用Dify聊天API
@@ -73,7 +84,7 @@ onMounted(() => {
   loadSavedConfig()
 
   // 根据用户登录状态显示个性化欢迎消息
-  const welcomeMessage = currentUser.value.username === '游客'
+  const welcomeMessage = currentUser.value === null
     ? '您好！我是武汉理工大学南湖校区羽毛球馆的智能客服。我可以为您提供场馆信息、预订服务等帮助。请问有什么可以为您效劳的吗？\n\n您可以问我：\n- 有几个羽毛球场？\n- 羽毛球馆的开放时间？\n- 如何预订场地？\n- 场馆位置和交通？'
     : `您好${currentUser.value.nickname}！欢迎回来！我是武汉理工大学南湖校区羽毛球馆的智能客服。我可以为您提供场馆信息、预订服务等帮助。请问有什么可以为您效劳的吗？\n\n您可以问我：\n- 有几个羽毛球场？\n- 羽毛球馆的开放时间？\n- 如何预订场地？\n- 场馆位置和交通？\n- 查看我的预订记录`;
 
@@ -89,6 +100,12 @@ onMounted(() => {
 
 // 发送消息
 const sendMessage = async () => {
+  // 检查登录状态
+  if (!isLoggedIn.value) {
+    ElMessage.warning('请先登录后再使用AI客服功能')
+    return
+  }
+
   if (!inputMessage.value.trim() || isLoading.value) return
 
   const userMessage = {
@@ -174,7 +191,7 @@ const handleTestConnection = async (config) => {
 // 清空对话
 const clearChat = () => {
   if (confirm('确定要清空所有对话记录吗？')) {
-    const clearMessage = currentUser.value.username === '游客'
+    const clearMessage = currentUser.value === null
       ? '对话已清空。请问有什么可以帮助您的？'
       : `对话已清空，${currentUser.value.nickname}。请问有什么可以帮助您的？`;
 
@@ -192,7 +209,7 @@ const resetConversation = () => {
   if (confirm('确定要开始新的会话吗？当前对话上下文将丢失。')) {
     resetChatConversation()
 
-    const resetMessage = currentUser.value.username === '游客'
+    const resetMessage = currentUser.value === null
       ? '新会话已开始。请问有什么可以帮助您的？'
       : `新会话已开始，${currentUser.value.nickname}。请问有什么可以帮助您的？`;
 
@@ -245,9 +262,12 @@ const scrollToBottom = () => {
     <!-- 消息区域 -->
     <div class="chat-messages" ref="messagesContainer">
       <div v-for="message in messages" :key="message.id" class="message" :class="message.type">
-        <div class="message-avatar" :class="{ 'has-user-avatar': message.type === 'user' && currentUser.avatar }">
+        <div class="message-avatar" :class="{ 'has-user-avatar': message.type === 'user' && (currentUser?.avatar || getGuestUser().avatar) }">
           <span v-if="message.type === 'user'">
-            <img v-if="currentUser.avatar" :src="currentUser.avatar" :alt="currentUser.nickname" class="user-avatar-img" />
+            <img v-if="(currentUser?.avatar || getGuestUser().avatar)" 
+                 :src="(currentUser?.avatar || getGuestUser().avatar)" 
+                 :alt="(currentUser?.nickname || getGuestUser().nickname)" 
+                 class="user-avatar-img" />
             <span v-else>👤</span>
           </span>
           <span v-else>🤖</span>
@@ -279,21 +299,30 @@ const scrollToBottom = () => {
         <input
           v-model="inputMessage"
           @keyup.enter="sendMessage"
-          :disabled="isLoading || !currentUser"
-          placeholder="请输入您的问题..."
+          :disabled="isLoading || !isLoggedIn"
+          :placeholder="isLoggedIn ? '请输入您的问题...' : '请登录后使用'"
           class="message-input"
         />
         <button
           @click="sendMessage"
-          :disabled="isLoading || !inputMessage.trim()"
+          :disabled="isLoading || !inputMessage.trim() || !isLoggedIn"
           class="send-button"
         >
           {{ isLoading ? '发送中...' : '发送' }}
         </button>
       </div>
 
+      <!-- 登录提示 -->
+      <div v-if="!isLoggedIn" class="login-prompt">
+        <el-icon><Warning /></el-icon>
+        <span>您当前未登录，请登录后使用AI客服功能</span>
+        <el-button type="primary" size="small" @click="$router.push('/login')">
+          立即登录
+        </el-button>
+      </div>
+
       <!-- 快捷操作 -->
-      <div class="chat-shortcuts">
+      <div class="chat-shortcuts" v-if="isLoggedIn">
         <el-button @click="clearChat" type="info" size="small" title="清空对话">
           🗑️ 清空
         </el-button>
@@ -559,6 +588,33 @@ const scrollToBottom = () => {
   opacity: 0.6;
   cursor: not-allowed;
   transform: none;
+}
+
+.login-prompt {
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #856404;
+  font-size: 0.9rem;
+}
+
+.login-prompt .el-icon {
+  color: #f39c12;
+  font-size: 1.2rem;
+}
+
+.login-prompt span {
+  flex: 1;
+}
+
+.login-prompt .el-button {
+  border-radius: 16px;
+  font-size: 0.875rem;
 }
 
 .chat-shortcuts {
