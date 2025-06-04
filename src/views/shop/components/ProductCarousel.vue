@@ -1,7 +1,8 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getRecommendProducts } from '@/api/shop'
+import axios from 'axios'
 
 const router = useRouter()
 
@@ -20,15 +21,163 @@ const fetchCarouselItems = async () => {
     if (res.data.code === 0) {
       carouselItems.value = res.data.data
     } else {
-      ElMessage.error(res.data.message)
+      ElMessage.error(res.data.msg)
     }
   } catch (error) {
     console.error('获取轮播图数据失败', error)
   }
 }
 
+const imgUrlList = ref([])
+
+// 获取主题色
+const getThemeColor = async () => {
+  // 清空之前的数据
+  imgUrlList.value = []
+
+  carouselItems.value.forEach(item => {
+    imgUrlList.value.push(item.mainImage)
+  })
+
+  const bgColorList = ref([])
+
+  // 使用Promise.all并行处理所有请求
+  try {
+    const promises = imgUrlList.value.map(async (url, index) => {
+      try {
+        // 尝试不同的阿里云OSS参数格式
+        const possibleUrls = [
+          url + '?x-oss-process=image/average-hue',
+          url + '@imageAve',
+          url + '?imageView2/1/w/1/h/1/q/1', // 缩略图方式
+        ]
+
+        let color = '#6366f1' // 默认颜色
+        let success = false
+
+        // 尝试阿里云OSS参数
+        for (const testUrl of possibleUrls) {
+          try {
+            console.log('尝试请求URL:', testUrl)
+            const response = await axios.get(testUrl, {
+              timeout: 5000,
+              responseType: 'text' // 确保以文本形式接收
+            })
+
+            console.log('响应数据类型:', typeof response.data)
+            console.log('响应数据长度:', response.data?.length)
+            console.log('响应数据前100字符:', response.data?.substring(0, 100))
+
+            // 检查是否是有效的颜色数据
+            if (typeof response.data === 'string' && response.data.length < 50) {
+              if (response.data.startsWith('#') || response.data.match(/^[0-9A-Fa-f]{6}$/)) {
+                color = response.data.startsWith('#') ? response.data : '#' + response.data
+                success = true
+                console.log(`通过OSS获取到图片${index + 1}的主题色:`, color)
+                break
+              }
+            }
+          } catch (error) {
+            console.log(`URL ${testUrl} 请求失败:`, error.message)
+            continue
+          }
+        }
+
+        // 如果OSS方式都失败，使用Canvas提取主色调
+        if (!success) {
+          console.log('OSS方式失败，使用Canvas提取主色调')
+          color = await extractColorFromImage(url)
+          console.log(`通过Canvas获取到图片${index + 1}的主题色:`, color)
+        }
+
+        // 直接更新对应的轮播项背景色
+        if (carouselItems.value[index]) {
+          carouselItems.value[index].bgColor = `linear-gradient(135deg, ${color}88, ${color}CC)`
+        }
+
+        return color
+      } catch (error) {
+        console.error('获取图片主题色失败:', error)
+
+        // 返回默认颜色并应用到轮播项
+        const defaultColor = '#6366f1'
+        if (carouselItems.value[index]) {
+          carouselItems.value[index].bgColor = `linear-gradient(135deg, ${defaultColor}88, ${defaultColor}CC)`
+        }
+        return defaultColor
+      }
+    })
+
+    const results = await Promise.all(promises)
+    bgColorList.value = results
+    console.log('所有主题色:', bgColorList.value)
+  } catch (error) {
+    console.error('批量获取主题色失败:', error)
+  }
+}
+
+// 使用Canvas提取图片主色调
+const extractColorFromImage = (imageUrl) => {
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous' // 处理跨域
+
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas')
+        const ctx = canvas.getContext('2d')
+
+        // 设置小尺寸以提高性能
+        canvas.width = 50
+        canvas.height = 50
+
+        // 绘制图片
+        ctx.drawImage(img, 0, 0, 50, 50)
+
+        // 获取图像数据
+        const imageData = ctx.getImageData(0, 0, 50, 50)
+        const data = imageData.data
+
+        let r = 0, g = 0, b = 0
+        let pixelCount = 0
+
+        // 计算平均颜色
+        for (let i = 0; i < data.length; i += 4) {
+          r += data[i]
+          g += data[i + 1]
+          b += data[i + 2]
+          pixelCount++
+        }
+
+        r = Math.round(r / pixelCount)
+        g = Math.round(g / pixelCount)
+        b = Math.round(b / pixelCount)
+
+        // 转换为十六进制
+        const hex = '#' + [r, g, b].map(x => {
+          const hex = x.toString(16)
+          return hex.length === 1 ? '0' + hex : hex
+        }).join('')
+
+        resolve(hex)
+      } catch (error) {
+        console.error('Canvas提取颜色失败:', error)
+        resolve('#6366f1') // 默认颜色
+      }
+    }
+
+    img.onerror = () => {
+      console.error('图片加载失败:', imageUrl)
+      resolve('#6366f1') // 默认颜色
+    }
+
+    img.src = imageUrl
+  })
+}
+
 onMounted(async () => {
   await fetchCarouselItems()
+  await getThemeColor()
 })
 </script>
 

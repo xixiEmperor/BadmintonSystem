@@ -191,7 +191,7 @@ export function updateSpecificationStock(specificationId, stock) {
  * @returns {Promise} 返回推荐商品轮播图图片
  */
 export function getRecommendProducts() {
-  return request.get('/mall/recommend/products')
+  return request.get('/api/mall/recommend/products')
 }
 
 
