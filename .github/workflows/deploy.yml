@@ -38,12 +38,39 @@ jobs:
         with:
           node-version: '18'
           
+      - name: 验证环境
+        run: |
+          echo "Node.js version: $(node --version)"
+          echo "pnpm version: $(pnpm --version)"
+          echo "当前工作目录: $(pwd)"
+          echo "文件列表:"
+          ls -la
+          
       - name: 安装依赖
-        run: pnpm install --frozen-lockfile
-        
+        run: |
+          echo "开始安装依赖..."
+          pnpm install --frozen-lockfile
+          echo "依赖安装完成"
+          
+      - name: 检查依赖
+        run: |
+          echo "检查已安装的依赖..."
+          pnpm list --depth=0
+          
       - name: 构建项目
-        run: pnpm run build
-        
+        run: |
+          echo "开始构建项目..."
+          echo "NODE_ENV: $NODE_ENV"
+          pnpm run build
+          echo "构建完成"
+          
+      - name: 检查构建结果
+        run: |
+          echo "检查构建产物..."
+          ls -la dist/
+          echo "dist目录大小:"
+          du -sh dist/
+          
       - name: 设置 Pages
         uses: actions/configure-pages@v4
         
