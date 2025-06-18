@@ -104,7 +104,7 @@ const router = createRouter({
       children: [
         {
           path: 'dashboard',
-          component: () => import('@/views/admin/DashBoard.vue'),
+          component: () => import('@/views/admin/Dashboard.vue'),
           meta: { title: '预订系统后台' },
         },
         {
