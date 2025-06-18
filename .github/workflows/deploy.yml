@@ -49,7 +49,7 @@ jobs:
       - name: 安装依赖
         run: |
           echo "开始安装依赖..."
-          pnpm install --frozen-lockfile
+          pnpm install --no-frozen-lockfile
           echo "依赖安装完成"
           
       - name: 检查依赖
