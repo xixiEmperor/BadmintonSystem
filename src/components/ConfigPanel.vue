@@ -1,70 +1,3 @@
-<template>
-  <div class="config-panel" v-if="showConfig">
-    <div class="config-overlay" @click="closeConfig"></div>
-    <div class="config-modal">
-      <div class="config-header">
-        <h3>⚙️ 系统配置</h3>
-        <button @click="closeConfig" class="close-btn">×</button>
-      </div>
-
-      <div class="config-content">
-        <div class="config-group">
-          <label for="apiKey">Dify API Key:</label>
-          <input
-            id="apiKey"
-            v-model="localConfig.apiKey"
-            type="password"
-            placeholder="请输入您的Dify API Key"
-            class="config-input"
-          />
-          <small>您可以在Dify控制台的"访问API"页面获取API Key</small>
-        </div>
-
-        <div class="config-group">
-          <label for="baseUrl">API 基础地址:</label>
-          <input
-            id="baseUrl"
-            v-model="localConfig.baseUrl"
-            type="text"
-            placeholder="http://127.0.0.1/v1"
-            class="config-input"
-          />
-          <small>Dify服务的API地址，默认为本地地址</small>
-        </div>
-
-        <div class="config-group">
-          <label for="userId">用户标识:</label>
-          <input
-            id="userId"
-            :value="props.config.userId"
-            type="text"
-            readonly
-            class="config-input readonly"
-          />
-          <small>当前登录用户的标识，用于个性化服务</small>
-        </div>
-
-        <div class="config-status">
-          <span class="status-indicator" :class="{ connected: isConnected }"></span>
-          <span>{{ isConnected ? '连接正常' : '未连接' }}</span>
-        </div>
-      </div>
-
-      <div class="config-actions">
-        <button @click="testConnection" class="test-btn" :disabled="testing">
-          {{ testing ? '测试中...' : '测试连接' }}
-        </button>
-        <button @click="saveConfig" class="save-btn">
-          保存配置
-        </button>
-        <button @click="resetConfig" class="reset-btn">
-          重置默认
-        </button>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup>
 import { ref, reactive, watch } from 'vue'
 
@@ -137,11 +70,11 @@ const testConnection = async () => {
     emit('test-connection', localConfig)
 
     // 模拟测试结果（实际应该由父组件处理）
-    setTimeout(() => {
-      isConnected.value = true
-      testing.value = false
-      alert('连接测试成功！')
-    }, 2000)
+    // setTimeout(() => {
+    //   isConnected.value = true
+    //   testing.value = false
+    //   alert('连接测试成功！')
+    // }, 2000)
 
   } catch (error) {
     isConnected.value = false
@@ -172,6 +105,73 @@ defineExpose({
 
 </script>
 
+<template>
+  <div class="config-panel" v-if="showConfig">
+    <div class="config-overlay" @click="closeConfig"></div>
+    <div class="config-modal">
+      <div class="config-header">
+        <h3>⚙️ 系统配置</h3>
+        <button @click="closeConfig" class="close-btn">×</button>
+      </div>
+
+      <div class="config-content">
+        <div class="config-group">
+          <label for="apiKey">Dify API Key:</label>
+          <input
+            id="apiKey"
+            v-model="localConfig.apiKey"
+            type="password"
+            placeholder="请输入您的Dify API Key"
+            class="config-input"
+          />
+          <small>您可以在Dify控制台的"访问API"页面获取API Key</small>
+        </div>
+
+        <div class="config-group">
+          <label for="baseUrl">API 基础地址:</label>
+          <input
+            id="baseUrl"
+            v-model="localConfig.baseUrl"
+            type="text"
+            placeholder="http://127.0.0.1/v1"
+            class="config-input"
+          />
+          <small>Dify服务的API地址，默认为本地地址</small>
+        </div>
+
+        <div class="config-group">
+          <label for="userId">用户标识:</label>
+          <input
+            id="userId"
+            :value="props.config.userId"
+            type="text"
+            readonly
+            class="config-input readonly"
+          />
+          <small>当前登录用户的标识，用于个性化服务</small>
+        </div>
+
+        <div class="config-status">
+          <span class="status-indicator" :class="{ connected: isConnected }"></span>
+          <span>{{ isConnected ? '连接正常' : '未连接' }}</span>
+        </div>
+      </div>
+
+      <div class="config-actions">
+        <button @click="testConnection" class="test-btn" :disabled="testing">
+          {{ testing ? '测试中...' : '测试连接' }}
+        </button>
+        <button @click="saveConfig" class="save-btn">
+          保存配置
+        </button>
+        <button @click="resetConfig" class="reset-btn">
+          重置默认
+        </button>
+      </div>
+    </div>
+  </div>
+</template>
+
 <style scoped>
 .config-panel {
   position: fixed;
@@ -192,7 +192,6 @@ defineExpose({
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
 }
 
 .config-modal {

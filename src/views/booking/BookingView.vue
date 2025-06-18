@@ -193,11 +193,11 @@ if(isWeekday(currentDate.value)) {
 
 // 当日期改变时，重置时间选择并检查场地可用性
 const handleDateChange = async (date) => {
-  const options = getTimeOptionsForDate(date)
-  if (options.startOptions.length > 0) {
-    startTime.value = options.startOptions[0]
+  // const options = getTimeOptionsForDate(date)
+  if (timeOptions.value.length > 0) {
+    startTime.value = timeOptions.value[0]
     // 设置结束时间为开始时间后1小时
-    endTime.value = options.endOptions[0]
+    endTime.value = endTimeOptions.value[0]
   } else {
     startTime.value = ''
     endTime.value = ''
@@ -331,6 +331,7 @@ onMounted(async () => {
   // 直接调用handleDateChange来初始化时间选择，避免重复代码
   await handleDateChange(currentDate.value)
   await handleStartTimeChange(startTime.value)
+
 })
 
 // 预约弹窗相关
@@ -452,16 +453,6 @@ const handleStartTimeChange = async (time) => {
 
 // 监听结束时间变化，确保结束时间始终大于开始时间且不超过3小时
 const handleEndTimeChange = async (time) => {
-  // 如果结束时间小于开始时间，则自动调整开始时间
-  if (time <= startTime.value) {
-    if (isWeekday(currentDate.value)) {
-      const endTimeIndex = endTimeOptions.value.indexOf(time)
-      startTime.value = timeOptions.value[endTimeIndex]
-    } else {
-      startTime.value = '18:00'
-    }
-  }
-
   // 检查场地可用性
   if (startTime.value) {
     await checkVenueAvailability(currentDate.value, startTime.value, time)

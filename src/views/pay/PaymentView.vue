@@ -614,7 +614,6 @@ onUnmounted(() => {
   font-size: 16px;
   font-weight: 500;
   color: #fff;
-  backdrop-filter: blur(10px);
   position: relative;
   overflow: hidden;
 }

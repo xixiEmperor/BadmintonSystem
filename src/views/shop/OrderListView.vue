@@ -14,7 +14,7 @@ const currentPage = ref(1)
 const pageSize = ref(5)
 
 // 从store获取数据
-const { loading, cancelOrder: storeCancelOrder, refreshOrders } = orderStore
+const { loading, cancelOrder: storeCancelOrder } = orderStore
 
 // 总数量
 const total = computed(() => {
@@ -71,27 +71,7 @@ const cancelOrder = (orderNumber) => {
   })
 }
 
-// 确认收货
-const confirmReceipt = (orderNumber) => {
-  ElMessageBox.confirm('确定已收到商品吗？', '确认收货', {
-    confirmButtonText: '确认收货',
-    cancelButtonText: '取消',
-    type: 'info',
-  }).then(async () => {
-    try {
-      // 这里应该调用确认收货的API，暂时只显示成功消息
-      console.log('确认收货订单号:', orderNumber)
-      ElMessage.success('确认收货成功')
-      // 刷新订单列表
-      await refreshOrders()
-    } catch (error) {
-      console.error('确认收货失败:', error)
-      ElMessage.error('确认收货失败')
-    }
-  }).catch(() => {
-    // 用户取消操作
-  })
-}
+
 
 // 去购物
 const goShopping = () => {
@@ -246,13 +226,13 @@ onMounted(() => {
                 @click="cancelOrder(order.orderNo)">
                 取消订单
               </el-button>
-              <el-button
+              <!-- <el-button
                 v-if="order.status === ORDER_STATUS.PAID"
                 type="success"
                 size="small"
                 @click="confirmReceipt(order.orderNo)">
                 确认收货
-              </el-button>
+              </el-button> -->
             </div>
           </div>
         </div>

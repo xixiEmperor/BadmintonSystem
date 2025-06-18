@@ -188,9 +188,6 @@ export const useCartStore = defineStore('cart', () => {
   // 选择/取消选择单个商品
   async function toggleSelectItem(item) {
     try {
-      // 检查是否需要更新全选状态
-      updateAllSelectedState()
-
       // 调用 API
       const data = { selected: item.selected }
       if (item.specificationId) {
@@ -198,6 +195,10 @@ export const useCartStore = defineStore('cart', () => {
       }
 
       await selectCartItem(item.productId, data)
+
+      // API调用成功后，检查是否需要更新全选状态
+      updateAllSelectedState()
+
       return true
     } catch (error) {
       console.error('更新选择状态失败:', error)

@@ -146,7 +146,7 @@ watch(() => props.productId, () => {
   if (props.productId && props.hasSpecification) {
     loadSpecOptions()
   }
-}, { immediate: true })
+})
 
 // 监听hasSpecification变化
 watch(() => props.hasSpecification, (newVal) => {
@@ -158,7 +158,7 @@ watch(() => props.hasSpecification, (newVal) => {
     Object.keys(selectedSpecs).forEach(key => delete selectedSpecs[key])
     selectedSpecification.value = null
   }
-}, { immediate: true })
+})
 
 // 监听用户选择变化
 watch(() => selectedSpecs, () => {

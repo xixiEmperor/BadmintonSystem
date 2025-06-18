@@ -1,16 +1,28 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { getCategories } from '@/api/shop'
+
+const props = defineProps({
+  categoryId: {
+    type: [String, Number],
+    default: 'all'
+  }
+})
 
 // 响应式数据
 const categories = ref([])
-const activeCategory = ref('all')
+
+const activeCategory = computed(() => {
+  return props.categoryId
+})
+console.log(activeCategory.value)
 
 // 获取分类列表
 const fetchCategories = async () => {
   const response = await getCategories()
   categories.value = response.data.data
 }
+
 
 // 处理分类选择
 const handleCategorySelect = (categoryId) => {
@@ -35,7 +47,7 @@ onMounted(() => {
     <!-- 桌面端菜单 -->
     <el-menu
       class="category-menu desktop-menu"
-      :default-active="activeCategory"
+      :default-active="activeCategory.toString()"
       @select="handleCategorySelect">
       <el-menu-item index="all">
         全部商品
@@ -94,7 +106,7 @@ onMounted(() => {
   left: 0;
   width: 30px;
   height: 2px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(#667eea 0%, #764ba2 100%);
 }
 
 /* 桌面端菜单样式 */
@@ -156,7 +168,6 @@ onMounted(() => {
   transition: all 0.3s ease;
   border: 1px solid #dcdfe6;
   background-color: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(10px);
   border-radius: 20px;
   padding: 8px 16px;
   font-size: 14px;

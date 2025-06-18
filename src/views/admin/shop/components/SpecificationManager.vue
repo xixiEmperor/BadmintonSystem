@@ -1,6 +1,6 @@
 <script setup>
 import { ref,  onMounted } from 'vue'
-import { Delete, Plus } from '@element-plus/icons-vue'
+import { Delete, Plus, Loading, Check, Warning } from '@element-plus/icons-vue'
 import {
   getProductSpecifications,
   getProductSpecOptions,
@@ -9,6 +9,7 @@ import {
   deleteSpecification,
   // updateProduct
 } from '@/api/shop'
+import TaskQueue from '@/utils/TaskQueue'
 
 const props = defineProps({
   visible: {
@@ -51,6 +52,17 @@ const specKeyMap = {
   'style': '款式',
   'custom': '自定义'
 }
+
+// 任务队列实例
+const taskQueue = ref(null)
+const queueStatus = ref({
+  pending: 0,
+  running: 0,
+  completed: 0,
+  failed: 0,
+  total: 0,
+  isProcessing: false
+})
 
 // 初始化
 onMounted(async () => {
@@ -182,6 +194,70 @@ const generateCombinations = (optionsData) => {
   return combine(0, {})
 }
 
+// 初始化任务队列
+const initTaskQueue = () => {
+  taskQueue.value = new TaskQueue({
+    maxConcurrency: 1, // 最大并发数设为1，避免数据库压力过大
+    delay: 50, // 任务间延迟50ms
+    retryTimes: 3 // 失败重试3次
+  })
+
+  // 订阅队列事件
+  taskQueue.value.subscribe('queueStarted', (data) => {
+    console.log('队列开始处理:', data)
+    ElMessage.info(`开始处理 ${data.totalTasks} 个规格保存任务`)
+  })
+
+  taskQueue.value.subscribe('taskCompleted', (taskItem) => {
+    queueStatus.value = taskQueue.value.getStatus()
+    console.log('任务完成:', taskItem.id)
+  })
+
+  taskQueue.value.subscribe('taskFailed', (taskItem) => {
+    queueStatus.value = taskQueue.value.getStatus()
+    console.error('任务失败:', taskItem.id, taskItem.error)
+  })
+
+  taskQueue.value.subscribe('taskRetry', (taskItem) => {
+    console.log('任务重试:', taskItem.id, `第${taskItem.retryCount}次重试`)
+  })
+
+  taskQueue.value.subscribe('queueCompleted', (data) => {
+    queueStatus.value = taskQueue.value.getStatus()
+    console.log('队列处理完成:', data)
+
+    if (data.failed > 0) {
+      ElMessage.warning(`规格保存完成！成功: ${data.completed}个，失败: ${data.failed}个`)
+
+      // 询问是否重试失败的任务
+      ElMessageBox.confirm(
+        `有 ${data.failed} 个规格保存失败，是否重试？`,
+        '保存结果',
+        {
+          confirmButtonText: '重试失败任务',
+          cancelButtonText: '忽略',
+          type: 'warning'
+        }
+      ).then(() => {
+        taskQueue.value.retryFailedTasks()
+      }).catch(() => {
+        // 用户选择忽略失败任务
+        finalizeSaveProcess()
+      })
+    } else {
+      ElMessage.success(`所有 ${data.completed} 个规格保存成功！`)
+      finalizeSaveProcess()
+    }
+  })
+}
+
+// 完成保存流程
+const finalizeSaveProcess = async () => {
+  await loadProductSpecifications()
+  specCombinations.value = []
+  submitting.value = false
+}
+
 // 保存所有规格
 const saveAllSpecifications = async () => {
   if (specCombinations.value.length === 0) {
@@ -191,10 +267,18 @@ const saveAllSpecifications = async () => {
 
   submitting.value = true
 
+  // 初始化任务队列
+  if (!taskQueue.value) {
+    initTaskQueue()
+  } else {
+    // 清空之前的队列
+    taskQueue.value.clear()
+  }
+
   // 创建加载提示
   const loadingInstance = ElLoading.service({
     lock: true,
-    text: '正在保存所有规格...',
+    text: '正在准备保存规格...',
     background: 'rgba(0, 0, 0, 0.7)'
   })
 
@@ -219,72 +303,51 @@ const saveAllSpecifications = async () => {
     // 更新商品规格设置
     // await updateProduct(props.productId, productUpdate)
 
-    // 保存所有规格组合
-    // 使用定时器控制请求发送速率
-    const results = []
-    const failedSpecs = []
-    const totalSpecs = specCombinations.value.length
-
-    // 创建进度提示组件
-    const progressMessage = ElMessage({
-      type: 'info',
-      message: `正在保存规格...`,
-      duration: 0,
-      showClose: true
-    })
-
-    // 使用Promise完成所有保存任务
-    await new Promise((resolve) => {
-      let index = 0
-
-      const saveNext = async () => {
-        if (index >= specCombinations.value.length) {
-          resolve()
-          return
-        }
-
-        const combo = specCombinations.value[index]
-
-        // 更新进度消息
-        progressMessage.message = `正在保存规格... (${index + 1}/${totalSpecs})`
-
-        try {
-          const result = await addProductSpecification(props.productId, {
-            specifications: combo.specs,
-            priceAdjustment: combo.priceAdjustment,
-            stock: combo.stock
-          })
-          results.push(result)
-        } catch (error) {
-          console.error('保存规格失败:', error)
-          failedSpecs.push(combo)
-        }
-
-        index++
-        setTimeout(saveNext, 30) // 每隔30ms发送一次请求
+    // 创建保存规格的任务函数
+    const createSpecificationTask = () => {
+      return async (data) => {
+        const result = await addProductSpecification(props.productId, {
+          specifications: data.specs,
+          priceAdjustment: data.priceAdjustment,
+          stock: data.stock
+        })
+        return result
       }
-
-      saveNext()
-    })
-
-    // 关闭进度消息
-    progressMessage.close()
-
-    // 根据结果显示消息
-    if (failedSpecs.length === 0) {
-      ElMessage.success('所有规格保存成功')
-    } else {
-      ElMessage.warning(`保存完成，但有${failedSpecs.length}个规格保存失败`)
-      console.error('保存失败的规格:', failedSpecs)
     }
 
-    await loadProductSpecifications()
-    specCombinations.value = []
+    // 将所有规格组合添加到任务队列
+    const tasks = specCombinations.value.map((combo, index) => ({
+      task: createSpecificationTask(),
+      data: combo,
+      id: `spec_${index}_${Date.now()}`
+    }))
+
+    // 批量添加任务到队列
+    taskQueue.value.addTasks(tasks)
+
+    // 更新加载提示
+    loadingInstance.setText('正在保存规格，请稍候...')
+
+    // 创建进度监控
+    const progressInterval = setInterval(() => {
+      const status = taskQueue.value.getStatus()
+      queueStatus.value = status
+
+      if (status.total > 0) {
+        const progress = Math.round(((status.completed + status.failed) / status.total) * 100)
+        loadingInstance.setText(`正在保存规格... ${progress}% (${status.completed + status.failed}/${status.total})`)
+      }
+
+      // 如果队列处理完成，清除定时器
+      if (!status.isProcessing && status.pending === 0 && status.running === 0) {
+        clearInterval(progressInterval)
+        loadingInstance.close()
+      }
+    }, 500)
+
   } catch (error) {
     console.error('保存规格失败:', error)
     ElMessage.error('保存规格失败，请稍后重试')
-  } finally {
-    // 关闭加载提示
     loadingInstance.close()
     submitting.value = false
   }
@@ -463,6 +526,54 @@ const handleSuccess = () => {
             <el-button type="primary" :loading="submitting" @click="saveAllSpecifications">
               保存所有规格
             </el-button>
+
+            <!-- 任务队列状态显示 -->
+            <div v-if="queueStatus.isProcessing || queueStatus.total > 0" class="queue-status">
+              <el-card class="status-card">
+                <div class="status-header">
+                  <el-icon class="status-icon">
+                    <Loading v-if="queueStatus.isProcessing" />
+                    <Check v-else-if="queueStatus.failed === 0" />
+                    <Warning v-else />
+                  </el-icon>
+                  <span class="status-text">
+                    {{ queueStatus.isProcessing ? '正在处理任务队列...' : '队列处理完成' }}
+                  </span>
+                </div>
+
+                <div class="status-details">
+                  <div class="status-item">
+                    <span class="label">总任务:</span>
+                    <span class="value">{{ queueStatus.total }}</span>
+                  </div>
+                  <div class="status-item">
+                    <span class="label">等待中:</span>
+                    <span class="value pending">{{ queueStatus.pending }}</span>
+                  </div>
+                  <div class="status-item">
+                    <span class="label">执行中:</span>
+                    <span class="value running">{{ queueStatus.running }}</span>
+                  </div>
+                  <div class="status-item">
+                    <span class="label">已完成:</span>
+                    <span class="value completed">{{ queueStatus.completed }}</span>
+                  </div>
+                  <div class="status-item">
+                    <span class="label">失败:</span>
+                    <span class="value failed">{{ queueStatus.failed }}</span>
+                  </div>
+                </div>
+
+                <!-- 进度条 -->
+                <div v-if="queueStatus.total > 0" class="progress-section">
+                  <el-progress
+                    :percentage="Math.round(((queueStatus.completed + queueStatus.failed) / queueStatus.total) * 100)"
+                    :status="queueStatus.failed > 0 ? 'warning' : (queueStatus.isProcessing ? 'active' : 'success')"
+                    :stroke-width="8">
+                  </el-progress>
+                </div>
+              </el-card>
+            </div>
           </div>
         </div>
       </div>
@@ -584,5 +695,77 @@ const handleSuccess = () => {
 .dialog-footer {
   display: flex;
   justify-content: flex-end;
+}
+
+.queue-status {
+  margin-top: 10px;
+
+  .status-card {
+    max-width: 300px;
+
+    .status-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+
+      .status-icon {
+        margin-right: 5px;
+        font-size: 16px;
+      }
+
+      .status-text {
+        font-size: 14px;
+        font-weight: 600;
+        color: #303133;
+      }
+    }
+
+    .status-details {
+      margin-bottom: 10px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+
+      .status-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 4px 8px;
+        border-radius: 4px;
+        background-color: #f5f7fa;
+
+        .label {
+          font-size: 12px;
+          font-weight: 600;
+          color: #606266;
+        }
+
+        .value {
+          font-size: 14px;
+          font-weight: 700;
+
+          &.pending {
+            color: #909399;
+          }
+
+          &.running {
+            color: #409eff;
+          }
+
+          &.completed {
+            color: #67c23a;
+          }
+
+          &.failed {
+            color: #f56c6c;
+          }
+        }
+      }
+    }
+
+    .progress-section {
+      margin-top: 10px;
+    }
+  }
 }
 </style>

@@ -1,24 +1,3 @@
-<template>
-  <div class="verification-code-input">
-    <div class="code-inputs">
-      <input
-        v-for="(digit, index) in digits"
-        :key="index"
-        v-model="digits[index]"
-        :ref="(el) => setInputRef(el, index)"
-        maxlength="1"
-        class="code-digit"
-        @input="handleInput(index, $event.target.value)"
-        @keydown="handleKeydown(index, $event)"
-        @paste="handlePaste"
-        type="text"
-        inputmode="numeric"
-        pattern="[0-9]*"
-      />
-    </div>
-  </div>
-</template>
-
 <script setup>
 import { ref, watch, nextTick } from 'vue'
 
@@ -119,6 +98,27 @@ defineExpose({
   }
 })
 </script>
+
+<template>
+  <div class="verification-code-input">
+    <div class="code-inputs">
+      <input
+        v-for="(digit, index) in digits"
+        :key="index"
+        v-model="digits[index]"
+        :ref="(el) => setInputRef(el, index)"
+        maxlength="1"
+        class="code-digit"
+        @input="handleInput(index, $event.target.value)"
+        @keydown="handleKeydown(index, $event)"
+        @paste="handlePaste"
+        type="text"
+        inputmode="numeric"
+        pattern="[0-9]*"
+      />
+    </div>
+  </div>
+</template>
 
 <style lang="less" scoped>
 .verification-code-input {

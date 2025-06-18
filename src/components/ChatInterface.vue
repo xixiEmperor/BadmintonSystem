@@ -237,9 +237,6 @@ const scrollToBottom = () => {
         <h1>🏸 武汉理工大学南湖校区羽毛球馆智能客服</h1>
         <p>您好！我是羽毛球馆智能助手，有什么可以帮助您的？</p>
       </div>
-      <!-- <button @click="showConfigPanel = true" class="config-btn" title="系统配置">
-        ⚙️
-      </button> -->
     </div>
 
     <!-- 消息区域 -->

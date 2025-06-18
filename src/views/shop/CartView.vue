@@ -124,9 +124,11 @@ onMounted(async () => {
 
     <div v-else class="cart-content">
       <el-table :data="cartStore.cartItems" style="width: 100%">
-        <el-table-column width="55" align="center">
+        <el-table-column width="200" align="center">
           <template #header>
-            <el-checkbox v-model="cartStore.isAllSelected" @change="toggleSelectAll" />
+            <el-checkbox v-model="cartStore.isAllSelected" @change="toggleSelectAll">
+              全选
+            </el-checkbox>
           </template>
           <template #default="scope">
             <el-checkbox v-model="scope.row.selected" @change="() => toggleSelectItem(scope.row)" />

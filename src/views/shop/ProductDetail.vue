@@ -12,7 +12,6 @@ const cartStore = useCartStore()
 const loading = ref(true)
 const productDetail = ref(null)
 const imageList = ref([])
-const activeTab = ref('detail')
 
 // 当前选中的规格
 const currentSpecification = ref(null)
@@ -40,7 +39,7 @@ const fetchProductDetail = async (productId) => {
     const response = await getProductDetail(productId)
     if (response.data.code === 0) {
       productDetail.value = response.data.data
-      // 如果无规格，则可以加入购物车和购买
+      // 如果无规格且有库存，则可以加入购物车和购买
       if(productDetail.value.hasSpecification === 0 && productDetail.value.stock){
         canAddToCart.value = true
       }
@@ -118,15 +117,9 @@ const decreaseQuantity = () => {
   }
 }
 
-// 添加到购物车
-const addToCartHandler = async () => {
-  if (!canAddToCart.value) {
-    ElMessage.warning('请先选择有效的商品规格')
-    return
-  }
-
-  // 构建商品数据
-  const cartItem = {
+// 构建商品数据的通用函数
+const buildProductData = () => {
+  const productData = {
     productId: productDetail.value.id,
     productName: productDetail.value.name,
     productImage: productDetail.value.mainImage,
@@ -140,12 +133,25 @@ const addToCartHandler = async () => {
 
   // 如果有规格，添加规格信息
   if (productDetail.value.hasSpecification === 1 && currentSpecification.value) {
-    cartItem.specificationId = currentSpecification.value.id
-    cartItem.specs = currentSpecification.value.specifications
-    cartItem.priceAdjustment = currentSpecification.value.priceAdjustment
+    productData.specificationId = currentSpecification.value.id
+    productData.specs = currentSpecification.value.specifications
+    productData.priceAdjustment = currentSpecification.value.priceAdjustment
   } else {
-    cartItem.priceAdjustment = 0
+    productData.priceAdjustment = 0
   }
+
+  return productData
+}
+
+// 添加到购物车
+const addToCartHandler = async () => {
+  if (!canAddToCart.value) {
+    ElMessage.warning('请先选择有效的商品规格')
+    return
+  }
+
+  // 构建商品数据
+  const cartItem = buildProductData()
 
   // 使用 store 添加到购物车
   const success = await cartStore.addToCart(cartItem)
@@ -161,27 +167,8 @@ const buyNow = async () => {
     return
   }
 
-  // 构建完整的商品信息，仿照购物车结算逻辑
-  const productInfo = {
-    productId: productDetail.value.id,
-    productName: productDetail.value.name,
-    productImage: productDetail.value.mainImage,
-    productPrice: productDetail.value.price,
-    quantity: quantity.value,
-    stock: productDetail.value.hasSpecification === 1 && currentSpecification.value
-      ? currentSpecification.value.stock
-      : productDetail.value.stock,
-    selected: true
-  }
-
-  // 如果有规格，添加规格信息
-  if (productDetail.value.hasSpecification === 1 && currentSpecification.value) {
-    productInfo.specificationId = currentSpecification.value.id
-    productInfo.specs = currentSpecification.value.specifications
-    productInfo.priceAdjustment = currentSpecification.value.priceAdjustment
-  } else {
-    productInfo.priceAdjustment = 0
-  }
+  // 构建完整的商品信息
+  const productInfo = buildProductData()
 
   // 计算实际价格和总金额
   const actualPrice = productInfo.productPrice + (productInfo.priceAdjustment || 0)
@@ -226,7 +213,7 @@ onMounted(() => {
       <!-- 面包屑导航 -->
       <el-breadcrumb separator="/">
         <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
-        <el-breadcrumb-item :to="{ path: '/shop', query: { categoryId: productDetail.categoryId } }">
+        <el-breadcrumb-item :to="{ path: '/shop', state: { categoryId: productDetail.categoryId } }">
           {{ productDetail.categoryName }}
         </el-breadcrumb-item>
         <el-breadcrumb-item>{{ productDetail.name }}</el-breadcrumb-item>

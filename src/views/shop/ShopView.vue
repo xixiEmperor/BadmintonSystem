@@ -5,7 +5,7 @@ import ProductList from './components/ProductList.vue'
 import ProductCarousel from './components/ProductCarousel.vue'
 
 // 选中的分类
-const selectedCategory = ref('all')
+const selectedCategory = ref(history.state.categoryId || 'all')
 
 // 响应式检测
 const isMobile = ref(false)
@@ -64,7 +64,7 @@ onUnmounted(() => {
       <el-aside width="240px" class="sidebar">
         <!-- 商品分类导航 -->
         <div class="category-section">
-          <CategoryList @category-selected="handleCategoryChange" />
+          <CategoryList :categoryId="selectedCategory" @category-selected="handleCategoryChange" />
         </div>
       </el-aside>
       <el-main class="main-content">
@@ -77,7 +77,7 @@ onUnmounted(() => {
     <div class="mobile-layout" v-if="isMobile">
       <!-- 移动端分类导航 -->
       <div class="mobile-category">
-        <CategoryList @category-selected="handleCategoryChange" />
+        <CategoryList :categoryId="selectedCategory" @category-selected="handleCategoryChange" />
       </div>
       <!-- 移动端商品列表 -->
       <div class="mobile-products">

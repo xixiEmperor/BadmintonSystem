@@ -34,7 +34,6 @@ export const sensitiveWordMap = initSensitiveWord()
 
 // 检查敏感词是否存在
 export const checkSensitiveWord = (sensitiveWordMap, txt, index) => {
-  console.log(txt)
   let currentMap = sensitiveWordMap
   let flag = false
   let sensitiveWord = ''

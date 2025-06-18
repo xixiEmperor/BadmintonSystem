@@ -242,17 +242,31 @@ onMounted(async () => {
   overflow: hidden;
 }
 
-.carousel-content::before {
+/* .carousel-content::before {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  z-index: 1;
-}
+  /* background: rgba(255, 255, 255, 0.1); */
+  /* 性能优化方案选择（取消注释使用）：*/
+
+  /* 方案1：移除backdrop-filter，使用更深的半透明背景 */
+  /* background: rgba(255, 255, 255, 0.2); */
+
+  /* 方案2：使用will-change优化，但可能增加内存使用 */
+  /* backdrop-filter: blur(10px); */
+  /* will-change: backdrop-filter; */
+
+  /* 方案3：减少模糊强度 */
+  /* backdrop-filter: blur(5px); */
+
+  /* 方案4：使用transform3d强制硬件加速 */
+  /* transform: translateZ(0); */
+
+  /* z-index: 1; */
+/* } */
 
 .content-left {
   flex: 1;

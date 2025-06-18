@@ -15,20 +15,20 @@ const router = useRouter()
 const loading = ref(false)
 const products = ref([])
 
-// 搜索参数
-const searchParams = reactive({
-  keyword: '',
-  orderBy: '',
-  pageNum: 1,
-  pageSize: 10,
-  categoryId: props.categoryId
-})
-
 // 分页信息
 const pagination = reactive({
   pageNum: 1,
   pageSize: 4,
   total: 0
+})
+
+// 搜索参数
+const searchParams = reactive({
+  keyword: '',
+  orderBy: '',
+  pageNum: 1,
+  pageSize: pagination.pageSize,
+  categoryId: props.categoryId
 })
 
 // 计算分页布局（移动端简化显示）
@@ -95,7 +95,10 @@ const handleCurrentChange = (val) => {
 
 // 前往详情页
 const goToDetail = (productId) => {
-  router.push(`/product/${productId}`)
+  router.push({
+    path: `/product/${productId}`,
+    query: { categoryId: props.categoryId }
+  })
 }
 
 </script>
@@ -115,7 +118,7 @@ const goToDetail = (productId) => {
             </el-select>
           </el-form-item>
           <el-form-item label="关键词" class="search-item">
-            <el-input v-model="searchParams.keyword" placeholder="请输入关键词" @keyup.enter="handleSearch"></el-input>
+            <el-input v-model="searchParams.keyword" placeholder="请输入关键词" @keyup.enter="handleSearch" style="width: 450px;"></el-input>
           </el-form-item>
         </div>
         <div class="button-row">
@@ -180,6 +183,8 @@ const goToDetail = (productId) => {
 }
 
 .filter-form {
+  display: flex;
+  justify-content: space-between;
   width: 100%;
 }
 
@@ -262,7 +267,7 @@ const goToDetail = (productId) => {
 .product-image {
   width: 100%;
   height: 220px;
-  object-fit: cover;
+  object-fit: contain;
   transition: transform 0.3s ease;
 }
 
