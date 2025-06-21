@@ -1,0 +1,1 @@
+import{aW as e}from"./index-CZU4bJ5v.js";const c=(s,n={})=>{if(["/post"].some(o=>s===o||s.startsWith(`${o}/`))){const o=new URL(s,window.location.origin);Object.keys(n).forEach(t=>{o.searchParams.set(t,n[t])}),window.open(o.toString(),"_blank")}else e.push({path:s,query:n})};export{c as n};
