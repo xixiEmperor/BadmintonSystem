@@ -1,12 +1,14 @@
 <script setup>
 import { ref, watch, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores'
-import { navigate } from '@/utils/router'
 import { getForumList } from '@/api/forum'
 import { useForumStore } from '@/stores/modules/forum'
 import { formatDateTime } from '@/utils/format'
 import { CaretTop } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 
+const router = useRouter()
 const userStore = useUserStore()
 const forumStore = useForumStore()
 // 分类选项卡
@@ -75,22 +77,28 @@ onMounted(async () => {
 
 // 跳转到发布页面
 const navigateToPublish = () => {
-  // 检查用户是否已登录
-  if (!userStore.token) {
-    // 未登录，跳转到登录页面
-    ElMessage.warning('请先登录后再发布文章')
-    navigate('/login')
-    return
+  console.log('点击发布新帖按钮') // 添加调试日志
+  console.log('当前路由器实例:', router)
+  console.log('UserStore状态:', {
+    token: userStore.token,
+    userinfo: userStore.userinfo
+  })
+  
+  try {
+    // 直接跳转到发布页面，让路由守卫处理登录检查
+    router.push('/publish-post')
+    console.log('路由跳转命令已执行')
+  } catch (error) {
+    console.error('路由跳转失败:', error)
+    ElMessage.error('页面跳转失败，请刷新页面后重试')
   }
-
-  // 已登录，在新标签页跳转到发布页面
-  navigate('/publish-post')
 }
 
 // 跳转到文章详情
 const navigateToDetail = (postId) => {
   // 在新标签页打开
-  navigate(`/post/${postId}`)
+  const routeUrl = router.resolve(`/post/${postId}`)
+  window.open(routeUrl.href, '_blank')
 }
 
 // 搜索功能（添加防抖）

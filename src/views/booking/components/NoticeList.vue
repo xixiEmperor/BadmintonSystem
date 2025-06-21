@@ -428,7 +428,7 @@ onMounted(() => {
   .notice-list-page {
     .notice-carousel-container {
       :deep(.el-carousel) {
-        height: 250px !important;
+        height: 300px !important;
       }
 
       :deep(.el-carousel__item) {

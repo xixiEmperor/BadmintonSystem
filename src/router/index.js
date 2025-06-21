@@ -81,7 +81,7 @@ const router = createRouter({
         {
           path: '/publish-post',
           component: () => import('@/views/forum/PublishPost.vue'),
-          meta: { title: '武汉理工大学南湖校区羽毛球场预定前台' },
+          meta: { requiresAuth: true, title: '发布新帖 - 武汉理工大学南湖校区羽毛球场预定前台' },
         },
         {
           path: '/post/:id',
@@ -166,6 +166,13 @@ const router = createRouter({
 
 // 全局前置守卫，检查用户是否已登录
 router.beforeEach((to, from, next) => {
+  console.log('路由守卫被触发:', { 
+    to: to.path, 
+    from: from.path,
+    requiresAuth: to.meta.requiresAuth,
+    requiresAdmin: to.meta.requiresAdmin
+  })
+  
   // 设置页面标题
   if (to.meta.title) {
     document.title = to.meta.title
@@ -173,14 +180,22 @@ router.beforeEach((to, from, next) => {
 
   // 判断路由是否需要登录
   const userStore = useUserStore()
+  console.log('UserStore状态:', {
+    hasToken: !!userStore.token,
+    tokenLength: userStore.token?.length,
+    isExpired: userStore.token ? userStore.isTokenExpired() : 'no token'
+  })
 
   if (to.meta.requiresAuth) {
+    console.log('需要登录验证的路由')
     // 检查是否有token且未过期
     if (userStore.token && !userStore.isTokenExpired()) {
       // 已登录且token有效，允许访问
+      console.log('用户已登录且token有效，允许访问')
       next()
     } else {
       // 未登录或token已过期，清除过期数据并跳转到登录页
+      console.log('用户未登录或token已过期')
       if (userStore.token && userStore.isTokenExpired()) {
         userStore.logout()
         ElMessage.warning('登录已过期，请重新登录')
@@ -191,6 +206,7 @@ router.beforeEach((to, from, next) => {
       })
     }
   } else if (to.meta.requiresAdmin) {
+    console.log('需要管理员权限的路由')
     // 检查是否有token且未过期
     if (userStore.token && !userStore.isTokenExpired()) {
       // 判断是否为管理员
@@ -213,6 +229,7 @@ router.beforeEach((to, from, next) => {
       })
     }
   } else {
+    console.log('不需要特殊权限的路由，直接放行')
     // 不需要登录，直接放行
     // 但如果有token且已过期，也要清除
     if (userStore.token && userStore.isTokenExpired()) {

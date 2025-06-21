@@ -1,5 +1,5 @@
 // 敏感词列表
-const sensitiveWordList = ['王八', '王八蛋', '王八羔子', 'fuck', 'shit', '傻逼', '傻叉', '傻子', '傻缺']
+const sensitiveWordList = ['王八', '王八蛋', '王八羔子', 'fuck', 'shit', '傻逼', '傻叉', '傻子', '傻缺', '操你妈']
 
 // 初始化敏感词（转为树结构）
 export const initSensitiveWord = () => {

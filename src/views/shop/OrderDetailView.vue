@@ -126,6 +126,10 @@ const getStatusType = (status) => {
       return 'success'
     case ORDER_STATUS.CANCELLED:
       return 'danger'
+    case ORDER_STATUS.COMPLETED:
+      return 'success'
+    case ORDER_STATUS.CLOSED:
+      return 'danger'
     default:
       return 'info'
   }
@@ -140,6 +144,10 @@ const getStatusText = (status) => {
       return '已支付'
     case ORDER_STATUS.CANCELLED:
       return '已取消'
+    case ORDER_STATUS.COMPLETED:
+      return '已完成'
+    case ORDER_STATUS.CLOSED:
+      return '已关闭'
     default:
       return '未知状态'
   }
@@ -203,7 +211,7 @@ onMounted(() => {
           <h2>{{ getStatusText(orderDetail.status) }}</h2>
           <p v-if="orderDetail.status === ORDER_STATUS.PAID">您的订单已支付成功</p>
           <p v-else-if="orderDetail.status === ORDER_STATUS.CANCELLED">订单已取消</p>
-          <p v-else>请尽快完成支付</p>
+          <p v-else-if="orderDetail.status === ORDER_STATUS.UNPAID">请尽快完成支付</p>
         </div>
       </div>
 
@@ -234,12 +242,12 @@ onMounted(() => {
             <span class="value">{{ orderDetail.remarks }}</span>
           </div>
           <!-- 取件码显示 -->
-          <div class="info-item pickup-code-item">
+          <div v-if="orderDetail.status === ORDER_STATUS.UNPAID" class="info-item pickup-code-item">
             <span class="label">取件码：</span>
             <span v-if="orderDetail.status === ORDER_STATUS.PAID" class="pickup-code">
               {{ orderDetail.pickupCode || 'WHUT2024' }}
             </span>
-            <span v-else class="pickup-code-pending">
+            <span class="pickup-code-pending">
               支付成功后显示取件码
             </span>
           </div>
@@ -250,18 +258,18 @@ onMounted(() => {
       <div class="products-section">
         <h3>商品信息</h3>
         <div class="product-list">
-          <div v-for="(product, index) in orderDetail.orderItems" :key="index" class="product-item">
+          <div v-for="(product, index) in orderDetail.orderItemList" :key="index" class="product-item">
             <el-image :src="product.productImage" class="product-image" fit="cover"></el-image>
             <div class="product-details">
               <div class="product-name">{{ product.productName }}</div>
               <div v-if="product.specs" class="product-specs">
                 规格：{{ Object.entries(product.specs).map(([key, value]) => `${value}`).join('、') }}
               </div>
-              <div class="product-price">¥{{ product.productPrice.toFixed(2) }}</div>
+              <div class="product-price">¥{{ product.currentUnitPrice.toFixed(2) }}</div>
             </div>
             <div class="product-quantity">x{{ product.quantity }}</div>
             <div class="product-subtotal">
-              ¥{{ (product.productPrice * product.quantity).toFixed(2) }}
+              ¥{{ (product.currentUnitPrice * product.quantity).toFixed(2) }}
             </div>
           </div>
         </div>

@@ -321,7 +321,7 @@ onBeforeUnmount(() => {
   // 移动端适配
 
   @media (max-width: 768px) {
-    height: 170px; // 增加移动端header高度以容纳换行的用户信息
+    height: 200px; // 增加移动端header高度以容纳换行的用户信息
   }
 
   .header__content {
